@@ -7,7 +7,17 @@ import EditModal, { EditData } from "@/components/EditModal";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import QtyInput from "@/components/QtyInput";
 import BarcodeScanner from "@/components/BarcodeScanner";
-import { getHistoryApi, updateEntryApi, deleteEntryApi, warmupCacheApi, saveStockOpnameApi, lookupBarcodeApi, searchProductsApi, getAllProductsApi, getAllLocationsApi } from "@/lib/api";
+import {
+  getHistoryApi,
+  updateEntryApi,
+  deleteEntryApi,
+  warmupCacheApi,
+  saveStockOpnameApi,
+  lookupBarcodeApi,
+  searchProductsApi,
+  getAllProductsApi,
+  getAllLocationsApi,
+} from "@/lib/api";
 import { HistoryEntry, Product } from "@/lib/types";
 import { getCache, setCache, clearCache } from "@/lib/cache";
 import toast from "react-hot-toast";
@@ -22,10 +32,14 @@ export default function HistoryPage() {
 
   // ── Search & Filter state ──
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterDate, setFilterDate] = useState("");   // "YYYY-MM-DD"
+  const [filterDate, setFilterDate] = useState(""); // "YYYY-MM-DD"
   const [filterDateEnd, setFilterDateEnd] = useState(""); // for range filtering
-  const [activeTab, setActiveTab] = useState<"all" | "today" | "week" | "month">("all");
-  const [selectedLocations, setSelectedLocations] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<
+    "all" | "today" | "week" | "month"
+  >("all");
+  const [selectedLocations, setSelectedLocations] = useState<Set<string>>(
+    new Set(),
+  );
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Inline edit state
@@ -42,11 +56,18 @@ export default function HistoryPage() {
   const [scanningBarcode, setScanningBarcode] = useState(false);
   const [addSearchResults, setAddSearchResults] = useState<Product[]>([]);
   const [showAddSuggestions, setShowAddSuggestions] = useState(false);
-  const [addSearchTimer, setAddSearchTimer] = useState<NodeJS.Timeout | null>(null);
+  const [addSearchTimer, setAddSearchTimer] = useState<NodeJS.Timeout | null>(
+    null,
+  );
   const [addFormula, setAddFormula] = useState("");
   const allProductsRef = useRef<Product[] | null>(null);
-  const allLocationsRef = useRef<Array<{ locationCode: string; productCount: number }> | null>(null);
-  const [locationResults, setLocationResults] = useState<Array<{ locationCode: string; productCount: number }>>([]);
+  const allLocationsRef = useRef<Array<{
+    locationCode: string;
+    productCount: number;
+  }> | null>(null);
+  const [locationResults, setLocationResults] = useState<
+    Array<{ locationCode: string; productCount: number }>
+  >([]);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [showLocationScanner, setShowLocationScanner] = useState(false);
   const [addForm, setAddForm] = useState({
@@ -85,7 +106,8 @@ export default function HistoryPage() {
     const q = addForm.batch.trim().toLowerCase();
     if (!q) return addBatchesForSku;
     // If current value exactly matches an existing batch, show ALL batches so user can switch
-    if (addBatchesForSku.some((b) => b.toLowerCase() === q)) return addBatchesForSku;
+    if (addBatchesForSku.some((b) => b.toLowerCase() === q))
+      return addBatchesForSku;
     return addBatchesForSku.filter((b) => b.toLowerCase().includes(q));
   }, [addForm.batch, addBatchesForSku]);
 
@@ -111,29 +133,38 @@ export default function HistoryPage() {
     const q = editingBatchValue.trim().toLowerCase();
     if (!q) return inlineBatchesForSku;
     // If current value exactly matches an existing batch, show ALL batches so user can switch
-    if (inlineBatchesForSku.some((b) => b.toLowerCase() === q)) return inlineBatchesForSku;
+    if (inlineBatchesForSku.some((b) => b.toLowerCase() === q))
+      return inlineBatchesForSku;
     return inlineBatchesForSku.filter((b) => b.toLowerCase().includes(q));
   }, [editingBatchValue, inlineBatchesForSku]);
 
   // Close add form batch dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (addBatchDropdownRef.current && !addBatchDropdownRef.current.contains(e.target as Node)) {
+      if (
+        addBatchDropdownRef.current &&
+        !addBatchDropdownRef.current.contains(e.target as Node)
+      ) {
         setShowAddBatchDropdown(false);
       }
     };
-    if (showAddBatchDropdown) document.addEventListener("mousedown", handleClickOutside);
+    if (showAddBatchDropdown)
+      document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showAddBatchDropdown]);
 
   // Close inline batch dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (inlineBatchDropdownRef.current && !inlineBatchDropdownRef.current.contains(e.target as Node)) {
+      if (
+        inlineBatchDropdownRef.current &&
+        !inlineBatchDropdownRef.current.contains(e.target as Node)
+      ) {
         setShowInlineBatchDropdown(false);
       }
     };
-    if (showInlineBatchDropdown) document.addEventListener("mousedown", handleClickOutside);
+    if (showInlineBatchDropdown)
+      document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showInlineBatchDropdown]);
 
@@ -143,23 +174,47 @@ export default function HistoryPage() {
     // Load all products + locations in parallel for instant search
     const cachedProducts = getCache<Product[]>("allProducts");
     if (cachedProducts) allProductsRef.current = cachedProducts.data;
-    const cachedLocations = getCache<Array<{ locationCode: string; productCount: number }>>("allLocations");
+    const cachedLocations =
+      getCache<Array<{ locationCode: string; productCount: number }>>(
+        "allLocations",
+      );
     if (cachedLocations) allLocationsRef.current = cachedLocations.data;
     // Background refresh
-    getAllProductsApi().then((res) => {
-      if (res.success && res.products) {
-        allProductsRef.current = res.products;
-        setCache("allProducts", res.products);
-      }
-    }).catch(() => {});
-    getAllLocationsApi().then((res) => {
-      if (res.success && res.locations) {
-        allLocationsRef.current = res.locations;
-        setCache("allLocations", res.locations);
-      }
-    }).catch(() => {});
+    getAllProductsApi()
+      .then((res) => {
+        if (res.success && res.products) {
+          allProductsRef.current = res.products;
+          setCache("allProducts", res.products);
+        }
+      })
+      .catch(() => {});
+    getAllLocationsApi()
+      .then((res) => {
+        if (res.success && res.locations) {
+          allLocationsRef.current = res.locations;
+          setCache("allLocations", res.locations);
+        }
+      })
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  // Normalize entries from API: Google Sheets may return numbers instead of strings
+  const normalizeEntry = (e: any): HistoryEntry => ({
+    ...e,
+    rowId: String(e.rowId ?? ""),
+    sessionId: String(e.sessionId ?? ""),
+    timestamp: String(e.timestamp ?? ""),
+    operator: String(e.operator ?? ""),
+    location: String(e.location ?? ""),
+    productName: String(e.productName ?? ""),
+    sku: String(e.sku ?? ""),
+    batch: String(e.batch ?? ""),
+    qty: Number(e.qty) || 0,
+    edited: String(e.edited ?? ""),
+    editTimestamp: String(e.editTimestamp ?? ""),
+    formula: String(e.formula ?? ""),
+  });
 
   const fetchHistory = async () => {
     if (!user) return;
@@ -169,7 +224,7 @@ export default function HistoryPage() {
     // Show cached data instantly (includes optimistic entries from save)
     const cached = getCache<HistoryEntry[]>(ck);
     if (cached) {
-      setHistory(cached.data);
+      setHistory(cached.data.map(normalizeEntry));
       setLoading(false);
     }
 
@@ -186,8 +241,9 @@ export default function HistoryPage() {
       const result = await getHistoryApi(user.email, undefined, true);
 
       if (result.success && result.history) {
-        setHistory(result.history);
-        setCache(ck, result.history);
+        const normalized = result.history.map(normalizeEntry);
+        setHistory(normalized);
+        setCache(ck, normalized);
       } else if (!cached) {
         toast.error(result.message || "Gagal mengambil riwayat");
       }
@@ -208,12 +264,29 @@ export default function HistoryPage() {
       const m = raw.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/);
       if (m) {
         const months: Record<string, number> = {
-          Jan:0,Feb:1,Mar:2,Apr:3,Mei:4,May:4,Jun:5,Jul:6,Agu:7,Aug:7,Sep:8,Okt:9,Oct:9,Nov:10,Des:11,Dec:11
+          Jan: 0,
+          Feb: 1,
+          Mar: 2,
+          Apr: 3,
+          Mei: 4,
+          May: 4,
+          Jun: 5,
+          Jul: 6,
+          Agu: 7,
+          Aug: 7,
+          Sep: 8,
+          Okt: 9,
+          Oct: 9,
+          Nov: 10,
+          Des: 11,
+          Dec: 11,
         };
         return new Date(+m[3], months[m[2]] ?? 0, +m[1]);
       }
       return new Date(raw);
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   };
 
   // ── Client-side filtered data (instant) ──
@@ -223,12 +296,23 @@ export default function HistoryPage() {
     // Search by product name, SKU, batch, location, operator
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
-      result = result.filter((e) =>
-        e.productName.toLowerCase().includes(q) ||
-        e.sku.toLowerCase().includes(q) ||
-        e.batch.toLowerCase().includes(q) ||
-        e.location.toLowerCase().includes(q) ||
-        (e.operator && e.operator.toLowerCase().includes(q))
+      result = result.filter(
+        (e) =>
+          String(e.productName || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(e.sku || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(e.batch || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(e.location || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(e.operator || "")
+            .toLowerCase()
+            .includes(q),
       );
     }
 
@@ -249,7 +333,8 @@ export default function HistoryPage() {
     if (selectedLocations.size > 0) {
       result = result.filter((e) => {
         for (const prefix of selectedLocations) {
-          if (e.location === prefix || e.location.startsWith(prefix + "/")) return true;
+          if (e.location === prefix || e.location.startsWith(prefix + "/"))
+            return true;
         }
         return false;
       });
@@ -271,8 +356,9 @@ export default function HistoryPage() {
     const groupMap = new Map<string, number>();
     history.forEach((e) => {
       // Take first 2 segments as group key: "CEN/PARAS" from "CEN/PARAS/RCK"
-      const parts = e.location.split("/");
-      const groupKey = parts.length >= 2 ? parts.slice(0, 2).join("/") : parts[0];
+      const parts = String(e.location || "").split("/");
+      const groupKey =
+        parts.length >= 2 ? parts.slice(0, 2).join("/") : parts[0];
       groupMap.set(groupKey, (groupMap.get(groupKey) || 0) + 1);
     });
     return Array.from(groupMap.entries())
@@ -288,8 +374,12 @@ export default function HistoryPage() {
       groups.get(e.location)!.push(e);
     });
     return Array.from(groups.entries()).sort((a, b) => {
-      const latestA = Math.max(...a[1].map((e) => new Date(e.timestamp).getTime() || 0));
-      const latestB = Math.max(...b[1].map((e) => new Date(e.timestamp).getTime() || 0));
+      const latestA = Math.max(
+        ...a[1].map((e) => new Date(e.timestamp).getTime() || 0),
+      );
+      const latestB = Math.max(
+        ...b[1].map((e) => new Date(e.timestamp).getTime() || 0),
+      );
       return latestB - latestA;
     });
   }, [filteredHistory]);
@@ -303,7 +393,8 @@ export default function HistoryPage() {
     });
   };
 
-  const hasActiveFilters = searchQuery || filterDate || selectedLocations.size > 0;
+  const hasActiveFilters =
+    searchQuery || filterDate || selectedLocations.size > 0;
 
   const clearAllFilters = () => {
     setSearchQuery("");
@@ -320,7 +411,7 @@ export default function HistoryPage() {
 
   const handleDelete = async (entry: HistoryEntry) => {
     const confirmDelete = window.confirm(
-      `Hapus entry "${entry.productName}" (Qty: ${entry.qty})?`
+      `Hapus entry "${entry.productName}" (Qty: ${entry.qty})?`,
     );
     if (!confirmDelete) return;
 
@@ -370,11 +461,15 @@ export default function HistoryPage() {
             edited: "Yes",
             editTimestamp,
           }
-        : e
+        : e,
     );
     setHistory(updated);
     setIsModalOpen(false);
-    toast.success(data.location ? `Berhasil update & pindah ke ${data.location}` : "Berhasil mengupdate entry");
+    toast.success(
+      data.location
+        ? `Berhasil update & pindah ke ${data.location}`
+        : "Berhasil mengupdate entry",
+    );
 
     const ck = `history:ALL:all`;
     setCache(ck, updated);
@@ -392,7 +487,7 @@ export default function HistoryPage() {
           batch: data.batch,
           formula: data.formula,
           location: data.location,
-        }
+        },
       );
 
       if (!result.success) {
@@ -427,7 +522,9 @@ export default function HistoryPage() {
 
     // Optimistic update
     const updated = history.map((e) =>
-      e.rowId === entry.rowId ? { ...e, batch: newBatch, edited: "Yes", editTimestamp } : e
+      e.rowId === entry.rowId
+        ? { ...e, batch: newBatch, edited: "Yes", editTimestamp }
+        : e,
     );
     setHistory(updated);
     toast.success("Batch berhasil diupdate");
@@ -441,7 +538,7 @@ export default function HistoryPage() {
         entry.sessionId,
         entry.qty,
         editTimestamp,
-        { batch: newBatch }
+        { batch: newBatch },
       );
       if (!result.success) {
         setHistory(prev);
@@ -473,8 +570,14 @@ export default function HistoryPage() {
     // Optimistic update
     const updated = history.map((e) =>
       e.rowId === entry.rowId
-        ? { ...e, qty: newQty, formula: newFormula, edited: "Yes", editTimestamp }
-        : e
+        ? {
+            ...e,
+            qty: newQty,
+            formula: newFormula,
+            edited: "Yes",
+            editTimestamp,
+          }
+        : e,
     );
     setHistory(updated);
     toast.success("Qty berhasil diupdate");
@@ -488,7 +591,7 @@ export default function HistoryPage() {
         entry.sessionId,
         newQty,
         editTimestamp,
-        { formula: newFormula }
+        { formula: newFormula },
       );
       if (!result.success) {
         setHistory(prev);
@@ -503,7 +606,8 @@ export default function HistoryPage() {
   };
 
   // ── Add Product handlers ──
-  const normalizeLocationCode = (value: string) => value.toUpperCase().replace(/\s+/g, "").trim();
+  const normalizeLocationCode = (value: string) =>
+    value.toUpperCase().replace(/\s+/g, "").trim();
 
   const handleLocationSearch = (value: string) => {
     const normalized = normalizeLocationCode(value);
@@ -523,7 +627,9 @@ export default function HistoryPage() {
     }
 
     // Add unique locations from history that aren't already in candidates
-    const existingCodes = new Set(candidates.map((c) => c.locationCode.toLowerCase()));
+    const existingCodes = new Set(
+      candidates.map((c) => c.locationCode.toLowerCase()),
+    );
     const historyLocations = new Set(history.map((e) => e.location));
     historyLocations.forEach((loc) => {
       if (!existingCodes.has(loc.toLowerCase())) {
@@ -639,15 +745,17 @@ export default function HistoryPage() {
 
     const sessionId = `${user?.email}_${Date.now()}`;
     const timestamp = new Date().toISOString();
-    const items = [{
-      productName: addForm.productName,
-      sku: addForm.sku,
-      batch: addForm.batch,
-      barcode: addForm.barcode || "",
-      qty: addForm.qty,
-      formula: addFormula || "",
-      isNew: true,
-    }];
+    const items = [
+      {
+        productName: addForm.productName,
+        sku: addForm.sku,
+        batch: addForm.batch,
+        barcode: addForm.barcode || "",
+        qty: addForm.qty,
+        formula: addFormula || "",
+        isNew: true,
+      },
+    ];
 
     // OPTIMISTIC: Add to history UI immediately — don't wait for server
     const newEntry: HistoryEntry = {
@@ -669,13 +777,26 @@ export default function HistoryPage() {
     setCache(ck, [newEntry, ...history]);
 
     // Reset form immediately
-    setAddForm({ location: addForm.location, productName: "", sku: "", batch: "", barcode: "", qty: 0 });
+    setAddForm({
+      location: addForm.location,
+      productName: "",
+      sku: "",
+      batch: "",
+      barcode: "",
+      qty: 0,
+    });
     setAddFormula("");
     setShowAddForm(false);
     toast.success("Produk berhasil ditambahkan!");
 
     // Background sync to server
-    saveStockOpnameApi(sessionId, user?.email || "", addForm.location.trim(), timestamp, items)
+    saveStockOpnameApi(
+      sessionId,
+      user?.email || "",
+      addForm.location.trim(),
+      timestamp,
+      items,
+    )
       .then((result) => {
         if (result.success) {
           // Refresh history to get real rowId
@@ -704,13 +825,20 @@ export default function HistoryPage() {
       <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center gap-3 mb-4">
           <h1 className="text-xl font-bold text-text-primary">Riwayat</h1>
-          <span className="px-2.5 py-0.5 bg-primary text-white text-xs font-bold rounded-full">{history.length}</span>
+          <span className="px-2.5 py-0.5 bg-primary text-white text-xs font-bold rounded-full">
+            {history.length}
+          </span>
         </div>
 
         {/* ── Filter Tabs ── */}
         <div className="flex gap-2 overflow-x-auto hide-scrollbar">
           {(["all", "today", "week", "month"] as const).map((tab) => {
-            const labels = { all: "Semua", today: "Hari Ini", week: "Minggu Ini", month: "Bulan Ini" };
+            const labels = {
+              all: "Semua",
+              today: "Hari Ini",
+              week: "Minggu Ini",
+              month: "Bulan Ini",
+            };
             return (
               <button
                 key={tab}
@@ -754,8 +882,15 @@ export default function HistoryPage() {
         {/* ── Search Box ── */}
         <div className="mb-3">
           <div className="relative">
-            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+            <svg
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
             </svg>
             <input
               ref={searchRef}
@@ -768,7 +903,10 @@ export default function HistoryPage() {
             {searchQuery && (
               <button
                 type="button"
-                onClick={() => { setSearchQuery(""); searchRef.current?.focus(); }}
+                onClick={() => {
+                  setSearchQuery("");
+                  searchRef.current?.focus();
+                }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary text-lg leading-none"
               >
                 ×
@@ -789,14 +927,24 @@ export default function HistoryPage() {
                   : "bg-white text-text-secondary border-border hover:border-primary"
               }`}
             >
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                className="w-3 h-3"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
                 <circle cx="12" cy="10" r="3" />
               </svg>
               Semua
-              <span className={`text-[10px] font-bold px-1 py-0.5 rounded-full ${
-                selectedLocations.size === 0 ? "bg-white/20" : "bg-gray-100"
-              }`}>{history.length}</span>
+              <span
+                className={`text-[10px] font-bold px-1 py-0.5 rounded-full ${
+                  selectedLocations.size === 0 ? "bg-white/20" : "bg-gray-100"
+                }`}
+              >
+                {history.length}
+              </span>
             </button>
             {uniqueLocations.map(({ location: loc, count }) => {
               const isActive = selectedLocations.has(loc);
@@ -812,9 +960,13 @@ export default function HistoryPage() {
                   }`}
                 >
                   {loc}
-                  <span className={`text-[10px] font-bold px-1 py-0.5 rounded-full ${
-                    isActive ? "bg-white/20" : "bg-gray-100"
-                  }`}>{count}</span>
+                  <span
+                    className={`text-[10px] font-bold px-1 py-0.5 rounded-full ${
+                      isActive ? "bg-white/20" : "bg-gray-100"
+                    }`}
+                  >
+                    {count}
+                  </span>
                 </button>
               );
             })}
@@ -825,13 +977,24 @@ export default function HistoryPage() {
         <div className="mb-3 flex items-center gap-2 flex-wrap">
           {/* Date filter */}
           <div className="flex items-center gap-1.5 bg-white rounded-lg px-2.5 py-1.5 shadow-card border border-border">
-            <svg className="w-4 h-4 text-text-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+            <svg
+              className="w-4 h-4 text-text-secondary"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <path d="M16 2v4M8 2v4M3 10h18" />
             </svg>
             <input
               type="date"
               value={filterDate}
-              onChange={(e) => { setFilterDate(e.target.value); setFilterDateEnd(""); setActiveTab("all"); }}
+              onChange={(e) => {
+                setFilterDate(e.target.value);
+                setFilterDateEnd("");
+                setActiveTab("all");
+              }}
               className="text-xs focus:outline-none bg-transparent"
             />
           </div>
@@ -864,7 +1027,9 @@ export default function HistoryPage() {
         {/* ── Add Product Form ── */}
         {showAddForm && (
           <div className="bg-white border border-border rounded-2xl p-4 mb-4 shadow-card">
-            <h3 className="text-sm font-semibold mb-3 text-text-primary">Tambah Produk Baru</h3>
+            <h3 className="text-sm font-semibold mb-3 text-text-primary">
+              Tambah Produk Baru
+            </h3>
 
             {scanningBarcode && (
               <div className="mb-3 flex items-center justify-center gap-2 text-xs text-text-secondary">
@@ -875,14 +1040,21 @@ export default function HistoryPage() {
             <div className="space-y-2.5">
               {/* Lokasi */}
               <div className="relative">
-                <label className="block text-xs font-medium text-text-primary mb-1">Lokasi</label>
+                <label className="block text-xs font-medium text-text-primary mb-1">
+                  Lokasi
+                </label>
                 <div className="relative">
                   <input
                     type="text"
                     value={addForm.location}
                     onChange={(e) => handleLocationSearch(e.target.value)}
-                    onFocus={() => { if (locationResults.length > 0) setShowLocationSuggestions(true); }}
-                    onBlur={() => { setTimeout(() => setShowLocationSuggestions(false), 200); }}
+                    onFocus={() => {
+                      if (locationResults.length > 0)
+                        setShowLocationSuggestions(true);
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => setShowLocationSuggestions(false), 200);
+                    }}
                     className="w-full pl-3 pr-12 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                     placeholder="Ketik atau scan lokasi..."
                     autoComplete="off"
@@ -893,7 +1065,13 @@ export default function HistoryPage() {
                     className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20"
                     title="Scan barcode lokasi"
                   >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
                       <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
                       <path d="M7 12h10" />
                     </svg>
@@ -909,9 +1087,13 @@ export default function HistoryPage() {
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleSelectLocation(loc)}
                       >
-                        <p className="font-medium text-text-primary text-xs">{loc.locationCode}</p>
+                        <p className="font-medium text-text-primary text-xs">
+                          {loc.locationCode}
+                        </p>
                         {loc.productCount > 0 && (
-                          <p className="text-[10px] text-text-secondary">{loc.productCount} produk</p>
+                          <p className="text-[10px] text-text-secondary">
+                            {loc.productCount} produk
+                          </p>
                         )}
                       </button>
                     ))}
@@ -921,15 +1103,22 @@ export default function HistoryPage() {
 
               {/* Barcode */}
               <div>
-                <label className="block text-xs font-medium text-text-primary mb-1">Barcode</label>
+                <label className="block text-xs font-medium text-text-primary mb-1">
+                  Barcode
+                </label>
                 <div className="relative">
                   <input
                     type="text"
                     value={addForm.barcode}
-                    onChange={(e) => setAddForm({ ...addForm, barcode: e.target.value.trim() })}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, barcode: e.target.value.trim() })
+                    }
                     onKeyDown={(e) => {
                       const bv = String(addForm.barcode || "").trim();
-                      if (e.key === "Enter" && bv) { e.preventDefault(); handleAddBarcodeScan(bv); }
+                      if (e.key === "Enter" && bv) {
+                        e.preventDefault();
+                        handleAddBarcodeScan(bv);
+                      }
                     }}
                     className="w-full pl-3 pr-20 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-gray-50"
                     placeholder="Scan / ketik barcode"
@@ -938,12 +1127,26 @@ export default function HistoryPage() {
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => { const bv = String(addForm.barcode || "").trim(); if (bv) handleAddBarcodeScan(bv); }}
-                      disabled={!String(addForm.barcode || "").trim() || scanningBarcode}
+                      onClick={() => {
+                        const bv = String(addForm.barcode || "").trim();
+                        if (bv) handleAddBarcodeScan(bv);
+                      }}
+                      disabled={
+                        !String(addForm.barcode || "").trim() || scanningBarcode
+                      }
                       className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 disabled:opacity-50"
                       title="Cari barcode"
                     >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+                      <svg
+                        className="w-4 h-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="M21 21l-4.35-4.35" />
+                      </svg>
                     </button>
                     <button
                       type="button"
@@ -952,7 +1155,13 @@ export default function HistoryPage() {
                       className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 disabled:opacity-50"
                       title="Scan barcode"
                     >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg
+                        className="w-4 h-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
                         <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
                         <path d="M7 12h10" />
                       </svg>
@@ -963,13 +1172,20 @@ export default function HistoryPage() {
 
               {/* Nama Produk + Search */}
               <div className="relative">
-                <label className="block text-xs font-medium text-text-primary mb-1">Nama Produk</label>
+                <label className="block text-xs font-medium text-text-primary mb-1">
+                  Nama Produk
+                </label>
                 <input
                   type="text"
                   value={addForm.productName}
                   onChange={(e) => handleAddProductSearch(e.target.value)}
-                  onFocus={() => { if (addSearchResults.length > 0) setShowAddSuggestions(true); }}
-                  onBlur={() => { setTimeout(() => setShowAddSuggestions(false), 200); }}
+                  onFocus={() => {
+                    if (addSearchResults.length > 0)
+                      setShowAddSuggestions(true);
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => setShowAddSuggestions(false), 200);
+                  }}
                   className="w-full px-3 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                   placeholder="Ketik min. 2 huruf untuk cari produk..."
                   autoComplete="off"
@@ -984,8 +1200,12 @@ export default function HistoryPage() {
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleAddSelectSuggestion(p)}
                       >
-                        <p className="font-medium text-text-primary text-xs">{p.productName}</p>
-                        <p className="text-[10px] text-text-secondary">SKU: {p.sku} | Batch: {p.batch}</p>
+                        <p className="font-medium text-text-primary text-xs">
+                          {p.productName}
+                        </p>
+                        <p className="text-[10px] text-text-secondary">
+                          SKU: {p.sku} | Batch: {p.batch}
+                        </p>
                       </button>
                     ))}
                   </div>
@@ -994,27 +1214,58 @@ export default function HistoryPage() {
 
               {/* SKU */}
               <div>
-                <label className="block text-xs font-medium text-text-primary mb-1">SKU</label>
-                <input type="text" value={addForm.sku} onChange={(e) => setAddForm({ ...addForm, sku: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm" placeholder="Masukkan SKU" />
+                <label className="block text-xs font-medium text-text-primary mb-1">
+                  SKU
+                </label>
+                <input
+                  type="text"
+                  value={addForm.sku}
+                  onChange={(e) =>
+                    setAddForm({ ...addForm, sku: e.target.value })
+                  }
+                  className="w-full px-3 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                  placeholder="Masukkan SKU"
+                />
               </div>
 
               {/* Batch */}
               <div ref={addBatchDropdownRef} className="relative">
-                <label className="block text-xs font-medium text-text-primary mb-1">Batch</label>
+                <label className="block text-xs font-medium text-text-primary mb-1">
+                  Batch
+                </label>
                 <div className="relative">
-                  <input type="text" value={addForm.batch}
-                    onChange={(e) => { setAddForm({ ...addForm, batch: e.target.value }); setShowAddBatchDropdown(true); }}
-                    onFocus={() => { if (addForm.sku.trim()) setShowAddBatchDropdown(true); }}
+                  <input
+                    type="text"
+                    value={addForm.batch}
+                    onChange={(e) => {
+                      setAddForm({ ...addForm, batch: e.target.value });
+                      setShowAddBatchDropdown(true);
+                    }}
+                    onFocus={() => {
+                      if (addForm.sku.trim()) setShowAddBatchDropdown(true);
+                    }}
                     className="w-full px-3 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm pr-8"
-                    placeholder={addBatchesForSku.length > 0 ? "Pilih atau ketik batch baru..." : "Masukkan batch"} />
+                    placeholder={
+                      addBatchesForSku.length > 0
+                        ? "Pilih atau ketik batch baru..."
+                        : "Masukkan batch"
+                    }
+                  />
                   {addBatchesForSku.length > 0 && (
                     <button
                       type="button"
-                      onClick={() => setShowAddBatchDropdown(!showAddBatchDropdown)}
+                      onClick={() =>
+                        setShowAddBatchDropdown(!showAddBatchDropdown)
+                      }
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary hover:text-primary p-0.5"
                     >
-                      <svg className={`w-4 h-4 transition-transform ${showAddBatchDropdown ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <svg
+                        className={`w-4 h-4 transition-transform ${showAddBatchDropdown ? "rotate-180" : ""}`}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                      >
                         <path d="M6 9l6 6 6-6" />
                       </svg>
                     </button>
@@ -1028,9 +1279,14 @@ export default function HistoryPage() {
                           <button
                             key={b}
                             type="button"
-                            onClick={() => { setAddForm({ ...addForm, batch: b }); setShowAddBatchDropdown(false); }}
+                            onClick={() => {
+                              setAddForm({ ...addForm, batch: b });
+                              setShowAddBatchDropdown(false);
+                            }}
                             className={`w-full text-left px-3 py-2 text-sm hover:bg-primary-pale/50 transition border-b border-border last:border-b-0 ${
-                              addForm.batch === b ? "bg-primary/10 text-primary font-semibold" : "text-text-primary"
+                              addForm.batch === b
+                                ? "bg-primary/10 text-primary font-semibold"
+                                : "text-text-primary"
                             }`}
                           >
                             {b}
@@ -1039,30 +1295,48 @@ export default function HistoryPage() {
                       </div>
                     ) : addForm.batch.trim() ? (
                       <div className="px-3 py-2 text-xs text-text-secondary">
-                        <span className="text-primary font-medium">&quot;{addForm.batch.trim()}&quot;</span> — batch baru
+                        <span className="text-primary font-medium">
+                          &quot;{addForm.batch.trim()}&quot;
+                        </span>{" "}
+                        — batch baru
                       </div>
                     ) : (
-                      <div className="px-3 py-2 text-xs text-text-secondary">Tidak ada batch untuk SKU ini</div>
-                    )}
-                    {addForm.batch.trim() && !addBatchesForSku.includes(addForm.batch.trim()) && addFilteredBatches.length > 0 && (
-                      <div className="border-t border-border px-3 py-2 bg-gray-50">
-                        <button
-                          type="button"
-                          onClick={() => setShowAddBatchDropdown(false)}
-                          className="text-xs text-primary font-medium hover:underline"
-                        >
-                          + Gunakan &quot;{addForm.batch.trim()}&quot; sebagai batch baru
-                        </button>
+                      <div className="px-3 py-2 text-xs text-text-secondary">
+                        Tidak ada batch untuk SKU ini
                       </div>
                     )}
+                    {addForm.batch.trim() &&
+                      !addBatchesForSku.includes(addForm.batch.trim()) &&
+                      addFilteredBatches.length > 0 && (
+                        <div className="border-t border-border px-3 py-2 bg-gray-50">
+                          <button
+                            type="button"
+                            onClick={() => setShowAddBatchDropdown(false)}
+                            className="text-xs text-primary font-medium hover:underline"
+                          >
+                            + Gunakan &quot;{addForm.batch.trim()}&quot; sebagai
+                            batch baru
+                          </button>
+                        </div>
+                      )}
                   </div>
                 )}
               </div>
 
               {/* Qty */}
               <div>
-                <label className="block text-xs font-medium text-text-primary mb-1">Quantity <span className="text-[10px] text-text-secondary font-normal">(bisa pakai rumus: 10+5, 10x10+5)</span></label>
-                <QtyInput value={addForm.qty} onChange={(v) => setAddForm((prev) => ({ ...prev, qty: v }))} onExprCommit={(expr) => setAddFormula(expr)} wide />
+                <label className="block text-xs font-medium text-text-primary mb-1">
+                  Quantity{" "}
+                  <span className="text-[10px] text-text-secondary font-normal">
+                    (bisa pakai rumus: 10+5, 10x10+5)
+                  </span>
+                </label>
+                <QtyInput
+                  value={addForm.qty}
+                  onChange={(v) => setAddForm((prev) => ({ ...prev, qty: v }))}
+                  onExprCommit={(expr) => setAddFormula(expr)}
+                  wide
+                />
               </div>
 
               <button
@@ -1078,10 +1352,20 @@ export default function HistoryPage() {
               <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
                 <div className="bg-white w-full max-w-md rounded-2xl p-4 shadow-2xl">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-text-primary text-sm">Scan Barcode Produk</h3>
-                    <button onClick={() => setShowBarcodeScanner(false)} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+                    <h3 className="font-semibold text-text-primary text-sm">
+                      Scan Barcode Produk
+                    </h3>
+                    <button
+                      onClick={() => setShowBarcodeScanner(false)}
+                      className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500"
+                    >
+                      ✕
+                    </button>
                   </div>
-                  <BarcodeScanner onScan={(code) => handleAddBarcodeScan(code)} active={showBarcodeScanner} />
+                  <BarcodeScanner
+                    onScan={(code) => handleAddBarcodeScan(code)}
+                    active={showBarcodeScanner}
+                  />
                 </div>
               </div>
             )}
@@ -1089,10 +1373,20 @@ export default function HistoryPage() {
               <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
                 <div className="bg-white w-full max-w-md rounded-2xl p-4 shadow-2xl">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-text-primary text-sm">Scan Barcode Lokasi</h3>
-                    <button onClick={() => setShowLocationScanner(false)} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+                    <h3 className="font-semibold text-text-primary text-sm">
+                      Scan Barcode Lokasi
+                    </h3>
+                    <button
+                      onClick={() => setShowLocationScanner(false)}
+                      className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500"
+                    >
+                      ✕
+                    </button>
                   </div>
-                  <BarcodeScanner onScan={(code) => handleLocationBarcodeScan(code)} active={showLocationScanner} />
+                  <BarcodeScanner
+                    onScan={(code) => handleLocationBarcodeScan(code)}
+                    active={showLocationScanner}
+                  />
                 </div>
               </div>
             )}
@@ -1102,14 +1396,26 @@ export default function HistoryPage() {
         {/* ── Data Cards ── */}
         {filteredHistory.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center shadow-card">
-            <svg className="w-12 h-12 mx-auto mb-3 text-text-secondary/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <svg
+              className="w-12 h-12 mx-auto mb-3 text-text-secondary/40"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
               <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
             <p className="text-text-secondary text-sm">
-              {hasActiveFilters ? "Tidak ada hasil yang cocok" : "Belum ada riwayat"}
+              {hasActiveFilters
+                ? "Tidak ada hasil yang cocok"
+                : "Belum ada riwayat"}
             </p>
             {hasActiveFilters && (
-              <button type="button" onClick={clearAllFilters} className="mt-2 text-sm text-primary font-medium hover:underline">
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="mt-2 text-sm text-primary font-medium hover:underline"
+              >
                 Reset Filter
               </button>
             )}
@@ -1121,12 +1427,22 @@ export default function HistoryPage() {
                 {/* Location Group Header */}
                 <div className="flex items-center gap-2.5 mb-2.5">
                   <div className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-light text-white px-4 py-2 rounded-xl shadow-md">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
                       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
                       <circle cx="12" cy="10" r="3" />
                     </svg>
-                    <span className="text-sm font-bold tracking-wide">{locationName}</span>
-                    <span className="bg-white/25 text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">{entries.length}</span>
+                    <span className="text-sm font-bold tracking-wide">
+                      {locationName}
+                    </span>
+                    <span className="bg-white/25 text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                      {entries.length}
+                    </span>
                   </div>
                   <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
                 </div>
@@ -1134,91 +1450,187 @@ export default function HistoryPage() {
                 {/* Entries for this location */}
                 <div className="space-y-2.5">
                   {entries.map((entry) => (
-                    <div key={entry.rowId} className="bg-white rounded-xl shadow-card border border-border border-l-[3px] border-l-primary p-3.5">
+                    <div
+                      key={entry.rowId}
+                      className="bg-white rounded-xl shadow-card border border-border border-l-[3px] border-l-primary p-3.5"
+                    >
                       {/* Row 1: Product Name + Actions */}
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <p className="text-[13px] font-semibold text-text-primary leading-snug flex-1">
                           {entry.productName}
-                          {entry.edited === "Yes" && <span className="ml-1 text-[10px] text-accent-yellow" title={`Diedit: ${entry.editTimestamp}`}>✏️</span>}
+                          {entry.edited === "Yes" && (
+                            <span
+                              className="ml-1 text-[10px] text-accent-yellow"
+                              title={`Diedit: ${entry.editTimestamp}`}
+                            >
+                              ✏️
+                            </span>
+                          )}
                         </p>
                         <div className="flex items-center gap-1 flex-shrink-0">
-                          <button onClick={() => handleEdit(entry)} className="px-2.5 py-1 bg-primary/10 text-primary text-[10px] rounded-lg font-semibold hover:bg-primary/20 transition">Edit</button>
-                          <button onClick={() => handleDelete(entry)} className="px-2.5 py-1 bg-accent-red/10 text-accent-red text-[10px] rounded-lg font-semibold hover:bg-accent-red/20 transition">Hapus</button>
+                          <button
+                            onClick={() => handleEdit(entry)}
+                            className="px-2.5 py-1 bg-primary/10 text-primary text-[10px] rounded-lg font-semibold hover:bg-primary/20 transition"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(entry)}
+                            className="px-2.5 py-1 bg-accent-red/10 text-accent-red text-[10px] rounded-lg font-semibold hover:bg-accent-red/20 transition"
+                          >
+                            Hapus
+                          </button>
                         </div>
                       </div>
                       {/* Row 2: Batch (inline editable) + SKU */}
                       <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <div className="flex items-center gap-1 min-w-0 relative" ref={editingBatch === entry.rowId ? inlineBatchDropdownRef : undefined}>
-                          <span className="text-[11px] text-text-secondary font-medium">Batch:</span>
+                        <div
+                          className="flex items-center gap-1 min-w-0 relative"
+                          ref={
+                            editingBatch === entry.rowId
+                              ? inlineBatchDropdownRef
+                              : undefined
+                          }
+                        >
+                          <span className="text-[11px] text-text-secondary font-medium">
+                            Batch:
+                          </span>
                           {editingBatch === entry.rowId ? (
                             <div className="relative">
                               <input
-                                type="text" value={editingBatchValue}
-                                onChange={(e) => { setEditingBatchValue(e.target.value); setShowInlineBatchDropdown(true); }}
-                                onKeyDown={(e) => { if (e.key === "Enter") saveInlineBatch(entry); if (e.key === "Escape") { setEditingBatch(null); setShowInlineBatchDropdown(false); } }}
-                                autoFocus className="w-28 px-1.5 py-0.5 border border-primary rounded-lg text-[11px] focus:outline-none focus:ring-1 focus:ring-primary pr-5"
+                                type="text"
+                                value={editingBatchValue}
+                                onChange={(e) => {
+                                  setEditingBatchValue(e.target.value);
+                                  setShowInlineBatchDropdown(true);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") saveInlineBatch(entry);
+                                  if (e.key === "Escape") {
+                                    setEditingBatch(null);
+                                    setShowInlineBatchDropdown(false);
+                                  }
+                                }}
+                                autoFocus
+                                className="w-28 px-1.5 py-0.5 border border-primary rounded-lg text-[11px] focus:outline-none focus:ring-1 focus:ring-primary pr-5"
                               />
                               {inlineBatchesForSku.length > 0 && (
                                 <button
                                   type="button"
-                                  onClick={() => setShowInlineBatchDropdown(!showInlineBatchDropdown)}
+                                  onClick={() =>
+                                    setShowInlineBatchDropdown(
+                                      !showInlineBatchDropdown,
+                                    )
+                                  }
                                   className="absolute right-0.5 top-1/2 -translate-y-1/2 text-text-secondary hover:text-primary p-0.5"
                                 >
-                                  <svg className={`w-3 h-3 transition-transform ${showInlineBatchDropdown ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                  <svg
+                                    className={`w-3 h-3 transition-transform ${showInlineBatchDropdown ? "rotate-180" : ""}`}
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.5"
+                                  >
                                     <path d="M6 9l6 6 6-6" />
                                   </svg>
                                 </button>
                               )}
-                              {showInlineBatchDropdown && inlineBatchesForSku.length > 0 && (
-                                <div className="absolute z-30 left-0 mt-1 w-36 bg-white border border-border rounded-lg shadow-lg overflow-hidden">
-                                  <div className="max-h-32 overflow-y-auto">
-                                    {inlineFilteredBatches.map((b) => (
-                                      <button
-                                        key={b}
-                                        type="button"
-                                        onMouseDown={(e) => e.preventDefault()}
-                                        onClick={() => { setEditingBatchValue(b); setShowInlineBatchDropdown(false); }}
-                                        className={`w-full text-left px-2 py-1.5 text-[11px] hover:bg-primary-pale/50 transition border-b border-border last:border-b-0 ${
-                                          editingBatchValue === b ? "bg-primary/10 text-primary font-semibold" : "text-text-primary"
-                                        }`}
-                                      >
-                                        {b}
-                                      </button>
-                                    ))}
-                                  </div>
-                                  {editingBatchValue.trim() && !inlineBatchesForSku.includes(editingBatchValue.trim()) && (
-                                    <div className="border-t border-border px-2 py-1.5 bg-gray-50">
-                                      <button
-                                        type="button"
-                                        onMouseDown={(e) => e.preventDefault()}
-                                        onClick={() => setShowInlineBatchDropdown(false)}
-                                        className="text-[10px] text-primary font-medium hover:underline"
-                                      >
-                                        + &quot;{editingBatchValue.trim()}&quot; batch baru
-                                      </button>
+                              {showInlineBatchDropdown &&
+                                inlineBatchesForSku.length > 0 && (
+                                  <div className="absolute z-30 left-0 mt-1 w-36 bg-white border border-border rounded-lg shadow-lg overflow-hidden">
+                                    <div className="max-h-32 overflow-y-auto">
+                                      {inlineFilteredBatches.map((b) => (
+                                        <button
+                                          key={b}
+                                          type="button"
+                                          onMouseDown={(e) =>
+                                            e.preventDefault()
+                                          }
+                                          onClick={() => {
+                                            setEditingBatchValue(b);
+                                            setShowInlineBatchDropdown(false);
+                                          }}
+                                          className={`w-full text-left px-2 py-1.5 text-[11px] hover:bg-primary-pale/50 transition border-b border-border last:border-b-0 ${
+                                            editingBatchValue === b
+                                              ? "bg-primary/10 text-primary font-semibold"
+                                              : "text-text-primary"
+                                          }`}
+                                        >
+                                          {b}
+                                        </button>
+                                      ))}
                                     </div>
-                                  )}
-                                </div>
-                              )}
+                                    {editingBatchValue.trim() &&
+                                      !inlineBatchesForSku.includes(
+                                        editingBatchValue.trim(),
+                                      ) && (
+                                        <div className="border-t border-border px-2 py-1.5 bg-gray-50">
+                                          <button
+                                            type="button"
+                                            onMouseDown={(e) =>
+                                              e.preventDefault()
+                                            }
+                                            onClick={() =>
+                                              setShowInlineBatchDropdown(false)
+                                            }
+                                            className="text-[10px] text-primary font-medium hover:underline"
+                                          >
+                                            + &quot;{editingBatchValue.trim()}
+                                            &quot; batch baru
+                                          </button>
+                                        </div>
+                                      )}
+                                  </div>
+                                )}
                             </div>
                           ) : (
-                            <span className="text-[11px] text-text-primary font-medium cursor-pointer hover:text-primary transition" onClick={() => startInlineBatchEdit(entry)}>
-                              {entry.batch} <span className="text-[9px] opacity-50">✏️</span>
+                            <span
+                              className="text-[11px] text-text-primary font-medium cursor-pointer hover:text-primary transition"
+                              onClick={() => startInlineBatchEdit(entry)}
+                            >
+                              {entry.batch}{" "}
+                              <span className="text-[9px] opacity-50">✏️</span>
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] text-text-secondary">SKU: <span className="font-medium text-text-primary">{entry.sku}</span></span>
+                        <span className="text-[10px] text-text-secondary">
+                          SKU:{" "}
+                          <span className="font-medium text-text-primary">
+                            {entry.sku}
+                          </span>
+                        </span>
                       </div>
                       {/* Row 3: Qty (prominent) + Date + Operator */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] text-text-secondary font-medium">Qty:</span>
+                          <span className="text-[11px] text-text-secondary font-medium">
+                            Qty:
+                          </span>
                           {editingQty === entry.rowId ? (
                             <div className="flex flex-col items-start">
-                              <QtyInput wide value={editingQtyValue} onChange={(v) => setEditingQtyValue(v)} onExprCommit={(expr) => setEditingQtyFormula(expr)} />
+                              <QtyInput
+                                wide
+                                value={editingQtyValue}
+                                onChange={(v) => setEditingQtyValue(v)}
+                                onExprCommit={(expr) =>
+                                  setEditingQtyFormula(expr)
+                                }
+                              />
                               <div className="flex gap-1 mt-1">
-                                <button type="button" onClick={() => saveInlineQty(entry)} className="px-2.5 py-0.5 bg-primary text-white text-[10px] rounded-lg font-semibold">💾</button>
-                                <button type="button" onClick={() => setEditingQty(null)} className="px-2.5 py-0.5 bg-gray-200 text-text-primary text-[10px] rounded-lg font-semibold">✕</button>
+                                <button
+                                  type="button"
+                                  onClick={() => saveInlineQty(entry)}
+                                  className="px-2.5 py-0.5 bg-primary text-white text-[10px] rounded-lg font-semibold"
+                                >
+                                  💾
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingQty(null)}
+                                  className="px-2.5 py-0.5 bg-gray-200 text-text-primary text-[10px] rounded-lg font-semibold"
+                                >
+                                  ✕
+                                </button>
                               </div>
                             </div>
                           ) : (
@@ -1227,9 +1639,18 @@ export default function HistoryPage() {
                                 {entry.qty.toLocaleString()}
                               </span>
                               {entry.formula && (
-                                <span className="text-[10px] text-text-secondary bg-gray-100 px-1.5 py-0.5 rounded-md">🧮 {entry.formula}</span>
+                                <span className="text-[10px] text-text-secondary bg-gray-100 px-1.5 py-0.5 rounded-md">
+                                  🧮 {entry.formula}
+                                </span>
                               )}
-                              <button type="button" onClick={() => startInlineQtyEdit(entry)} className="text-[10px] text-text-secondary hover:text-primary opacity-50" title="Edit qty">✏️</button>
+                              <button
+                                type="button"
+                                onClick={() => startInlineQtyEdit(entry)}
+                                className="text-[10px] text-text-secondary hover:text-primary opacity-50"
+                                title="Edit qty"
+                              >
+                                ✏️
+                              </button>
                             </span>
                           )}
                         </div>
@@ -1239,9 +1660,25 @@ export default function HistoryPage() {
                               const d = parseTimestamp(entry.timestamp);
                               if (!d) return entry.timestamp;
                               const dd = String(d.getDate()).padStart(2, "0");
-                              const mm = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"][d.getMonth()];
+                              const mm = [
+                                "Jan",
+                                "Feb",
+                                "Mar",
+                                "Apr",
+                                "Mei",
+                                "Jun",
+                                "Jul",
+                                "Agu",
+                                "Sep",
+                                "Okt",
+                                "Nov",
+                                "Des",
+                              ][d.getMonth()];
                               const hh = String(d.getHours()).padStart(2, "0");
-                              const mi = String(d.getMinutes()).padStart(2, "0");
+                              const mi = String(d.getMinutes()).padStart(
+                                2,
+                                "0",
+                              );
                               return `${dd} ${mm} ${hh}:${mi}`;
                             })()}
                           </span>
@@ -1254,7 +1691,9 @@ export default function HistoryPage() {
                       </div>
                       {/* Formula tooltip */}
                       {showFormula === entry.rowId && entry.formula && (
-                        <div className="mt-2 bg-gray-800 text-white text-[10px] px-2.5 py-1 rounded-lg inline-block">{entry.formula}</div>
+                        <div className="mt-2 bg-gray-800 text-white text-[10px] px-2.5 py-1 rounded-lg inline-block">
+                          {entry.formula}
+                        </div>
                       )}
                     </div>
                   ))}
@@ -1266,7 +1705,13 @@ export default function HistoryPage() {
       </div>
 
       {selectedEntry && (
-        <EditModal entry={selectedEntry} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveEdit} allProducts={allProductsRef.current || undefined} />
+        <EditModal
+          entry={selectedEntry}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSave={handleSaveEdit}
+          allProducts={allProductsRef.current || undefined}
+        />
       )}
 
       <BottomNav activePage="history" />
