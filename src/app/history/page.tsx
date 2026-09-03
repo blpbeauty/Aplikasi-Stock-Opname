@@ -652,20 +652,29 @@ export default function HistoryPage() {
                         {/* Qty with formula */}
                         <div className="flex items-center gap-1.5">
                           {editingQty === entry.rowId ? (
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="number"
+                            <div className="flex flex-col items-end gap-1">
+                              <QtyInput
+                                wide
                                 value={editingQtyValue}
-                                onChange={(e) => setEditingQtyValue(Number(e.target.value))}
-                                className="w-16 px-1.5 py-0.5 bg-white border border-primary rounded text-xs font-bold text-center"
-                                autoFocus
+                                onChange={(v) => setEditingQtyValue(v)}
+                                onExprCommit={(expr) => setEditingQtyFormula(expr)}
                               />
-                              <button
-                                onClick={() => saveInlineQty(entry)}
-                                className="px-2 py-0.5 bg-primary text-white text-[10px] font-bold rounded"
-                              >
-                                OK
-                              </button>
+                              <div className="flex gap-1 mt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => saveInlineQty(entry)}
+                                  className="px-3 py-1 bg-primary text-white text-[10px] font-bold rounded-lg shadow-xs"
+                                >
+                                  Simpan
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingQty(null)}
+                                  className="px-2.5 py-1 bg-surface-warm text-text-primary text-[10px] font-bold rounded-lg"
+                                >
+                                  Batal
+                                </button>
+                              </div>
                             </div>
                           ) : (
                             <button
@@ -674,19 +683,30 @@ export default function HistoryPage() {
                                 setEditingQtyValue(entry.qty);
                                 setEditingQtyFormula(entry.formula || "");
                               }}
-                              className="flex items-center gap-1 font-black text-xs text-primary bg-primary-pale px-2 py-0.5 rounded-lg border border-primary/20"
+                              className="flex items-center gap-1 font-black text-xs text-primary bg-primary-pale px-2.5 py-1 rounded-lg border border-primary/20 hover:bg-primary/20 transition active:scale-95"
+                              title="Klik untuk edit Qty"
                             >
                               <span>{entry.qty} pcs</span>
-                              {entry.formula && <span className="text-[9px] text-text-secondary">🧮</span>}
+                              <span className="text-[10px] opacity-70">✏️</span>
                             </button>
                           )}
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between text-[9px] text-text-secondary mt-1">
+                      {/* Explicit Formula Breakdown (Perkalian & Penjumlahan) */}
+                      {entry.formula && (
+                        <div className="mt-2 flex items-center gap-1.5 px-2.5 py-1 bg-surface-warm border border-border-subtle rounded-lg text-primary">
+                          <span className="text-xs">🧮</span>
+                          <span className="text-[11px] font-bold font-mono tracking-tight">
+                            Rumus: {entry.formula}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between text-[9px] text-text-secondary mt-1.5">
                         <span>{formatDisplayTime(entry.timestamp)}</span>
                         {entry.edited === "Yes" && (
-                          <span className="text-accent-yellow font-semibold">Telah diedit</span>
+                          <span className="text-accent-yellow font-bold">Telah diedit</span>
                         )}
                       </div>
                     </div>
