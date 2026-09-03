@@ -44,7 +44,7 @@ export default function EditModal({
   const [scanningBarcode, setScanningBarcode] = useState(false);
   const [showBatchDropdown, setShowBatchDropdown] = useState(false);
   const batchDropdownRef = useRef<HTMLDivElement>(null);
-  const [locSuggestions, setLocSuggestions] = useState<{locationCode: string; productCount: number}[]>([]);
+  const [locSuggestions, setLocSuggestions] = useState<{ locationCode: string; productCount: number }[]>([]);
   const [showLocSuggestions, setShowLocSuggestions] = useState(false);
   const [locSearchTimer, setLocSearchTimer] = useState<NodeJS.Timeout | null>(null);
   const locRef = useRef<HTMLDivElement>(null);
@@ -66,7 +66,6 @@ export default function EditModal({
   const filteredBatches = useMemo(() => {
     const q = batch.trim().toLowerCase();
     if (!q) return batchesForSku;
-    // If current value exactly matches an existing batch, show ALL batches so user can switch
     if (batchesForSku.some((b) => b.toLowerCase() === q)) return batchesForSku;
     return batchesForSku.filter((b) => b.toLowerCase().includes(q));
   }, [batch, batchesForSku]);
@@ -177,69 +176,83 @@ export default function EditModal({
   const handleSave = () => {
     if (quantity < 0) return;
     const locChanged = location.trim().toUpperCase() !== entry.location.trim().toUpperCase();
-    onSave({ newQty: quantity, productName, sku, batch, formula, location: locChanged ? location.trim().toUpperCase() : undefined });
+    onSave({
+      newQty: quantity,
+      productName,
+      sku,
+      batch,
+      formula,
+      location: locChanged ? location.trim().toUpperCase() : undefined,
+    });
   };
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
       onClick={onClose}
     >
-      <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-xl font-semibold text-text-primary mb-4">
-          Edit Entry
-        </h2>
+      <div
+        className="bg-white rounded-t-3xl sm:rounded-2xl p-5 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-border"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-3 sm:hidden" />
 
+        <div className="flex items-center justify-between pb-3 mb-3 border-b border-border">
+          <h2 className="text-base font-bold text-text-primary">Edit Entri Opname</h2>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-surface-warm hover:bg-gray-200 text-text-secondary flex items-center justify-center text-sm transition active:scale-95"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Lokasi */}
         <div ref={locRef} className="mb-3 relative">
-          <label className="block text-sm font-semibold text-text-primary mb-1">Lokasi:</label>
+          <label className="block text-xs font-semibold text-text-primary mb-1">Lokasi:</label>
           <input
             type="text"
             value={location}
             onChange={(e) => handleLocSearch(e.target.value)}
-            onFocus={() => { if (locSuggestions.length > 0) setShowLocSuggestions(true); }}
-            className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary uppercase"
+            onFocus={() => {
+              if (locSuggestions.length > 0) setShowLocSuggestions(true);
+            }}
+            className="w-full px-3 py-2.5 bg-surface-warm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary uppercase text-sm font-semibold"
             placeholder="Kode lokasi"
           />
           {location.trim().toUpperCase() !== entry.location.trim().toUpperCase() && (
-            <p className="text-xs text-amber-600 mt-1">⚠️ Lokasi berubah: {entry.location} → {location.trim().toUpperCase()}</p>
+            <p className="text-[11px] text-accent-yellow mt-1 font-medium">
+              ⚠️ Lokasi berubah: {entry.location} → {location.trim().toUpperCase()}
+            </p>
           )}
           {showLocSuggestions && locSuggestions.length > 0 && (
-            <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-border rounded-lg shadow-lg max-h-40 overflow-y-auto">
+            <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-lg max-h-40 overflow-y-auto">
               {locSuggestions.map((loc) => (
                 <button
                   key={loc.locationCode}
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => { setLocation(loc.locationCode); setShowLocSuggestions(false); }}
-                  className={`w-full text-left px-3 py-2 hover:bg-primary-pale transition border-b border-border last:border-b-0 ${
-                    location.trim().toUpperCase() === loc.locationCode.toUpperCase() ? "bg-primary/10" : ""
+                  onClick={() => {
+                    setLocation(loc.locationCode);
+                    setShowLocSuggestions(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 hover:bg-primary-pale transition border-b border-border last:border-b-0 flex justify-between items-center ${
+                    location.trim().toUpperCase() === loc.locationCode.toUpperCase() ? "bg-primary/10 text-primary font-bold" : ""
                   }`}
                 >
-                  <span className="font-medium text-sm">{loc.locationCode}</span>
-                  <span className="text-xs text-text-secondary ml-2">({loc.productCount} produk)</span>
+                  <span className="font-semibold text-xs">{loc.locationCode}</span>
+                  <span className="text-[10px] text-text-secondary">({loc.productCount} produk)</span>
                 </button>
               ))}
             </div>
           )}
         </div>
 
+        {/* Barcode & Nama Produk */}
         <div className="mb-4 space-y-3">
           <div>
-            <label className="block text-sm font-semibold text-text-primary mb-1">
-              Barcode
-            </label>
+            <label className="block text-xs font-semibold text-text-primary mb-1">Barcode</label>
             <div className="relative">
-              <svg
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
-                <path d="M7 12h10" />
-                <path d="M7 9h2M11 9h2M15 9h2M7 15h2M11 15h2M15 15h2" />
-              </svg>
               <input
                 type="text"
                 value={barcode}
@@ -250,58 +263,48 @@ export default function EditModal({
                     handleBarcodeScan(barcode);
                   }
                 }}
-                className="w-full pl-11 pr-24 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-gray-50"
+                className="w-full pl-3 pr-20 py-2 bg-surface-warm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-xs"
                 placeholder="Scan / ketik barcode"
               />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => handleBarcodeScan(barcode)}
                   disabled={!barcode || scanningBarcode}
-                  className="w-9 h-9 rounded-lg border border-border bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                  title="Cari barcode"
+                  className="w-7 h-7 rounded-lg bg-white border border-border flex items-center justify-center text-primary disabled:opacity-50"
+                  title="Cari"
                 >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="M21 21l-4.35-4.35" />
-                  </svg>
+                  🔍
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowBarcodeScanner(true)}
                   disabled={scanningBarcode}
-                  className="w-9 h-9 rounded-lg border border-border bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                  title="Scan barcode"
+                  className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center disabled:opacity-50"
+                  title="Scan"
                 >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
-                    <path d="M7 12h10" />
-                    <path d="M7 9h2M11 9h2M15 9h2M7 15h2M11 15h2M15 15h2" />
-                  </svg>
+                  📷
                 </button>
               </div>
             </div>
-            {scanningBarcode && (
-              <p className="text-xs text-text-secondary mt-1">Mencari data produk...</p>
-            )}
           </div>
 
           <div className="relative">
-            <label className="block text-sm font-semibold text-text-primary mb-1">
-              Nama Produk:
-            </label>
+            <label className="block text-xs font-semibold text-text-primary mb-1">Nama Produk:</label>
             <input
               type="text"
               value={productName}
               onChange={(e) => handleProductSearch(e.target.value)}
-              onFocus={() => { if (searchResults.length > 0) setShowSuggestions(true); }}
+              onFocus={() => {
+                if (searchResults.length > 0) setShowSuggestions(true);
+              }}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-              className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-xs"
               placeholder="Ketik min. 2 huruf untuk cari..."
               autoComplete="off"
             />
             {showSuggestions && searchResults.length > 0 && (
-              <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-border rounded-lg shadow-lg max-h-40 overflow-y-auto">
+              <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-lg max-h-40 overflow-y-auto">
                 {searchResults.map((p, idx) => (
                   <button
                     key={`${p.sku}-${idx}`}
@@ -310,121 +313,109 @@ export default function EditModal({
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => handleSelectProduct(p)}
                   >
-                    <p className="font-medium text-text-primary text-sm">{p.productName}</p>
-                    <p className="text-xs text-text-secondary">SKU: {p.sku} | Batch: {p.batch}</p>
+                    <p className="font-semibold text-text-primary text-xs">{p.productName}</p>
+                    <p className="text-[10px] text-text-secondary">
+                      SKU: {p.sku} | Batch: {p.batch}
+                    </p>
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-text-primary mb-1">
-              SKU:
-            </label>
-            <input
-              type="text"
-              value={sku}
-              onChange={(e) => setSku(e.target.value)}
-              className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          <div ref={batchDropdownRef} className="relative">
-            <label className="block text-sm font-semibold text-text-primary mb-1">
-              Batch:
-            </label>
-            <div className="relative">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-semibold text-text-primary mb-1">SKU:</label>
               <input
                 type="text"
-                value={batch}
-                onChange={(e) => { setBatch(e.target.value); setShowBatchDropdown(true); }}
-                onFocus={() => { if (sku.trim()) setShowBatchDropdown(true); }}
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary pr-8"
-                placeholder={batchesForSku.length > 0 ? "Pilih atau ketik batch baru..." : "Masukkan batch"}
+                value={sku}
+                onChange={(e) => setSku(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-xs"
               />
-              {batchesForSku.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowBatchDropdown(!showBatchDropdown)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary hover:text-primary p-0.5"
-                >
-                  <svg className={`w-4 h-4 transition-transform ${showBatchDropdown ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </button>
-              )}
             </div>
-            {showBatchDropdown && sku.trim() && (
-              <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-border rounded-lg shadow-lg overflow-hidden">
-                {filteredBatches.length > 0 ? (
-                  <div className="max-h-40 overflow-y-auto">
-                    {filteredBatches.map((b) => (
-                      <button
-                        key={b}
-                        type="button"
-                        onClick={() => { setBatch(b); setShowBatchDropdown(false); }}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-primary-pale/50 transition border-b border-border last:border-b-0 ${
-                          batch === b ? "bg-primary/10 text-primary font-semibold" : "text-text-primary"
-                        }`}
-                      >
-                        {b}
-                      </button>
-                    ))}
-                  </div>
-                ) : batch.trim() ? (
-                  <div className="px-3 py-2 text-xs text-text-secondary">
-                    <span className="text-primary font-medium">&quot;{batch.trim()}&quot;</span> — batch baru
-                  </div>
-                ) : (
-                  <div className="px-3 py-2 text-xs text-text-secondary">Tidak ada batch untuk SKU ini</div>
-                )}
-                {batch.trim() && !batchesForSku.includes(batch.trim()) && filteredBatches.length > 0 && (
-                  <div className="border-t border-border px-3 py-2 bg-gray-50">
-                    <button
-                      type="button"
-                      onClick={() => setShowBatchDropdown(false)}
-                      className="text-xs text-primary font-medium hover:underline"
-                    >
-                      + Gunakan &quot;{batch.trim()}&quot; sebagai batch baru
-                    </button>
-                  </div>
+
+            <div ref={batchDropdownRef} className="relative">
+              <label className="block text-xs font-semibold text-text-primary mb-1">Batch:</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={batch}
+                  onChange={(e) => {
+                    setBatch(e.target.value);
+                    setShowBatchDropdown(true);
+                  }}
+                  onFocus={() => {
+                    if (sku.trim()) setShowBatchDropdown(true);
+                  }}
+                  className="w-full px-3 py-2 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-xs pr-7"
+                  placeholder="Batch"
+                />
+                {batchesForSku.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowBatchDropdown(!showBatchDropdown)}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-secondary hover:text-primary p-0.5"
+                  >
+                    ▼
+                  </button>
                 )}
               </div>
-            )}
+              {showBatchDropdown && sku.trim() && (
+                <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-lg overflow-hidden">
+                  {filteredBatches.length > 0 ? (
+                    <div className="max-h-36 overflow-y-auto">
+                      {filteredBatches.map((b) => (
+                        <button
+                          key={b}
+                          type="button"
+                          onClick={() => {
+                            setBatch(b);
+                            setShowBatchDropdown(false);
+                          }}
+                          className={`w-full text-left px-3 py-1.5 text-xs hover:bg-primary-pale transition border-b border-border last:border-b-0 ${
+                            batch === b ? "bg-primary/10 text-primary font-bold" : "text-text-primary"
+                          }`}
+                        >
+                          {b}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="px-3 py-2 text-[11px] text-text-secondary">Batch baru: &quot;{batch.trim()}&quot;</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-text-primary mb-1">
-              Quantity:
-            </label>
-            <p className="text-[10px] text-text-secondary mb-1">💡 Bisa pakai rumus: ketik langsung atau klik tombol operator di bawah</p>
-            <p className="text-[10px] text-text-secondary mb-2">Contoh: 10x10+5 = 105 (perkalian dihitung duluan)</p>
+            <label className="block text-xs font-semibold text-text-primary mb-1">Quantity:</label>
             <QtyInput
               value={quantity}
               onChange={(v) => setQuantity(v)}
               onExprCommit={(expr) => setFormula(expr)}
               wide
-              className="w-full px-4 py-2.5 border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-center text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             {formula && (
-              <p className="text-xs text-primary mt-1.5 font-medium">🧮 Rumus: {formula}</p>
+              <p className="text-[11px] text-primary mt-1 font-semibold">🧮 Rumus: {formula}</p>
             )}
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-2.5 pt-2 border-t border-border">
           <button
+            type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-2 bg-gray-200 text-text-primary rounded-lg hover:bg-gray-300 transition"
+            className="flex-1 py-3 bg-surface-warm text-text-primary text-sm font-semibold rounded-xl hover:bg-gray-200 transition active:scale-[0.98]"
           >
             Batal
           </button>
           <button
+            type="button"
             onClick={handleSave}
-            className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-light transition"
+            className="flex-1 py-3 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-light transition shadow-md active:scale-[0.98]"
           >
-            Simpan
+            Simpan Perubahan
           </button>
         </div>
 
@@ -432,7 +423,7 @@ export default function EditModal({
           <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4">
             <div className="bg-white w-full max-w-md rounded-2xl p-4 shadow-2xl">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-text-primary">Scan Barcode Produk</h3>
+                <h3 className="font-semibold text-text-primary text-sm">Scan Barcode Produk</h3>
                 <button
                   onClick={() => setShowBarcodeScanner(false)}
                   className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500"

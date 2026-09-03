@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { playScanSuccessSound } from "@/lib/sound";
 
 interface BarcodeScannerProps {
   onScan: (code: string) => void;
@@ -39,7 +40,7 @@ export default function BarcodeScanner({ onScan, active }: BarcodeScannerProps) 
     if (code === lastScanRef.current && now - lastScanTimeRef.current < 1500) return;
     lastScanRef.current = code;
     lastScanTimeRef.current = now;
-    if (navigator.vibrate) navigator.vibrate(80);
+    playScanSuccessSound();
     onScanRef.current(code);
   }, []);
 
@@ -345,15 +346,15 @@ export default function BarcodeScanner({ onScan, active }: BarcodeScannerProps) 
               {/* Corner brackets */}
               <div className="relative" style={{ width: "70%", height: "55%", maxWidth: "300px", maxHeight: "250px" }}>
                 {/* Top-left */}
-                <div className="absolute top-0 left-0 w-6 h-6 border-t-3 border-l-3 border-green-400 rounded-tl-md" />
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-[3px] border-l-[3px] border-amber-400 rounded-tl-md" />
                 {/* Top-right */}
-                <div className="absolute top-0 right-0 w-6 h-6 border-t-3 border-r-3 border-green-400 rounded-tr-md" />
+                <div className="absolute top-0 right-0 w-6 h-6 border-t-[3px] border-r-[3px] border-amber-400 rounded-tr-md" />
                 {/* Bottom-left */}
-                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-3 border-l-3 border-green-400 rounded-bl-md" />
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-[3px] border-l-[3px] border-amber-400 rounded-bl-md" />
                 {/* Bottom-right */}
-                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-3 border-r-3 border-green-400 rounded-br-md" />
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-[3px] border-r-[3px] border-amber-400 rounded-br-md" />
                 {/* Scan line animation */}
-                <div className="absolute left-2 right-2 h-0.5 bg-green-400/70 animate-pulse" style={{ top: "50%" }} />
+                <div className="absolute left-2 right-2 h-0.5 bg-amber-400/80 animate-pulse shadow-[0_0_8px_rgba(212,155,75,0.8)]" style={{ top: "50%" }} />
               </div>
             </div>
           )}

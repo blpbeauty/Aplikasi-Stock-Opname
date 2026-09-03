@@ -324,6 +324,8 @@ function addMasterProduct(data) {
     var loc = normalizeLocation(data.locationCode);
     var sku = normalizeText(data.sku);
     var batch = normalizeText(data.batch || "");
+    var skuForSheet = sku ? "'" + sku : "";
+    var batchForSheet = batch ? "'" + batch : "";
 
     // Check if already exists
     for (var i = 1; i < mdData.length; i++) {
@@ -332,7 +334,7 @@ function addMasterProduct(data) {
       }
     }
 
-    sheet.appendRow([loc, data.productName || "", sku, batch, data.barcode || ""]);
+    sheet.appendRow([loc, data.productName || "", skuForSheet, batchForSheet, data.barcode || ""]);
     bumpCacheVersion();
     return { success: true, message: "Produk berhasil ditambahkan ke Master Data" };
   });
@@ -376,7 +378,7 @@ function saveStockOpname(data) {
 
     var rows = data.items.map(function(item) {
       return [sessionId, generateShortId("R-", 6), timestamp, operatorName, loc,
-              item.productName, item.sku, item.batch, item.qty, "No", "", item.formula || ""];
+              item.productName, item.sku ? "'" + item.sku : "", item.batch ? "'" + item.batch : "", item.qty, "No", "", item.formula || ""];
     });
 
     sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 12).setValues(rows);
@@ -412,7 +414,7 @@ function syncMasterDataInternal(locationCode, items) {
     var key = sku + "||" + batch;
     if (!sku || existing[key] || seen[key]) return;
     seen[key] = true;
-    newRows.push([loc, item.productName || "", sku, item.batch || "", item.barcode || ""]);
+    newRows.push([loc, item.productName || "", "'" + sku, item.batch ? "'" + item.batch : "", item.barcode || ""]);
   });
 
   if (newRows.length > 0) {
@@ -437,8 +439,8 @@ function updateEntry(data) {
         var row = values[i].slice();
         if (data.location !== undefined) row[4] = normalizeLocation(data.location);
         if (data.productName !== undefined) row[5] = data.productName;
-        if (data.sku !== undefined) row[6] = data.sku;
-        if (data.batch !== undefined) row[7] = data.batch;
+        if (data.sku !== undefined) row[6] = data.sku ? "'" + data.sku : "";
+        if (data.batch !== undefined) row[7] = data.batch ? "'" + data.batch : "";
         row[8] = data.newQty;
         row[9] = "Yes";
         row[10] = formatTimestamp(data.editTimestamp);
@@ -461,8 +463,8 @@ function updateEntry(data) {
               // Update the Master Data row with new values
               if (newLocation !== oldLocation) mdSheet.getRange(j + 1, 1).setValue(newLocation); // col A = Location
               mdSheet.getRange(j + 1, 2).setValue(newProductName); // col B = Product Name
-              mdSheet.getRange(j + 1, 3).setValue(newSku);         // col C = SKU
-              mdSheet.getRange(j + 1, 4).setValue(newBatch);       // col D = Batch
+              mdSheet.getRange(j + 1, 3).setValue(newSku ? "'" + newSku : "");         // col C = SKU
+              mdSheet.getRange(j + 1, 4).setValue(newBatch ? "'" + newBatch : "");       // col D = Batch
               break; // Only update exact match
             }
           }

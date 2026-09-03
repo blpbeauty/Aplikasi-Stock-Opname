@@ -7,7 +7,7 @@ import BottomNav from "@/components/BottomNav";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import QtyInput from "@/components/QtyInput";
-import { calcExpr } from "@/components/QtyInput";
+import ConfirmModal from "@/components/ConfirmModal";
 import {
   getProductsApi,
   saveStockOpnameApi,
@@ -41,6 +41,22 @@ function InputPageContent() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [scanningBarcode, setScanningBarcode] = useState(false);
+
+  // Delete confirm modal state
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    sku: string;
+    batch: string;
+    productName: string;
+    isNew: boolean;
+  }>({
+    isOpen: false,
+    sku: "",
+    batch: "",
+    productName: "",
+    isNew: false,
+  });
+
   const [newProductForm, setNewProductForm] = useState({
     productName: "",
     sku: "",
@@ -53,16 +69,20 @@ function InputPageContent() {
   const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
   const [newProductFormula, setNewProductFormula] = useState("");
   const [savingMasterData, setSavingMasterData] = useState(false);
+
   // Inline batch editing
   const [editingBatchKey, setEditingBatchKey] = useState<string | null>(null);
   const [editingBatchValue, setEditingBatchValue] = useState("");
   const [editingBatchSku, setEditingBatchSku] = useState("");
+
   // Batch dropdown (add form)
   const [showBatchDropdown, setShowBatchDropdown] = useState(false);
   const batchDropdownRef = useRef<HTMLDivElement>(null);
+
   // Batch dropdown (inline edit)
   const [showInlineBatchDropdown, setShowInlineBatchDropdown] = useState(false);
   const inlineBatchDropdownRef = useRef<HTMLDivElement>(null);
+
   // Move location
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [moveTarget, setMoveTarget] = useState("");
@@ -73,16 +93,18 @@ function InputPageContent() {
     Array<{ locationCode: string; productCount: number }>
   >([]);
   const [showMoveLocSuggestions, setShowMoveLocSuggestions] = useState(false);
-  const [moveLocSearchTimer, setMoveLocSearchTimer] =
-    useState<NodeJS.Timeout | null>(null);
+  const [moveLocSearchTimer, setMoveLocSearchTimer] = useState<NodeJS.Timeout | null>(null);
   const moveLocRef = useRef<HTMLDivElement>(null);
 
-  // Unique key per product row: SKU + batch combination
+  // Auto-scroll refs
+  const addFormQtyRef = useRef<HTMLDivElement>(null);
+  const addFormSubmitRef = useRef<HTMLDivElement>(null);
+  const productListRef = useRef<HTMLDivElement>(null);
+
+  // Unique key per product row
   const productKey = (sku: string, batch: string) => `${sku}__${batch}`;
-  // All products cached locally for instant client-side search
   const allProductsRef = useRef<Product[] | null>(null);
 
-  // Normalize product fields: Google Sheets may return numbers instead of strings
   const normalizeProduct = (p: any): Product => ({
     ...p,
     productName: String(p.productName ?? ""),
@@ -91,7 +113,7 @@ function InputPageContent() {
     barcode: String(p.barcode ?? ""),
   });
 
-  // Get unique batches for current SKU from allProducts
+  // Get unique batches for current SKU
   const batchesForSku = useMemo(() => {
     const sku = newProductForm.sku.trim().toLowerCase();
     if (!sku) return [];
@@ -102,7 +124,6 @@ function InputPageContent() {
         batchSet.add(p.batch);
       }
     });
-    // Also include batches from loaded products for current location
     products.forEach((p) => {
       if (p.sku.trim().toLowerCase() === sku && p.batch) {
         batchSet.add(p.batch);
@@ -111,20 +132,16 @@ function InputPageContent() {
     return Array.from(batchSet).sort();
   }, [newProductForm.sku, products]);
 
-  // Filtered batches based on current input
   const filteredBatches = useMemo(() => {
     const q = newProductForm.batch.trim().toLowerCase();
     if (!q) return batchesForSku;
-    // If current value exactly matches an existing batch, show ALL batches so user can switch
     if (batchesForSku.some((b) => b.toLowerCase() === q)) return batchesForSku;
     return batchesForSku.filter((b) => b.toLowerCase().includes(q));
   }, [newProductForm.batch, batchesForSku]);
 
-  // Get unique batches for inline batch edit SKU
+  // Batches for inline edit
   const inlineBatchesForSku = useMemo(() => {
-    const sku = String(editingBatchSku || "")
-      .trim()
-      .toLowerCase();
+    const sku = String(editingBatchSku || "").trim().toLowerCase();
     if (!sku) return [];
     const all = allProductsRef.current || [];
     const batchSet = new Set<string>();
@@ -133,7 +150,6 @@ function InputPageContent() {
         batchSet.add(String(p.batch));
       }
     });
-    // Also include batches from loaded products for current location
     [...products, ...newProducts].forEach((p) => {
       if (String(p.sku).trim().toLowerCase() === sku && p.batch) {
         batchSet.add(String(p.batch));
@@ -142,50 +158,31 @@ function InputPageContent() {
     return Array.from(batchSet).sort();
   }, [editingBatchSku, products, newProducts]);
 
-  // Filtered batches for inline edit
   const inlineFilteredBatches = useMemo(() => {
     const q = editingBatchValue.trim().toLowerCase();
     if (!q) return inlineBatchesForSku;
-    if (inlineBatchesForSku.some((b) => b.toLowerCase() === q))
-      return inlineBatchesForSku;
+    if (inlineBatchesForSku.some((b) => b.toLowerCase() === q)) return inlineBatchesForSku;
     return inlineBatchesForSku.filter((b) => b.toLowerCase().includes(q));
   }, [editingBatchValue, inlineBatchesForSku]);
 
-  // Close batch dropdown on outside click (add form)
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        batchDropdownRef.current &&
-        !batchDropdownRef.current.contains(e.target as Node)
-      ) {
+      if (batchDropdownRef.current && !batchDropdownRef.current.contains(e.target as Node)) {
         setShowBatchDropdown(false);
       }
-    };
-    if (showBatchDropdown)
-      document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showBatchDropdown]);
-
-  // Close inline batch dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        inlineBatchDropdownRef.current &&
-        !inlineBatchDropdownRef.current.contains(e.target as Node)
-      ) {
+      if (inlineBatchDropdownRef.current && !inlineBatchDropdownRef.current.contains(e.target as Node)) {
         setShowInlineBatchDropdown(false);
       }
     };
-    if (showInlineBatchDropdown)
+    if (showBatchDropdown || showInlineBatchDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
+    }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showInlineBatchDropdown]);
+  }, [showBatchDropdown, showInlineBatchDropdown]);
 
   useEffect(() => {
     warmupCacheApi().catch(() => {});
-    // Preload history for instant tab switch
     if (user?.email) preloadHistory(user.email);
-    // Load all products for instant client-side search
     const loadAllProducts = async () => {
       const cached = getCache<Product[]>("allProducts");
       if (cached && cached.age < 120) {
@@ -197,9 +194,7 @@ function InputPageContent() {
           allProductsRef.current = result.products;
           setCache("allProducts", result.products);
         }
-      } catch {
-        // Fall back to server-side search
-      }
+      } catch {}
     };
     loadAllProducts();
   }, [user]);
@@ -209,14 +204,11 @@ function InputPageContent() {
       router.push("/scan");
       return;
     }
-
     fetchProducts();
   }, [location, router]);
 
   const fetchProducts = async () => {
     const ck = `products:${location}`;
-
-    // AppSheet-style: show cached products INSTANTLY
     const cached = getCache<Product[]>(ck);
     if (cached) {
       const normalized = cached.data.map(normalizeProduct);
@@ -224,17 +216,15 @@ function InputPageContent() {
       const init: Record<string, number> = {};
       normalized.forEach((p) => (init[productKey(p.sku, p.batch)] = 0));
       setQuantities(init);
-      setLoading(false); // UI langsung tampil!
+      setLoading(false);
     }
 
-    // Background refresh
     try {
       const result = await getProductsApi(location);
       if (result.success && result.products) {
         const normalized = result.products.map(normalizeProduct);
         setProducts(normalized);
         setCache(ck, normalized);
-        // Only set qty for NEW products (don't overwrite user input)
         setQuantities((prev) => {
           const next = { ...prev };
           normalized.forEach((p) => {
@@ -259,36 +249,42 @@ function InputPageContent() {
   };
 
   const handleQuantityChange = (key: string, qty: number) => {
-    setQuantities((prev) => ({
-      ...prev,
-      [key]: qty,
-    }));
+    setQuantities((prev) => ({ ...prev, [key]: qty }));
   };
 
   const handleExprCommit = (key: string, expr: string) => {
-    setFormulas((prev) => ({
-      ...prev,
-      [key]: expr,
-    }));
+    setFormulas((prev) => ({ ...prev, [key]: expr }));
   };
 
-  const handleDeleteProduct = async (sku: string, batch: string) => {
-    const confirmDelete = window.confirm(
-      "Hapus produk ini dari lokasi? Data juga akan dihapus dari Master Data.",
-    );
-    if (!confirmDelete) return;
+  const promptDeleteProduct = (product: Product, isNew: boolean) => {
+    setDeleteModal({
+      isOpen: true,
+      sku: product.sku,
+      batch: product.batch,
+      productName: product.productName,
+      isNew,
+    });
+  };
 
-    // AppSheet-style: optimistic delete
+  const confirmDeleteProduct = async () => {
+    const { sku, batch, isNew } = deleteModal;
+    if (isNew) {
+      setNewProducts((prev) => prev.filter((p) => !(p.sku === sku && p.batch === batch)));
+      setQuantities((prev) => {
+        const copy = { ...prev };
+        delete copy[productKey(sku, batch)];
+        return copy;
+      });
+      toast.success("Produk baru dihapus dari daftar");
+      return;
+    }
+
+    // Optimistic delete
     const prevProducts = [...products];
     const prevNewProducts = [...newProducts];
     const prevQuantities = { ...quantities };
 
-    setProducts((prev) =>
-      prev.filter((p) => !(p.sku === sku && p.batch === batch)),
-    );
-    setNewProducts((prev) =>
-      prev.filter((p) => !(p.sku === sku && p.batch === batch)),
-    );
+    setProducts((prev) => prev.filter((p) => !(p.sku === sku && p.batch === batch)));
     setQuantities((prev) => {
       const copy = { ...prev };
       delete copy[productKey(sku, batch)];
@@ -296,15 +292,10 @@ function InputPageContent() {
     });
     toast.success("Produk berhasil dihapus");
 
-    // Update product cache
     const ck = `products:${location}`;
-    setCache(
-      ck,
-      products.filter((p) => !(p.sku === sku && p.batch === batch)),
-    );
-    clearCache("history:"); // invalidate history cache
+    setCache(ck, products.filter((p) => !(p.sku === sku && p.batch === batch)));
+    clearCache("history:");
 
-    // Background sync
     try {
       const result = await deleteProductApi(location, sku, batch);
       if (!result.success) {
@@ -314,8 +305,7 @@ function InputPageContent() {
         setCache(ck, prevProducts);
         toast.error(result.message || "Gagal menghapus, data dikembalikan");
       }
-    } catch (error) {
-      console.error("Delete error:", error);
+    } catch {
       setProducts(prevProducts);
       setNewProducts(prevNewProducts);
       setQuantities(prevQuantities);
@@ -324,45 +314,25 @@ function InputPageContent() {
     }
   };
 
-  const handleDeleteNewProduct = (sku: string, batch: string) => {
-    setNewProducts((prev) =>
-      prev.filter((p) => !(p.sku === sku && p.batch === batch)),
-    );
-    setQuantities((prev) => {
-      const copy = { ...prev };
-      delete copy[productKey(sku, batch)];
-      return copy;
-    });
-    toast.success("Produk baru dihapus dari daftar");
-  };
-
   const handleProductNameSearch = (value: string) => {
     setNewProductForm((prev) => ({ ...prev, productName: value }));
-
     if (searchTimer) clearTimeout(searchTimer);
-
     if (value.trim().length < 2) {
       setSearchResults([]);
       setShowSuggestions(false);
       return;
     }
 
-    // CLIENT-SIDE filtering if we have all products (INSTANT — 0ms)
     if (allProductsRef.current) {
       const q = value.trim().toLowerCase();
       const filtered = allProductsRef.current
-        .filter((p) =>
-          String(p.productName || "")
-            .toLowerCase()
-            .includes(q),
-        )
+        .filter((p) => String(p.productName || "").toLowerCase().includes(q))
         .slice(0, 10);
       setSearchResults(filtered);
       setShowSuggestions(filtered.length > 0);
       return;
     }
 
-    // Fallback: server-side search
     const timer = setTimeout(async () => {
       try {
         const result = await searchProductsApi(value.trim());
@@ -374,7 +344,6 @@ function InputPageContent() {
         console.error("Search error:", error);
       }
     }, 80);
-
     setSearchTimer(timer);
   };
 
@@ -389,6 +358,9 @@ function InputPageContent() {
     setShowSuggestions(false);
     setSearchResults([]);
     toast.success(`Produk dipilih: ${product.productName}`);
+    setTimeout(() => {
+      addFormQtyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
   };
 
   const handleBarcodeScan = async (barcode: string) => {
@@ -405,48 +377,33 @@ function InputPageContent() {
           barcode: barcode,
         }));
         toast.success(`Produk ditemukan: ${result.product.productName}`);
+        setTimeout(() => {
+          addFormQtyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 150);
       } else {
-        // Barcode not found, just fill the barcode field
-        setNewProductForm((prev) => ({
-          ...prev,
-          barcode: barcode,
-        }));
+        setNewProductForm((prev) => ({ ...prev, barcode }));
         toast.error(result.message || "Produk tidak ditemukan, isi manual");
       }
-    } catch (error) {
-      console.error("Barcode lookup error:", error);
-      setNewProductForm((prev) => ({
-        ...prev,
-        barcode: barcode,
-      }));
-      toast.error("Gagal lookup barcode, isi data manual");
+    } catch {
+      setNewProductForm((prev) => ({ ...prev, barcode }));
+      toast.error("Gagal lookup barcode, isi manual");
     } finally {
       setScanningBarcode(false);
     }
   };
 
   const handleAddNewProduct = () => {
-    if (
-      !newProductForm.productName ||
-      !newProductForm.sku ||
-      !newProductForm.batch
-    ) {
+    if (!newProductForm.productName || !newProductForm.sku || !newProductForm.batch) {
       toast.error("Nama Produk, SKU, dan Batch harus diisi");
       return;
     }
-
     if (newProductForm.qty <= 0) {
       toast.error("Quantity harus lebih dari 0");
       return;
     }
 
-    // Check if SKU + Batch already exists
-    const allProducts = [...products, ...newProducts];
-    if (
-      allProducts.some(
-        (p) => p.sku === newProductForm.sku && p.batch === newProductForm.batch,
-      )
-    ) {
+    const all = [...products, ...newProducts];
+    if (all.some((p) => p.sku === newProductForm.sku && p.batch === newProductForm.batch)) {
       toast.error("Produk dengan SKU dan Batch yang sama sudah ada");
       return;
     }
@@ -460,22 +417,12 @@ function InputPageContent() {
 
     setNewProducts((prev) => [...prev, newProduct]);
     const nk = productKey(newProduct.sku, newProduct.batch);
-    setQuantities((prev) => ({
-      ...prev,
-      [nk]: newProductForm.qty,
-    }));
+    setQuantities((prev) => ({ ...prev, [nk]: newProductForm.qty }));
     if (newProductFormula) {
       setFormulas((prev) => ({ ...prev, [nk]: newProductFormula }));
     }
 
-    // Reset form
-    setNewProductForm({
-      productName: "",
-      sku: "",
-      batch: "",
-      barcode: "",
-      qty: 0,
-    });
+    setNewProductForm({ productName: "", sku: "", batch: "", barcode: "", qty: 0 });
     setNewProductFormula("");
     setShowAddForm(false);
     toast.success("Produk baru berhasil ditambahkan");
@@ -494,24 +441,18 @@ function InputPageContent() {
     setEditingBatchValue("");
     setEditingBatchSku("");
     setShowInlineBatchDropdown(false);
-    if (newBatch === oldBatch) return; // no change
+    if (newBatch === oldBatch) return;
 
-    // Update the product's batch — match by BOTH sku and oldBatch
     if (isNew) {
       setNewProducts((prev) =>
-        prev.map((p) =>
-          p.sku === sku && p.batch === oldBatch ? { ...p, batch: newBatch } : p,
-        ),
+        prev.map((p) => (p.sku === sku && p.batch === oldBatch ? { ...p, batch: newBatch } : p))
       );
     } else {
       setProducts((prev) =>
-        prev.map((p) =>
-          p.sku === sku && p.batch === oldBatch ? { ...p, batch: newBatch } : p,
-        ),
+        prev.map((p) => (p.sku === sku && p.batch === oldBatch ? { ...p, batch: newBatch } : p))
       );
     }
 
-    // Migrate qty/formula from old key to new key
     const oldKey = productKey(sku, oldBatch);
     const newKey = productKey(sku, newBatch);
     if (oldKey !== newKey) {
@@ -533,7 +474,6 @@ function InputPageContent() {
     toast.success("Batch diperbarui");
   };
 
-  // ── Move Location handlers ──
   const openMoveModal = () => {
     setMoveTarget("");
     setMoveMode("all");
@@ -555,17 +495,12 @@ function InputPageContent() {
       try {
         const result = await searchLocationsApi(query.trim());
         if (result.success && result.locations) {
-          // Filter out current location
           setMoveLocSuggestions(
-            result.locations.filter(
-              (l) => l.locationCode.toUpperCase() !== location.toUpperCase(),
-            ),
+            result.locations.filter((l) => l.locationCode.toUpperCase() !== location.toUpperCase())
           );
           setShowMoveLocSuggestions(true);
         }
-      } catch {
-        /* ignore */
-      }
+      } catch {}
     }, 300);
     setMoveLocSearchTimer(timer);
   };
@@ -609,7 +544,6 @@ function InputPageContent() {
       if (result.success) {
         toast.success(result.message || "Produk berhasil dipindah");
         setShowMoveModal(false);
-        // Reload products for current location
         clearCache("products:");
         invalidateMemCache("getProducts");
         invalidateMemCache("getAllProducts");
@@ -632,9 +566,7 @@ function InputPageContent() {
 
   const handleSave = () => {
     const existingItems = products
-      .filter(
-        (product) => quantities[productKey(product.sku, product.batch)] > 0,
-      )
+      .filter((product) => quantities[productKey(product.sku, product.batch)] > 0)
       .map((product) => {
         const k = productKey(product.sku, product.batch);
         return {
@@ -649,9 +581,7 @@ function InputPageContent() {
       });
 
     const newItems = newProducts
-      .filter(
-        (product) => quantities[productKey(product.sku, product.batch)] > 0,
-      )
+      .filter((product) => quantities[productKey(product.sku, product.batch)] > 0)
       .map((product) => {
         const k = productKey(product.sku, product.batch);
         return {
@@ -666,7 +596,6 @@ function InputPageContent() {
       });
 
     const items = [...existingItems, ...newItems];
-
     if (items.length === 0) {
       toast.error("Tidak ada produk dengan quantity > 0");
       return;
@@ -676,9 +605,6 @@ function InputPageContent() {
     const sessionId = `${user?.email}_${Date.now()}`;
     const timestamp = new Date().toISOString();
 
-    // ── Optimistic update: inject new entries into localStorage cache ──
-    // This makes scan terakhir & history show new data INSTANTLY
-    // instead of waiting for server round-trip (GAS cold start = 3-10s)
     const historyCacheKey = `history:${user?.email}:all`;
     const cachedHistory = getCache<HistoryEntry[]>(historyCacheKey);
     const optimisticEntries: HistoryEntry[] = items.map((item, idx) => ({
@@ -695,443 +621,290 @@ function InputPageContent() {
       editTimestamp: "",
       formula: item.formula || "",
     }));
-    const updatedHistory = [
-      ...optimisticEntries,
-      ...(cachedHistory?.data || []),
-    ];
+    const updatedHistory = [...optimisticEntries, ...(cachedHistory?.data || [])];
     setCache(historyCacheKey, updatedHistory);
 
-    // Fire save in background — don't await
     saveStockOpnameApi(sessionId, user?.email || "", location, timestamp, items)
       .then((result) => {
-        if (!result.success)
-          toast.error(result.message || "Gagal sinkron ke server");
+        if (!result.success) toast.error(result.message || "Gagal sinkron ke server");
       })
       .catch(() => toast.error("Gagal sinkron ke server"));
 
-    // Mark save timestamp so other pages know not to overwrite optimistic data
     if (typeof window !== "undefined") {
       window.localStorage.setItem("lastSaveTs", String(Date.now()));
     }
 
-    // Navigate immediately — memCache invalidated so background refresh gets real data
     invalidateMemCache("getHistory");
     clearCache("products:");
     toast.success("Stock opname berhasil disimpan!");
     router.push("/scan");
   };
 
+  const allProducts = [...products, ...newProducts];
+
+  const scrollToNextProduct = (currentGlobalIdx: number) => {
+    const totalCount = allProducts.length;
+    if (currentGlobalIdx < totalCount - 1) {
+      const nextCard = productListRef.current?.querySelector(
+        `[data-product-idx="${currentGlobalIdx + 1}"]`
+      ) as HTMLElement | null;
+      if (nextCard) {
+        setTimeout(() => {
+          nextCard.scrollIntoView({ behavior: "smooth", block: "center" });
+          const nextInput = nextCard.querySelector('input[type="text"]') as HTMLInputElement | null;
+          if (nextInput) nextInput.focus();
+        }, 200);
+      }
+    }
+  };
+
+  const totalItems = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--primary-bg)]">
+      <div className="mobile-container flex items-center justify-center min-h-screen">
         <LoadingSpinner />
       </div>
     );
   }
 
-  const allProducts = [...products, ...newProducts];
-  const totalItems = Object.values(quantities).reduce(
-    (sum, qty) => sum + qty,
-    0,
-  );
-
   return (
-    <div className="min-h-screen pb-44 bg-[var(--primary-bg)]">
-      {/* ── Header ── */}
-      <div className="bg-white px-5 pt-6 pb-4 shadow-card">
-        <div className="flex items-center gap-3 mb-1">
-          <button
-            onClick={() => router.push("/scan")}
-            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition"
-          >
-            <svg
-              className="w-4 h-4 text-text-primary"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+    <div className="mobile-container pb-36">
+      {/* ── Sticky Top Header ── */}
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border shadow-xs">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => router.push("/scan")}
+              className="w-9 h-9 rounded-xl bg-surface-warm flex items-center justify-center hover:bg-gray-200 text-text-primary transition active:scale-95 shadow-xs"
             >
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-          <div>
-            <h1 className="text-lg font-bold text-text-primary">
-              Input Quantity
-            </h1>
-            <p className="text-xs text-text-secondary">
-              Lokasi:{" "}
-              <span className="font-semibold text-primary">{location}</span>
-            </p>
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <div>
+              <h1 className="text-sm font-bold text-text-primary leading-tight">Input Quantity</h1>
+              <p className="text-[11px] text-text-secondary">
+                Lokasi: <span className="font-bold text-primary">{location}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <span className="text-[10px] font-bold text-text-secondary uppercase">Total Terhitung</span>
+            <p className="text-base font-black text-primary leading-none">{totalItems} item</p>
           </div>
         </div>
       </div>
 
-      <div className="px-4 pt-3">
-        {/* ── Stats Card ── */}
-        <div className="bg-white rounded-2xl p-4 mb-3 shadow-card border border-border">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <svg
-                  className="w-5 h-5 text-primary"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-xs text-text-secondary">Total Produk</p>
-                <p className="text-lg font-bold text-text-primary">
-                  {allProducts.length}
-                </p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-text-secondary">Total Item</p>
-              <p className="text-lg font-bold text-primary">{totalItems}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Add New Product & Move Location Buttons ── */}
-        <div className="mb-3 flex gap-2">
+      <div className="px-4 pt-3 space-y-3">
+        {/* ── Action Buttons (+ Tambah & Pindah) ── */}
+        <div className="flex gap-2">
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="flex-1 bg-primary text-white py-3 rounded-2xl font-semibold hover:bg-primary-light transition text-sm shadow-card active:scale-[0.98]"
+            className="flex-1 bg-primary text-white py-2.5 px-3 rounded-xl font-bold hover:bg-primary-light transition text-xs shadow-md active:scale-[0.98] flex items-center justify-center gap-1.5"
           >
-            {showAddForm ? "✕ Tutup Form" : "+ Tambah Produk"}
+            {showAddForm ? (
+              <>✕ Tutup Form</>
+            ) : (
+              <>
+                <span className="text-base leading-none">+</span> Tambah Produk
+              </>
+            )}
           </button>
           {products.length > 0 && (
             <button
               onClick={openMoveModal}
-              className="bg-amber-500 text-white px-4 py-3 rounded-2xl font-semibold hover:bg-amber-600 transition text-sm shadow-card active:scale-[0.98] flex items-center gap-1.5"
+              className="bg-surface-warm border border-border text-text-primary px-3.5 py-2.5 rounded-xl font-bold hover:bg-gray-200 transition text-xs active:scale-[0.98] flex items-center gap-1.5 shadow-xs"
             >
-              <svg
-                className="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-              Pindah
+              <span>⇄</span> Pindah
             </button>
           )}
         </div>
 
-        {/* ── Add New Product Form ── */}
+        {/* ── Form Tambah Produk Baru ── */}
         {showAddForm && (
-          <div className="bg-white border border-border rounded-2xl p-4 mb-4 shadow-card">
-            <h3 className="text-sm font-semibold mb-3 text-text-primary">
-              Tambah Produk Baru
-            </h3>
+          <div className="bg-white border border-border rounded-2xl p-4 shadow-card animate-fadeIn space-y-3">
+            <h3 className="text-xs font-bold text-text-primary">Tambah Produk ke Lokasi Ini</h3>
 
-            {scanningBarcode && (
-              <div className="mb-3 flex items-center justify-center gap-2 text-xs text-text-secondary">
-                <LoadingSpinner /> Mencari produk...
-              </div>
-            )}
-
-            <div className="space-y-2.5">
-              {/* Barcode */}
-              <div>
-                <label className="block text-xs font-medium text-text-primary mb-1">
-                  Barcode
-                </label>
-                <div className="relative">
-                  <svg
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
-                    <path d="M7 12h10" />
-                  </svg>
-                  <input
-                    type="text"
-                    value={newProductForm.barcode}
-                    onChange={(e) =>
-                      setNewProductForm({
-                        ...newProductForm,
-                        barcode: e.target.value.trim(),
-                      })
-                    }
-                    onKeyDown={(e) => {
-                      const barcodeVal = String(
-                        newProductForm.barcode || "",
-                      ).trim();
-                      if (e.key === "Enter" && barcodeVal) {
-                        e.preventDefault();
-                        handleBarcodeScan(barcodeVal);
-                      }
-                    }}
-                    className="w-full pl-10 pr-20 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-gray-50 text-sm"
-                    placeholder="Scan / ketik barcode produk"
-                    autoComplete="off"
-                  />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const barcodeVal = String(
-                          newProductForm.barcode || "",
-                        ).trim();
-                        if (barcodeVal) handleBarcodeScan(barcodeVal);
-                      }}
-                      disabled={
-                        !String(newProductForm.barcode || "").trim() ||
-                        scanningBarcode
-                      }
-                      className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 disabled:opacity-50"
-                      title="Cari barcode"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="M21 21l-4.35-4.35" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowBarcodeScanner(true)}
-                      disabled={scanningBarcode}
-                      className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 disabled:opacity-50"
-                      title="Scan barcode"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
-                        <path d="M7 12h10" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Nama Produk + Search */}
+            {/* Barcode Scanner */}
+            <div>
+              <label className="block text-[11px] font-bold text-text-secondary mb-1">
+                Scan Barcode Produk
+              </label>
               <div className="relative">
-                <label className="block text-xs font-medium text-text-primary mb-1">
-                  Nama Produk
-                </label>
                 <input
                   type="text"
-                  value={newProductForm.productName}
-                  onChange={(e) => handleProductNameSearch(e.target.value)}
-                  onFocus={() => {
-                    if (searchResults.length > 0) setShowSuggestions(true);
+                  value={newProductForm.barcode}
+                  onChange={(e) =>
+                    setNewProductForm({ ...newProductForm, barcode: e.target.value.trim() })
+                  }
+                  onKeyDown={(e) => {
+                    const b = String(newProductForm.barcode || "").trim();
+                    if (e.key === "Enter" && b) {
+                      e.preventDefault();
+                      handleBarcodeScan(b);
+                    }
                   }}
-                  onBlur={() => {
-                    setTimeout(() => setShowSuggestions(false), 200);
-                  }}
-                  className="w-full px-3 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                  placeholder="Ketik min. 2 huruf untuk cari produk..."
-                  autoComplete="off"
+                  className="w-full pl-3 pr-20 py-2 bg-surface-warm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-xs font-semibold"
+                  placeholder="Scan / ketik barcode..."
                 />
-                {showSuggestions && searchResults.length > 0 && (
-                  <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                    {searchResults.map((p, idx) => (
-                      <button
-                        key={`${p.sku}-${idx}`}
-                        type="button"
-                        className="w-full text-left px-3 py-2.5 hover:bg-primary-pale transition border-b border-border last:border-b-0"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => handleSelectSuggestion(p)}
-                      >
-                        <p className="font-medium text-text-primary text-xs">
-                          {p.productName}
-                        </p>
-                        <p className="text-[10px] text-text-secondary">
-                          SKU: {p.sku} | Batch: {p.batch}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const b = String(newProductForm.barcode || "").trim();
+                      if (b) handleBarcodeScan(b);
+                    }}
+                    disabled={!String(newProductForm.barcode || "").trim() || scanningBarcode}
+                    className="w-7 h-7 rounded-lg bg-white border border-border flex items-center justify-center text-primary disabled:opacity-50"
+                  >
+                    🔍
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowBarcodeScanner(true)}
+                    disabled={scanningBarcode}
+                    className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center disabled:opacity-50 shadow-xs"
+                  >
+                    📷
+                  </button>
+                </div>
               </div>
+            </div>
 
-              {/* SKU */}
+            {/* Nama Produk Search */}
+            <div className="relative">
+              <label className="block text-[11px] font-bold text-text-secondary mb-1">
+                Nama Produk
+              </label>
+              <input
+                type="text"
+                value={newProductForm.productName}
+                onChange={(e) => handleProductNameSearch(e.target.value)}
+                onFocus={() => {
+                  if (searchResults.length > 0) setShowSuggestions(true);
+                }}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                className="w-full px-3 py-2 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-xs font-semibold"
+                placeholder="Ketik min. 2 huruf..."
+                autoComplete="off"
+              />
+              {showSuggestions && searchResults.length > 0 && (
+                <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-xl max-h-44 overflow-y-auto">
+                  {searchResults.map((p, idx) => (
+                    <button
+                      key={`${p.sku}-${idx}`}
+                      type="button"
+                      className="w-full text-left px-3 py-2 hover:bg-primary-pale border-b border-border last:border-b-0"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handleSelectSuggestion(p)}
+                    >
+                      <p className="font-bold text-text-primary text-xs">{p.productName}</p>
+                      <p className="text-[10px] text-text-secondary">
+                        SKU: {p.sku} | Batch: {p.batch}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* SKU & Batch */}
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-medium text-text-primary mb-1">
-                  SKU
-                </label>
+                <label className="block text-[11px] font-bold text-text-secondary mb-1">SKU</label>
                 <input
                   type="text"
                   value={newProductForm.sku}
                   onChange={(e) =>
-                    setNewProductForm({
-                      ...newProductForm,
-                      sku: e.target.value,
-                    })
+                    setNewProductForm({ ...newProductForm, sku: e.target.value })
                   }
-                  className="w-full px-3 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                  placeholder="Masukkan SKU"
+                  className="w-full px-3 py-2 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-xs font-semibold"
+                  placeholder="SKU..."
                 />
               </div>
 
-              {/* Batch */}
               <div ref={batchDropdownRef} className="relative">
-                <label className="block text-xs font-medium text-text-primary mb-1">
-                  Batch
-                </label>
+                <label className="block text-[11px] font-bold text-text-secondary mb-1">Batch</label>
                 <div className="relative">
                   <input
                     type="text"
                     value={newProductForm.batch}
                     onChange={(e) => {
-                      setNewProductForm({
-                        ...newProductForm,
-                        batch: e.target.value,
-                      });
+                      setNewProductForm({ ...newProductForm, batch: e.target.value });
                       setShowBatchDropdown(true);
                     }}
                     onFocus={() => {
                       if (newProductForm.sku.trim()) setShowBatchDropdown(true);
                     }}
-                    className="w-full px-3 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm pr-8"
-                    placeholder={
-                      batchesForSku.length > 0
-                        ? "Pilih atau ketik batch baru..."
-                        : "Masukkan batch"
-                    }
+                    className="w-full px-3 py-2 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-xs font-semibold pr-6"
+                    placeholder="Batch..."
                   />
                   {batchesForSku.length > 0 && (
                     <button
                       type="button"
                       onClick={() => setShowBatchDropdown(!showBatchDropdown)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary hover:text-primary p-0.5"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-secondary hover:text-primary p-0.5"
                     >
-                      <svg
-                        className={`w-4 h-4 transition-transform ${showBatchDropdown ? "rotate-180" : ""}`}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                      >
-                        <path d="M6 9l6 6 6-6" />
-                      </svg>
+                      ▼
                     </button>
                   )}
                 </div>
-                {/* Batch dropdown */}
+
                 {showBatchDropdown && newProductForm.sku.trim() && (
-                  <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-lg overflow-hidden">
+                  <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-lg overflow-hidden max-h-36 overflow-y-auto">
                     {filteredBatches.length > 0 ? (
-                      <div className="max-h-40 overflow-y-auto">
-                        {filteredBatches.map((batch) => (
-                          <button
-                            key={batch}
-                            type="button"
-                            onClick={() => {
-                              setNewProductForm({ ...newProductForm, batch });
-                              setShowBatchDropdown(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 text-sm hover:bg-primary-pale/50 transition border-b border-border last:border-b-0 ${
-                              newProductForm.batch === batch
-                                ? "bg-primary/10 text-primary font-semibold"
-                                : "text-text-primary"
-                            }`}
-                          >
-                            {batch}
-                          </button>
-                        ))}
-                      </div>
-                    ) : newProductForm.batch.trim() ? (
-                      <div className="px-3 py-2 text-xs text-text-secondary">
-                        <span className="text-primary font-medium">
-                          &quot;{newProductForm.batch.trim()}&quot;
-                        </span>{" "}
-                        — batch baru
-                      </div>
+                      filteredBatches.map((batch) => (
+                        <button
+                          key={batch}
+                          type="button"
+                          onClick={() => {
+                            setNewProductForm({ ...newProductForm, batch });
+                            setShowBatchDropdown(false);
+                          }}
+                          className={`w-full text-left px-3 py-1.5 text-xs hover:bg-primary-pale border-b border-border last:border-b-0 ${
+                            newProductForm.batch === batch ? "bg-primary/10 text-primary font-bold" : ""
+                          }`}
+                        >
+                          {batch}
+                        </button>
+                      ))
                     ) : (
-                      <div className="px-3 py-2 text-xs text-text-secondary">
-                        Tidak ada batch untuk SKU ini
+                      <div className="px-3 py-2 text-[10px] text-text-secondary">
+                        Batch baru: &quot;{newProductForm.batch.trim()}&quot;
                       </div>
                     )}
-                    {newProductForm.batch.trim() &&
-                      !batchesForSku.includes(newProductForm.batch.trim()) &&
-                      filteredBatches.length > 0 && (
-                        <div className="border-t border-border px-3 py-2 bg-gray-50">
-                          <button
-                            type="button"
-                            onClick={() => setShowBatchDropdown(false)}
-                            className="text-xs text-primary font-medium hover:underline"
-                          >
-                            + Gunakan &quot;{newProductForm.batch.trim()}&quot;
-                            sebagai batch baru
-                          </button>
-                        </div>
-                      )}
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* Qty */}
-              <div>
-                <label className="block text-xs font-medium text-text-primary mb-1">
-                  Quantity
-                </label>
-                <QtyInput
-                  value={newProductForm.qty}
-                  onChange={(v) =>
-                    setNewProductForm((prev) => ({ ...prev, qty: v }))
-                  }
-                  onExprCommit={(expr) => setNewProductFormula(expr)}
-                  wide
-                />
-              </div>
+            {/* Qty Input */}
+            <div ref={addFormQtyRef}>
+              <label className="block text-[11px] font-bold text-text-secondary mb-1">Quantity</label>
+              <QtyInput
+                value={newProductForm.qty}
+                onChange={(v) => setNewProductForm((prev) => ({ ...prev, qty: v }))}
+                onExprCommit={(expr) => setNewProductFormula(expr)}
+                wide
+              />
+            </div>
 
+            <div ref={addFormSubmitRef} className="pt-2 space-y-2">
               <button
+                type="button"
                 onClick={handleAddNewProduct}
-                className="w-full bg-primary text-white py-3 rounded-xl font-semibold hover:bg-primary-light transition text-sm active:scale-[0.98]"
+                className="w-full bg-primary text-white py-3 rounded-xl font-bold text-xs hover:bg-primary-light transition shadow-md active:scale-[0.98]"
               >
-                Tambahkan Produk
+                + Masukkan ke Hitungan Opname
               </button>
 
-              {/* Divider */}
-              <div className="relative flex items-center gap-2 py-1">
-                <div className="flex-1 border-t border-border" />
-                <span className="text-[10px] text-text-secondary">atau</span>
-                <div className="flex-1 border-t border-border" />
-              </div>
-
-              {/* Simpan ke Master Data saja */}
               <button
+                type="button"
                 onClick={async () => {
-                  if (
-                    !newProductForm.productName ||
-                    !newProductForm.sku ||
-                    !newProductForm.batch
-                  ) {
+                  if (!newProductForm.productName || !newProductForm.sku || !newProductForm.batch) {
                     toast.error("Nama Produk, SKU, dan Batch harus diisi");
-                    return;
-                  }
-                  const allProds = [...products, ...newProducts];
-                  if (
-                    allProds.some(
-                      (p) =>
-                        p.sku === newProductForm.sku &&
-                        p.batch === newProductForm.batch,
-                    )
-                  ) {
-                    toast.error(
-                      "Produk dengan SKU dan Batch yang sama sudah ada",
-                    );
                     return;
                   }
                   setSavingMasterData(true);
@@ -1141,10 +914,9 @@ function InputPageContent() {
                       newProductForm.productName,
                       newProductForm.sku,
                       newProductForm.batch,
-                      newProductForm.barcode,
+                      newProductForm.barcode
                     );
                     if (result.success) {
-                      // Add to local products list
                       const newProd: Product = {
                         productName: newProductForm.productName,
                         sku: newProductForm.sku,
@@ -1156,551 +928,232 @@ function InputPageContent() {
                         ...prev,
                         [productKey(newProd.sku, newProd.batch)]: 0,
                       }));
-                      // Update cache
-                      const ck = `products:${location}`;
-                      setCache(ck, [...products, newProd]);
-                      // Reset form
-                      setNewProductForm({
-                        productName: "",
-                        sku: "",
-                        batch: "",
-                        barcode: "",
-                        qty: 0,
-                      });
-                      setNewProductFormula("");
+                      setNewProductForm({ productName: "", sku: "", batch: "", barcode: "", qty: 0 });
                       setShowAddForm(false);
-                      toast.success(
-                        "Produk berhasil ditambahkan ke Master Data",
-                      );
+                      toast.success("Produk tersimpan di Master Data");
                     } else {
-                      toast.error(result.message || "Gagal menambahkan produk");
+                      toast.error(result.message || "Gagal menyimpan");
                     }
-                  } catch (error) {
-                    console.error("Add master product error:", error);
-                    toast.error("Gagal menambahkan produk ke Master Data");
+                  } catch {
+                    toast.error("Gagal menambahkan ke Master Data");
                   } finally {
                     setSavingMasterData(false);
                   }
                 }}
                 disabled={savingMasterData}
-                className="w-full bg-white border-2 border-primary text-primary py-3 rounded-xl font-semibold hover:bg-primary-pale transition text-sm active:scale-[0.98] disabled:opacity-50"
+                className="w-full bg-surface-warm border border-border text-text-primary py-2.5 rounded-xl font-bold text-xs hover:bg-gray-200 transition active:scale-[0.98]"
               >
-                {savingMasterData
-                  ? "Menyimpan..."
-                  : "Simpan ke Master Data Saja"}
+                {savingMasterData ? "Menyimpan..." : "Simpan ke Master Data Saja"}
               </button>
-              <p className="text-[10px] text-text-secondary text-center -mt-1">
-                Menambahkan produk ke daftar lokasi tanpa Stock Opname
-              </p>
+            </div>
+          </div>
+        )}
 
-              {showBarcodeScanner && (
-                <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-                  <div className="bg-white w-full max-w-md rounded-2xl p-4 shadow-2xl">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-text-primary text-sm">
-                        Scan Barcode Produk
+        {/* ── Product List (Card Layout) ── */}
+        <div ref={productListRef} className="space-y-2.5">
+          {allProducts.length === 0 ? (
+            <div className="bg-white rounded-2xl p-8 text-center border border-border shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-primary-pale text-primary mx-auto flex items-center justify-center text-xl mb-2">
+                📦
+              </div>
+              <p className="text-xs font-bold text-text-primary">Belum ada produk di lokasi ini</p>
+              <p className="text-[11px] text-text-secondary mt-1">
+                Gunakan tombol &quot;+ Tambah Produk&quot; untuk memasukkan barang
+              </p>
+            </div>
+          ) : (
+            allProducts.map((product, idx) => {
+              const isNew = idx >= products.length;
+              const k = productKey(product.sku, product.batch);
+              const qty = quantities[k] || 0;
+              const formula = formulas[k] || "";
+
+              return (
+                <div
+                  key={`${product.sku}-${product.batch}-${idx}`}
+                  data-product-idx={idx}
+                  className={`bg-white rounded-2xl p-3.5 border transition shadow-card ${
+                    qty > 0 ? "border-primary/40 bg-primary-pale/10" : "border-border"
+                  }`}
+                >
+                  {/* Row 1: Header (Product Name + Delete Button) */}
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      {isNew && (
+                        <span className="inline-block px-2 py-0.5 bg-accent-yellow/20 text-accent-yellow text-[9px] font-bold rounded-md mb-1">
+                          PRODUK BARU
+                        </span>
+                      )}
+                      <h3 className="text-xs font-bold text-text-primary leading-tight break-words">
+                        {product.productName}
                       </h3>
-                      <button
-                        onClick={() => setShowBarcodeScanner(false)}
-                        className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500"
-                      >
-                        ✕
-                      </button>
+                      <p className="text-[10px] text-text-secondary mt-0.5">
+                        SKU: <span className="font-semibold">{product.sku}</span>
+                      </p>
                     </div>
-                    <BarcodeScanner
-                      onScan={(code) => handleBarcodeScan(code)}
-                      active={showBarcodeScanner}
+
+                    {/* Delete button (Ergonomic 36x36px target) */}
+                    <button
+                      type="button"
+                      onClick={() => promptDeleteProduct(product, isNew)}
+                      className="w-9 h-9 rounded-xl bg-accent-red/10 text-accent-red hover:bg-accent-red hover:text-white transition flex-shrink-0 flex items-center justify-center active:scale-90"
+                      title="Hapus produk"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Row 2: Batch (Inline Edit) */}
+                  <div className="mb-2.5">
+                    <div
+                      className="relative inline-block"
+                      ref={
+                        editingBatchKey === `${isNew ? "new" : "exist"}-${product.sku}-${product.batch}`
+                          ? inlineBatchDropdownRef
+                          : undefined
+                      }
+                    >
+                      {editingBatchKey === `${isNew ? "new" : "exist"}-${product.sku}-${product.batch}` ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={editingBatchValue}
+                            onChange={(e) => {
+                              setEditingBatchValue(e.target.value);
+                              setShowInlineBatchDropdown(true);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleBatchSave(product.sku, product.batch, isNew);
+                              if (e.key === "Escape") setEditingBatchKey(null);
+                            }}
+                            className="w-32 px-2 py-1 bg-surface-warm border border-primary rounded-lg text-xs font-bold text-text-primary focus:outline-none"
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleBatchSave(product.sku, product.batch, isNew)}
+                            className="px-2 py-1 bg-primary text-white text-[10px] font-bold rounded-lg"
+                          >
+                            Simpan
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleBatchEdit(
+                              `${isNew ? "new" : "exist"}-${product.sku}-${product.batch}`,
+                              product.batch,
+                              product.sku
+                            )
+                          }
+                          className="flex items-center gap-1.5 px-2.5 py-1 bg-surface-warm hover:bg-primary-pale rounded-lg border border-border-subtle transition active:scale-95"
+                        >
+                          <span className="text-[10px] text-text-secondary">Batch:</span>
+                          <span className="text-[11px] font-bold text-text-primary">{product.batch}</span>
+                          <span className="text-[10px] text-text-secondary">✏️</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Row 3: Qty Input */}
+                  <div className="pt-1 border-t border-border-subtle">
+                    <QtyInput
+                      wide
+                      value={qty}
+                      onChange={(v) => handleQuantityChange(k, v)}
+                      onExprCommit={(expr) => handleExprCommit(k, expr)}
+                      onCommit={() => scrollToNextProduct(idx)}
                     />
+                    {formula && (
+                      <p className="text-[10px] text-primary font-bold mt-1 text-center">
+                        🧮 Rumus: {formula}
+                      </p>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── Product Table ── */}
-        {allProducts.length > 0 && (
-          <div className="mb-4 bg-white rounded-2xl shadow-card overflow-hidden">
-            <p className="text-[10px] text-text-secondary px-3 py-1.5 bg-gray-50 border-b border-border flex items-center gap-1">
-              <svg
-                className="w-3 h-3 text-accent-yellow"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M12 2L1 21h22L12 2zm0 4l7.53 13H4.47L12 6z" />
-                <path d="M11 10h2v5h-2zm0 6h2v2h-2z" />
-              </svg>
-              Qty bisa pakai rumus: 10+5, 400-100, 10x10+5
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-primary text-white">
-                    <th className="text-left px-3 py-2.5 font-semibold whitespace-nowrap">
-                      Produk
-                    </th>
-                    <th className="text-left px-2 py-2.5 font-semibold whitespace-nowrap">
-                      Batch
-                    </th>
-                    <th className="text-center px-2 py-2.5 font-semibold whitespace-nowrap">
-                      Qty
-                    </th>
-                    <th className="px-1 py-2.5"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {products.map((product, idx) => (
-                    <tr
-                      key={`${product.sku}-${product.batch}`}
-                      className={`hover:bg-primary-pale/50 transition ${idx % 2 === 1 ? "bg-gray-50/50" : "bg-white"}`}
-                    >
-                      <td className="px-3 py-2 text-text-primary font-medium">
-                        <span className="break-words text-[11px] leading-tight">
-                          {product.productName}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 text-text-secondary whitespace-nowrap">
-                        <div
-                          className="relative"
-                          ref={
-                            editingBatchKey ===
-                            `existing-${product.sku}-${product.batch}`
-                              ? inlineBatchDropdownRef
-                              : undefined
-                          }
-                        >
-                          {editingBatchKey ===
-                          `existing-${product.sku}-${product.batch}` ? (
-                            <div className="relative">
-                              <div className="flex items-center">
-                                <input
-                                  type="text"
-                                  value={editingBatchValue}
-                                  onChange={(e) => {
-                                    setEditingBatchValue(e.target.value);
-                                    setShowInlineBatchDropdown(true);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter")
-                                      handleBatchSave(
-                                        product.sku,
-                                        product.batch,
-                                        false,
-                                      );
-                                    if (e.key === "Escape") {
-                                      setEditingBatchKey(null);
-                                      setEditingBatchSku("");
-                                      setShowInlineBatchDropdown(false);
-                                    }
-                                  }}
-                                  onBlur={() => {
-                                    setTimeout(() => {
-                                      if (
-                                        !inlineBatchDropdownRef.current?.contains(
-                                          document.activeElement,
-                                        )
-                                      )
-                                        handleBatchSave(
-                                          product.sku,
-                                          product.batch,
-                                          false,
-                                        );
-                                    }, 200);
-                                  }}
-                                  className="w-20 pl-1.5 pr-6 py-0.5 border border-primary rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                                  autoFocus
-                                />
-                                {inlineBatchesForSku.length > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setShowInlineBatchDropdown(
-                                        !showInlineBatchDropdown,
-                                      )
-                                    }
-                                    className="absolute right-0.5 top-1/2 -translate-y-1/2 text-text-secondary hover:text-primary p-0.5"
-                                  >
-                                    <svg
-                                      className={`w-3 h-3 transition-transform ${showInlineBatchDropdown ? "rotate-180" : ""}`}
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2.5"
-                                    >
-                                      <path d="M6 9l6 6 6-6" />
-                                    </svg>
-                                  </button>
-                                )}
-                              </div>
-                              {showInlineBatchDropdown &&
-                                inlineBatchesForSku.length > 0 && (
-                                  <div className="absolute z-30 left-0 top-full mt-1 w-40 bg-white border border-border rounded-lg shadow-lg overflow-hidden">
-                                    <div className="max-h-36 overflow-y-auto">
-                                      {inlineFilteredBatches.map((b) => (
-                                        <button
-                                          key={b}
-                                          type="button"
-                                          onMouseDown={(e) =>
-                                            e.preventDefault()
-                                          }
-                                          onClick={() => {
-                                            setEditingBatchValue(b);
-                                            setShowInlineBatchDropdown(false);
-                                          }}
-                                          className={`w-full text-left px-2.5 py-1.5 text-[11px] hover:bg-primary-pale/50 transition border-b border-border last:border-b-0 ${editingBatchValue === b ? "bg-primary/10 text-primary font-semibold" : "text-text-primary"}`}
-                                        >
-                                          {b}
-                                        </button>
-                                      ))}
-                                    </div>
-                                    {editingBatchValue.trim() &&
-                                      !inlineBatchesForSku.includes(
-                                        editingBatchValue.trim(),
-                                      ) && (
-                                        <div className="border-t border-border px-2.5 py-1.5 bg-green-50">
-                                          <button
-                                            type="button"
-                                            onMouseDown={(e) =>
-                                              e.preventDefault()
-                                            }
-                                            onClick={() =>
-                                              setShowInlineBatchDropdown(false)
-                                            }
-                                            className="text-[10px] text-green-700 font-medium"
-                                          >
-                                            + Batch baru: &quot;
-                                            {editingBatchValue.trim()}&quot;
-                                          </button>
-                                        </div>
-                                      )}
-                                  </div>
-                                )}
-                            </div>
-                          ) : (
-                            <span
-                              className="flex items-center gap-1 group cursor-pointer"
-                              onClick={() =>
-                                handleBatchEdit(
-                                  `existing-${product.sku}-${product.batch}`,
-                                  product.batch,
-                                  product.sku,
-                                )
-                              }
-                            >
-                              <span className="text-[11px]">
-                                {product.batch}
-                              </span>
-                              <span className="text-[10px] text-text-secondary opacity-0 group-hover:opacity-100 transition">
-                                ✏️
-                              </span>
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-1 py-1 text-center">
-                        <QtyInput
-                          wide
-                          value={
-                            quantities[
-                              productKey(product.sku, product.batch)
-                            ] || 0
-                          }
-                          onChange={(v) =>
-                            handleQuantityChange(
-                              productKey(product.sku, product.batch),
-                              v,
-                            )
-                          }
-                          onExprCommit={(expr) =>
-                            handleExprCommit(
-                              productKey(product.sku, product.batch),
-                              expr,
-                            )
-                          }
-                        />
-                      </td>
-                      <td className="px-1 py-1 text-center">
-                        <button
-                          onClick={() =>
-                            handleDeleteProduct(product.sku, product.batch)
-                          }
-                          className="w-6 h-6 rounded-full bg-red-50 text-accent-red hover:bg-accent-red hover:text-white text-[10px] font-bold transition"
-                          title="Hapus"
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {newProducts.length > 0 && (
-                    <tr className="bg-primary/5">
-                      <td
-                        colSpan={4}
-                        className="px-3 py-1.5 text-xs font-semibold text-primary"
-                      >
-                        Produk Baru
-                      </td>
-                    </tr>
-                  )}
-                  {newProducts.map((product, idx) => (
-                    <tr
-                      key={`new-${product.sku}-${product.batch}`}
-                      className={`hover:bg-primary-pale/50 transition ${idx % 2 === 1 ? "bg-blue-50/30" : "bg-primary-pale/20"}`}
-                    >
-                      <td className="px-3 py-2 text-text-primary font-medium">
-                        <span className="break-words text-[11px] leading-tight">
-                          {product.productName}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 text-text-secondary whitespace-nowrap">
-                        <div
-                          className="relative"
-                          ref={
-                            editingBatchKey ===
-                            `new-${product.sku}-${product.batch}`
-                              ? inlineBatchDropdownRef
-                              : undefined
-                          }
-                        >
-                          {editingBatchKey ===
-                          `new-${product.sku}-${product.batch}` ? (
-                            <div className="relative">
-                              <div className="flex items-center">
-                                <input
-                                  type="text"
-                                  value={editingBatchValue}
-                                  onChange={(e) => {
-                                    setEditingBatchValue(e.target.value);
-                                    setShowInlineBatchDropdown(true);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter")
-                                      handleBatchSave(
-                                        product.sku,
-                                        product.batch,
-                                        true,
-                                      );
-                                    if (e.key === "Escape") {
-                                      setEditingBatchKey(null);
-                                      setEditingBatchSku("");
-                                      setShowInlineBatchDropdown(false);
-                                    }
-                                  }}
-                                  onBlur={() => {
-                                    setTimeout(() => {
-                                      if (
-                                        !inlineBatchDropdownRef.current?.contains(
-                                          document.activeElement,
-                                        )
-                                      )
-                                        handleBatchSave(
-                                          product.sku,
-                                          product.batch,
-                                          true,
-                                        );
-                                    }, 200);
-                                  }}
-                                  className="w-20 pl-1.5 pr-6 py-0.5 border border-primary rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                                  autoFocus
-                                />
-                                {inlineBatchesForSku.length > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setShowInlineBatchDropdown(
-                                        !showInlineBatchDropdown,
-                                      )
-                                    }
-                                    className="absolute right-0.5 top-1/2 -translate-y-1/2 text-text-secondary hover:text-primary p-0.5"
-                                  >
-                                    <svg
-                                      className={`w-3 h-3 transition-transform ${showInlineBatchDropdown ? "rotate-180" : ""}`}
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2.5"
-                                    >
-                                      <path d="M6 9l6 6 6-6" />
-                                    </svg>
-                                  </button>
-                                )}
-                              </div>
-                              {showInlineBatchDropdown &&
-                                inlineBatchesForSku.length > 0 && (
-                                  <div className="absolute z-30 left-0 top-full mt-1 w-40 bg-white border border-border rounded-lg shadow-lg overflow-hidden">
-                                    <div className="max-h-36 overflow-y-auto">
-                                      {inlineFilteredBatches.map((b) => (
-                                        <button
-                                          key={b}
-                                          type="button"
-                                          onMouseDown={(e) =>
-                                            e.preventDefault()
-                                          }
-                                          onClick={() => {
-                                            setEditingBatchValue(b);
-                                            setShowInlineBatchDropdown(false);
-                                          }}
-                                          className={`w-full text-left px-2.5 py-1.5 text-[11px] hover:bg-primary-pale/50 transition border-b border-border last:border-b-0 ${editingBatchValue === b ? "bg-primary/10 text-primary font-semibold" : "text-text-primary"}`}
-                                        >
-                                          {b}
-                                        </button>
-                                      ))}
-                                    </div>
-                                    {editingBatchValue.trim() &&
-                                      !inlineBatchesForSku.includes(
-                                        editingBatchValue.trim(),
-                                      ) && (
-                                        <div className="border-t border-border px-2.5 py-1.5 bg-green-50">
-                                          <button
-                                            type="button"
-                                            onMouseDown={(e) =>
-                                              e.preventDefault()
-                                            }
-                                            onClick={() =>
-                                              setShowInlineBatchDropdown(false)
-                                            }
-                                            className="text-[10px] text-green-700 font-medium"
-                                          >
-                                            + Batch baru: &quot;
-                                            {editingBatchValue.trim()}&quot;
-                                          </button>
-                                        </div>
-                                      )}
-                                  </div>
-                                )}
-                            </div>
-                          ) : (
-                            <span
-                              className="flex items-center gap-1 group cursor-pointer"
-                              onClick={() =>
-                                handleBatchEdit(
-                                  `new-${product.sku}-${product.batch}`,
-                                  product.batch,
-                                  product.sku,
-                                )
-                              }
-                            >
-                              <span className="text-[11px]">
-                                {product.batch}
-                              </span>
-                              <span className="text-[10px] text-text-secondary opacity-0 group-hover:opacity-100 transition">
-                                ✏️
-                              </span>
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-1 py-1 text-center">
-                        <QtyInput
-                          wide
-                          value={
-                            quantities[
-                              productKey(product.sku, product.batch)
-                            ] || 0
-                          }
-                          onChange={(v) =>
-                            handleQuantityChange(
-                              productKey(product.sku, product.batch),
-                              v,
-                            )
-                          }
-                          onExprCommit={(expr) =>
-                            handleExprCommit(
-                              productKey(product.sku, product.batch),
-                              expr,
-                            )
-                          }
-                        />
-                      </td>
-                      <td className="px-1 py-1 text-center">
-                        <button
-                          onClick={() =>
-                            handleDeleteNewProduct(product.sku, product.batch)
-                          }
-                          className="w-6 h-6 rounded-full bg-red-50 text-accent-red hover:bg-accent-red hover:text-white text-[10px] font-bold transition"
-                          title="Hapus"
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ── Save Button (Fixed) ── */}
-        <div className="fixed bottom-20 left-0 right-0 p-4 bg-white/95 backdrop-blur border-t border-border">
-          <button
-            onClick={handleSave}
-            disabled={saving || totalItems === 0}
-            className="w-full bg-primary text-white py-3.5 rounded-2xl font-semibold hover:bg-primary-light transition disabled:opacity-50 disabled:cursor-not-allowed shadow-card active:scale-[0.98]"
-          >
-            {saving ? <LoadingSpinner /> : `Simpan (${totalItems} item)`}
-          </button>
+              );
+            })
+          )}
         </div>
       </div>
 
-      <BottomNav activePage="scan" />
+      {/* ── Fixed Floating Bottom Save Bar ── */}
+      {!showAddForm && allProducts.length > 0 && (
+        <div className="fixed bottom-16 left-0 right-0 z-30 pointer-events-none">
+          <div className="max-w-md mx-auto p-4 pointer-events-auto">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || totalItems === 0}
+              className="w-full bg-primary text-white py-3.5 px-6 rounded-2xl font-bold text-sm hover:bg-primary-light transition shadow-xl border border-primary-light/30 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] flex items-center justify-between"
+            >
+              <span>{saving ? "Menyimpan Data..." : "Simpan Hasil Opname"}</span>
+              <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-black">
+                {totalItems} Item
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirmation Modal Hapus Produk ── */}
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        title="Hapus Produk dari Lokasi?"
+        message={`Apakah Anda yakin ingin menghapus "${deleteModal.productName}" (SKU: ${deleteModal.sku}, Batch: ${deleteModal.batch})?`}
+        confirmText="Hapus Produk"
+        cancelText="Batal"
+        isDanger
+        onConfirm={confirmDeleteProduct}
+        onClose={() => setDeleteModal((prev) => ({ ...prev, isOpen: false }))}
+      />
 
       {/* ── Move Location Modal ── */}
       {showMoveModal && (
         <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
           onClick={() => setShowMoveModal(false)}
         >
           <div
-            className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col"
+            className="bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl border border-border"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className="px-5 pt-5 pb-3 border-b border-border">
-              <div className="flex items-center justify-between mb-1">
-                <h2 className="text-base font-bold text-text-primary flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5 text-amber-500"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                  Pindah Lokasi
-                </h2>
-                <button
-                  onClick={() => setShowMoveModal(false)}
-                  className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-text-secondary text-sm"
-                >
-                  ✕
-                </button>
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mt-3 sm:hidden" />
+
+            <div className="px-5 pt-3 pb-3 border-b border-border flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-text-primary">Pindah Lokasi</h2>
+                <p className="text-[11px] text-text-secondary">
+                  Dari: <span className="font-bold text-primary">{location}</span>
+                </p>
               </div>
-              <p className="text-xs text-text-secondary">
-                Pindahkan produk dari{" "}
-                <span className="font-semibold text-primary">{location}</span>{" "}
-                ke lokasi lain
-              </p>
+              <button
+                onClick={() => setShowMoveModal(false)}
+                className="w-7 h-7 rounded-full bg-surface-warm flex items-center justify-center text-text-secondary text-xs"
+              >
+                ✕
+              </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="px-5 py-4 overflow-y-auto flex-1 space-y-4">
-              {/* Target Location */}
+            <div className="px-5 py-3 overflow-y-auto flex-1 space-y-3">
+              {/* Lokasi Tujuan */}
               <div ref={moveLocRef} className="relative">
-                <label className="block text-xs font-medium text-text-primary mb-1">
-                  Lokasi Tujuan
+                <label className="block text-xs font-bold text-text-primary mb-1">
+                  Lokasi Tujuan:
                 </label>
                 <input
                   type="text"
                   value={moveTarget}
                   onChange={(e) => handleMoveLocSearch(e.target.value)}
                   onFocus={() => {
-                    if (moveLocSuggestions.length > 0)
-                      setShowMoveLocSuggestions(true);
+                    if (moveLocSuggestions.length > 0) setShowMoveLocSuggestions(true);
                   }}
                   placeholder="Ketik kode lokasi tujuan..."
-                  className="w-full border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                  className="w-full bg-surface-warm border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold uppercase focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 {showMoveLocSuggestions && moveLocSuggestions.length > 0 && (
                   <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-lg max-h-36 overflow-y-auto">
@@ -1713,150 +1166,80 @@ function InputPageContent() {
                           setMoveTarget(loc.locationCode);
                           setShowMoveLocSuggestions(false);
                         }}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-primary-pale/50 border-b border-border last:border-b-0 flex justify-between"
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-primary-pale border-b border-border last:border-b-0 flex justify-between"
                       >
-                        <span className="font-medium text-text-primary">
-                          {loc.locationCode}
-                        </span>
-                        <span className="text-xs text-text-secondary">
-                          {loc.productCount} produk
-                        </span>
+                        <span className="font-bold text-text-primary">{loc.locationCode}</span>
+                        <span className="text-[10px] text-text-secondary">({loc.productCount} produk)</span>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* Move Mode */}
+              {/* Mode Pindah */}
               <div>
-                <label className="block text-xs font-medium text-text-primary mb-2">
-                  Mode Pindah
+                <label className="block text-xs font-bold text-text-primary mb-1.5">
+                  Pilihan Produk
                 </label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setMoveMode("all")}
-                    className={`flex-1 py-2 rounded-xl text-xs font-semibold transition border ${moveMode === "all" ? "bg-amber-500 text-white border-amber-500" : "bg-white text-text-primary border-border hover:border-amber-300"}`}
+                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition border ${
+                      moveMode === "all"
+                        ? "bg-primary text-white border-primary shadow-xs"
+                        : "bg-surface-warm text-text-primary border-border"
+                    }`}
                   >
-                    Semua Produk ({products.length})
+                    Semua ({products.length})
                   </button>
                   <button
                     onClick={() => setMoveMode("select")}
-                    className={`flex-1 py-2 rounded-xl text-xs font-semibold transition border ${moveMode === "select" ? "bg-amber-500 text-white border-amber-500" : "bg-white text-text-primary border-border hover:border-amber-300"}`}
+                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition border ${
+                      moveMode === "select"
+                        ? "bg-primary text-white border-primary shadow-xs"
+                        : "bg-surface-warm text-text-primary border-border"
+                    }`}
                   >
                     Pilih Produk
                   </button>
                 </div>
               </div>
 
-              {/* Product Selection (when mode=select) */}
+              {/* Selection list */}
               {moveMode === "select" && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-medium text-text-primary">
-                      Pilih Produk ({moveSelected.size}/{products.length})
-                    </label>
-                    <button
-                      onClick={() => {
-                        if (moveSelected.size === products.length) {
-                          setMoveSelected(new Set());
-                        } else {
-                          setMoveSelected(
-                            new Set(
-                              products.map((p) => productKey(p.sku, p.batch)),
-                            ),
-                          );
-                        }
-                      }}
-                      className="text-[10px] text-primary font-medium hover:underline"
-                    >
-                      {moveSelected.size === products.length
-                        ? "Batal Semua"
-                        : "Pilih Semua"}
-                    </button>
-                  </div>
-                  <div className="border border-border rounded-xl overflow-hidden max-h-48 overflow-y-auto">
-                    {products.map((product, idx) => {
-                      const key = productKey(product.sku, product.batch);
-                      const isSelected = moveSelected.has(key);
-                      return (
-                        <button
-                          key={key}
-                          onClick={() =>
-                            toggleMoveSelect(product.sku, product.batch)
-                          }
-                          className={`w-full text-left px-3 py-2 flex items-center gap-2.5 border-b border-border last:border-b-0 transition ${isSelected ? "bg-amber-50" : idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}
-                        >
-                          <div
-                            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition ${isSelected ? "bg-amber-500 border-amber-500" : "border-gray-300"}`}
-                          >
-                            {isSelected && (
-                              <svg
-                                className="w-3 h-3 text-white"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="3"
-                              >
-                                <path d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[11px] font-medium text-text-primary truncate">
-                              {product.productName}
-                            </p>
-                            <p className="text-[10px] text-text-secondary">
-                              SKU: {product.sku} | Batch: {product.batch}
-                            </p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                <div className="border border-border rounded-xl overflow-hidden max-h-40 overflow-y-auto divide-y divide-border-subtle bg-white">
+                  {products.map((p) => {
+                    const key = productKey(p.sku, p.batch);
+                    const isSelected = moveSelected.has(key);
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => toggleMoveSelect(p.sku, p.batch)}
+                        className={`w-full text-left px-3 py-2 flex items-center gap-2 transition ${
+                          isSelected ? "bg-primary-pale/40" : ""
+                        }`}
+                      >
+                        <span className={`text-sm ${isSelected ? "text-primary" : "text-gray-300"}`}>
+                          {isSelected ? "☑" : "☐"}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-text-primary truncate">{p.productName}</p>
+                          <p className="text-[10px] text-text-secondary">
+                            SKU: {p.sku} | Batch: {p.batch}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
-
-              {/* Summary */}
-              <div className="bg-amber-50 rounded-xl p-3 border border-amber-200">
-                <div className="flex items-start gap-2">
-                  <svg
-                    className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M12 8v4M12 16h.01" />
-                  </svg>
-                  <div className="text-[11px] text-amber-800">
-                    <p className="font-semibold mb-0.5">
-                      {moveMode === "all"
-                        ? `${products.length} produk akan dipindah`
-                        : `${moveSelected.size} produk akan dipindah`}
-                    </p>
-                    <p>
-                      Dari: <span className="font-semibold">{location}</span>
-                    </p>
-                    <p>
-                      Ke:{" "}
-                      <span className="font-semibold">
-                        {moveTarget.trim().toUpperCase() || "..."}
-                      </span>
-                    </p>
-                    <p className="mt-1 text-amber-600">
-                      Produk yang sudah ada di lokasi tujuan akan dilewati.
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-5 py-4 border-t border-border flex gap-3">
+            <div className="px-5 py-4 border-t border-border flex gap-2.5">
               <button
                 onClick={() => setShowMoveModal(false)}
-                className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-text-primary hover:bg-gray-50 transition"
+                className="flex-1 py-2.5 bg-surface-warm rounded-xl text-xs font-bold text-text-primary"
               >
                 Batal
               </button>
@@ -1867,29 +1250,34 @@ function InputPageContent() {
                   !moveTarget.trim() ||
                   (moveMode === "select" && moveSelected.size === 0)
                 }
-                className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-light disabled:opacity-50 shadow-md"
               >
-                {movingProducts ? (
-                  <LoadingSpinner />
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
-                    Pindahkan
-                  </>
-                )}
+                {movingProducts ? <LoadingSpinner /> : "Pindahkan"}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Barcode Scanner Modal */}
+      {showBarcodeScanner && (
+        <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-4 shadow-2xl border border-border">
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h3 className="font-bold text-text-primary text-sm">Scan Barcode Produk</h3>
+              <button
+                onClick={() => setShowBarcodeScanner(false)}
+                className="w-8 h-8 rounded-full bg-surface-warm flex items-center justify-center text-text-secondary text-xs"
+              >
+                ✕
+              </button>
+            </div>
+            <BarcodeScanner onScan={handleBarcodeScan} active={showBarcodeScanner} />
+          </div>
+        </div>
+      )}
+
+      <BottomNav activePage="scan" />
     </div>
   );
 }
@@ -1898,7 +1286,7 @@ export default function InputPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="mobile-container flex items-center justify-center min-h-screen">
           <LoadingSpinner />
         </div>
       }
