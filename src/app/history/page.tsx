@@ -582,7 +582,7 @@ export default function HistoryPage() {
                 {/* Entry Items */}
                 <div className="divide-y divide-border-subtle">
                   {entries.map((entry) => (
-                    <div key={entry.rowId} className="p-3 hover:bg-primary-pale/10 transition">
+                    <div key={entry.rowId} className="p-3.5 sm:p-4 hover:bg-primary-pale/10 transition">
                       <div className="flex items-start justify-between gap-2 mb-1.5">
                         <div className="flex-1 min-w-0">
                           <h4 className="text-xs font-bold text-text-primary leading-snug break-words">

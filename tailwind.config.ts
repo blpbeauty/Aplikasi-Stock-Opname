@@ -32,10 +32,19 @@ const config: Config = {
         },
         "text-primary": "var(--text-primary)",
         "text-secondary": "var(--text-secondary)",
-        border: "var(--border)",
+        border: {
+          DEFAULT: "var(--border)",
+          subtle: "var(--border-subtle)",
+        },
       },
       boxShadow: {
-        card: "var(--card-shadow)",
+        card: "0 2px 14px rgba(45, 30, 20, 0.06)",
+        cardHover: "0 4px 20px rgba(45, 30, 20, 0.10)",
+        subtle: "0 1px 3px rgba(45, 30, 20, 0.04)",
+      },
+      borderRadius: {
+        "2xl": "1rem",
+        "3xl": "1.5rem",
       },
     },
   },

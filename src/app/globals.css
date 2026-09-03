@@ -21,16 +21,17 @@
   
   --text-primary: #231815;     /* Deep Espresso Black */
   --text-secondary: #786B65;   /* Warm Slate / Cocoa Gray */
-  --border: #EBE3DA;           /* Subtle Warm Ivory Border */
+  --border: #E8E0D7;           /* Subtle Warm Ivory Border */
   --border-subtle: #F2ECE4;
-  --card-shadow: 0 2px 14px rgba(45, 30, 20, 0.05);
 }
 
 /* Base styles */
 body {
   background-color: var(--primary-bg);
   color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
@@ -48,7 +49,8 @@ html {
   margin-right: auto;
   min-height: 100vh;
   position: relative;
-  box-shadow: 0 0 30px rgba(74, 53, 40, 0.04);
+  background-color: var(--primary-bg);
+  box-shadow: 0 0 32px rgba(74, 53, 40, 0.05);
 }
 
 /* Hide scrollbar but keep scroll */

@@ -107,10 +107,10 @@ export default function ProfilePage() {
         <div className="w-16 h-16 mx-auto rounded-2xl bg-primary text-white flex items-center justify-center mb-3 shadow-md">
           <span className="text-2xl font-black">{initial}</span>
         </div>
-        <h1 className="text-base font-bold text-text-primary tracking-tight">
+        <h1 className="text-base font-bold text-text-primary tracking-tight leading-snug">
           {user?.name || "Operator Gudang"}
         </h1>
-        <div className="flex items-center justify-center gap-1.5 mt-1 text-xs text-text-secondary font-medium">
+        <div className="flex items-center justify-center gap-1.5 mt-1.5 text-xs text-text-secondary font-medium">
           <span className="inline-block px-2.5 py-0.5 bg-primary-pale text-primary rounded-full font-bold text-[10px]">
             {user?.role || "Staff Gudang"}
           </span>
@@ -122,27 +122,27 @@ export default function ProfilePage() {
       <div className="px-4 pt-4 space-y-4">
         {/* ── Stats Row ── */}
         <div className="bg-white rounded-2xl shadow-card border border-border grid grid-cols-3 divide-x divide-border-subtle overflow-hidden">
-          <div className="py-3.5 px-2 text-center">
-            <p className="text-base font-black text-primary">{stats.discan}</p>
-            <p className="text-[10px] text-text-secondary font-bold mt-0.5">Lokasi Discan</p>
+          <div className="py-4 px-2 text-center">
+            <p className="text-base font-black text-primary leading-tight">{stats.discan}</p>
+            <p className="text-[10px] text-text-secondary font-bold mt-1">Lokasi Discan</p>
           </div>
-          <div className="py-3.5 px-2 text-center">
-            <p className="text-base font-black text-text-primary">
+          <div className="py-4 px-2 text-center">
+            <p className="text-base font-black text-text-primary leading-tight">
               {stats.entries.toLocaleString()}
             </p>
-            <p className="text-[10px] text-text-secondary font-bold mt-0.5">Produk Diinput</p>
+            <p className="text-[10px] text-text-secondary font-bold mt-1">Produk Diinput</p>
           </div>
-          <div className="py-3.5 px-2 text-center">
-            <p className="text-base font-black text-accent-yellow">
+          <div className="py-4 px-2 text-center">
+            <p className="text-base font-black text-accent-yellow leading-tight">
               {stats.items.toLocaleString()}
             </p>
-            <p className="text-[10px] text-text-secondary font-bold mt-0.5">Total Pcs</p>
+            <p className="text-[10px] text-text-secondary font-bold mt-1">Total Pcs</p>
           </div>
         </div>
 
         {/* ── Location Group Progress ── */}
         {locationGroups.length > 0 && (
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             <h2 className="text-xs font-bold text-text-primary px-1 uppercase tracking-wider">
               Progress per Area Gudang
             </h2>
@@ -151,17 +151,17 @@ export default function ProfilePage() {
               return (
                 <div
                   key={group.name}
-                  className="bg-white rounded-2xl shadow-card border border-border p-3.5"
+                  className="bg-white rounded-2xl shadow-card border border-border p-4"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-primary-pale text-primary flex items-center justify-center text-xs font-bold">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-primary-pale text-primary flex items-center justify-center text-xs font-bold">
                         📍
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-text-primary">{group.name}</p>
-                        <p className="text-[10px] text-text-secondary">
-                          {group.scanned} / {group.total} lokasi selesai
+                        <p className="text-xs font-bold text-text-primary leading-tight">{group.name}</p>
+                        <p className="text-[10px] text-text-secondary mt-0.5">
+                          {group.scanned} dari {group.total} lokasi selesai
                         </p>
                       </div>
                     </div>
@@ -179,16 +179,16 @@ export default function ProfilePage() {
                   </div>
 
                   {/* Progress Bar */}
-                  <div className="w-full h-2 bg-surface-warm rounded-full overflow-hidden border border-border-subtle">
+                  <div className="w-full h-2.5 bg-surface-warm rounded-full overflow-hidden border border-border-subtle p-0.5">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
-                        pct === 100 ? "bg-accent-green" : "bg-primary"
+                        pct === 100 ? "bg-accent-green" : "bg-gradient-to-r from-primary to-accent-yellow"
                       }`}
-                      style={{ width: `${pct}%` }}
+                      style={{ width: `${Math.max(pct, pct > 0 ? 4 : 0)}%` }}
                     />
                   </div>
 
-                  <div className="flex items-center justify-between mt-2 text-[10px] text-text-secondary">
+                  <div className="flex items-center justify-between mt-2.5 text-[10px] text-text-secondary">
                     <span>
                       Diinput: <strong className="text-text-primary">{group.inputCount}</strong>
                     </span>
@@ -203,13 +203,13 @@ export default function ProfilePage() {
         )}
 
         {/* ── Info Card ── */}
-        <div className="bg-white rounded-2xl shadow-card border border-border p-3.5 flex items-center gap-3">
+        <div className="bg-white rounded-2xl shadow-card border border-border p-4 flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-primary-pale text-primary flex items-center justify-center text-sm font-bold">
             ℹ️
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold text-text-primary">BLP Stock Opname Mobile</p>
-            <p className="text-[10px] text-text-secondary">Versi 2.0.0 · Dark Brown &amp; Warm Ivory Edition</p>
+            <p className="text-[10px] text-text-secondary mt-0.5">Versi 2.0.0 · Dark Brown &amp; Warm Ivory Edition</p>
           </div>
         </div>
 

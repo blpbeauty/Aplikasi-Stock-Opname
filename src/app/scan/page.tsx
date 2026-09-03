@@ -1,330 +1,300 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { useDataSync } from "@/components/DataSyncProvider";
-import BarcodeScanner from "@/components/BarcodeScanner";
 import BottomNav from "@/components/BottomNav";
+import BarcodeScanner from "@/components/BarcodeScanner";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   getProductsApi,
+  getHistoryApi,
+  searchProductsApi,
   searchLocationsApi,
   warmupCacheApi,
-  preloadHistory,
-  preloadProducts,
+  getAllProductsApi,
   getAllLocationsApi,
-  getHistoryApi,
   searchProductsGlobalApi,
   moveProductsApi,
 } from "@/lib/api";
+import { useDataSync } from "@/components/DataSyncProvider";
+import { Product, HistoryEntry } from "@/lib/types";
 import { getCache, setCache } from "@/lib/cache";
 import toast from "react-hot-toast";
-import LoadingSpinner from "@/components/LoadingSpinner";
-import { HistoryEntry } from "@/lib/types";
 
 type LocationResult = {
   locationCode: string;
   productCount: number;
 };
 
-export default function ScanPage() {
+type GlobalProductItem = {
+  location: string;
+  productName: string;
+  sku: string;
+  batch: string;
+  barcode: string;
+};
+
+export default function ScanDashboard() {
   const { user } = useAuth();
-  const { syncProgress, forceSync, lastSyncTime } = useDataSync();
   const router = useRouter();
+  const { isReady, syncProgress, lastSyncTime, forceSync } = useDataSync();
+
   const [locationCode, setLocationCode] = useState("");
-  const [showLocationScanner, setShowLocationScanner] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
+  const [showLocationScanner, setShowLocationScanner] = useState(false);
 
+  // Search locations state
   const [locationResults, setLocationResults] = useState<LocationResult[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const [searchLocationApiDisabled, setSearchLocationApiDisabled] = useState(false);
-  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const warmedRef = useRef(false);
-  const allLocationsRef = useRef<LocationResult[] | null>(null);
-  const [recentHistory, setRecentHistory] = useState<HistoryEntry[]>([]);
-  const [totalLocations, setTotalLocations] = useState(0);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
 
-  // Product search + move state
-  const [productQuery, setProductQuery] = useState("");
-  const [productResults, setProductResults] = useState<
-    Array<{ location: string; productName: string; sku: string; batch: string; barcode: string }>
+  // Statistics state
+  const [stats, setStats] = useState({
+    total: 0,
+    scannedCount: 0,
+    pending: 0,
+    progress: 0,
+  });
+
+  // Recent scans
+  const [recentScans, setRecentScans] = useState<
+    Array<{ location: string; time: string; count: number }>
   >([]);
-  const [productSearchLoading, setProductSearchLoading] = useState(false);
-  const [showProductResults, setShowProductResults] = useState(false);
-  const productSearchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Quick move
-  const [moveItem, setMoveItem] = useState<{
-    location: string;
-    sku: string;
-    batch: string;
-    productName: string;
-  } | null>(null);
+  // Product Finder state
+  const [productQuery, setProductQuery] = useState("");
+  const [productResults, setProductResults] = useState<GlobalProductItem[]>([]);
+  const [productSearchLoading, setProductSearchLoading] = useState(false);
+  const [productSearchTimer, setProductSearchTimer] = useState<NodeJS.Timeout | null>(null);
+  const [showProductScanner, setShowProductScanner] = useState(false);
+
+  // Quick move product state
+  const [moveItem, setMoveItem] = useState<GlobalProductItem | null>(null);
   const [quickMoveTarget, setQuickMoveTarget] = useState("");
+  const [quickMoving, setQuickMoving] = useState(false);
   const [quickMoveSuggestions, setQuickMoveSuggestions] = useState<LocationResult[]>([]);
   const [showQuickMoveSuggestions, setShowQuickMoveSuggestions] = useState(false);
-  const [quickMoving, setQuickMoving] = useState(false);
-  const quickMoveTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const quickMoveRef = useRef<HTMLDivElement>(null);
+  const [quickMoveTimer, setQuickMoveTimer] = useState<NodeJS.Timeout | null>(null);
 
-  const normalizeLocationCode = (value: string) => value.toUpperCase().replace(/\s+/g, "").trim();
+  const allLocationsRef = useRef<LocationResult[] | null>(null);
+  const allProductsRef = useRef<Product[] | null>(null);
 
-  // Compute dashboard stats from data
-  const stats = useMemo(() => {
-    const uniqueLocations = new Set(recentHistory.map((e) => e.location));
-    const scannedCount = uniqueLocations.size;
-    const total = Math.max(totalLocations, scannedCount);
-    const pending = Math.max(0, total - scannedCount);
-    const progress = total > 0 ? Math.round((scannedCount / total) * 100) : 0;
+  const calculateStats = useCallback(
+    (locations: LocationResult[], history: HistoryEntry[]) => {
+      const scannedLocations = new Set(history.map((h) => h.location));
+      const total = locations.length;
+      const scannedCount = scannedLocations.size;
+      const pending = Math.max(0, total - scannedCount);
+      const progress = total > 0 ? Math.round((scannedCount / total) * 100) : 0;
 
-    // Recent scans: group by location, get latest timestamp & item count
-    const locationMap = new Map<string, { items: number; timestamp: string; operator: string }>();
-    recentHistory.forEach((e) => {
-      const existing = locationMap.get(e.location);
-      if (!existing) {
-        locationMap.set(e.location, { items: 1, timestamp: e.timestamp, operator: e.operator });
-      } else {
-        existing.items += 1;
-        if (new Date(e.timestamp).getTime() > new Date(existing.timestamp).getTime()) {
-          existing.timestamp = e.timestamp;
+      setStats({ total, scannedCount, pending, progress });
+
+      const locationMap = new Map<string, { time: string; count: number }>();
+      history.forEach((h) => {
+        const existing = locationMap.get(h.location);
+        if (!existing) {
+          locationMap.set(h.location, { time: h.timestamp, count: 1 });
+        } else {
+          existing.count += 1;
+        }
+      });
+
+      const recents = Array.from(locationMap.entries())
+        .map(([location, data]) => ({ location, time: data.time, count: data.count }))
+        .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+        .slice(0, 5);
+
+      setRecentScans(recents);
+    },
+    []
+  );
+
+  const loadDashboardData = useCallback(async () => {
+    const cachedLocations = getCache<LocationResult[]>("allLocations");
+    const cachedHistory = getCache<HistoryEntry[]>(`history:${user?.email}:all`);
+
+    if (cachedLocations) allLocationsRef.current = cachedLocations.data;
+
+    if (cachedLocations && cachedHistory) {
+      calculateStats(cachedLocations.data, cachedHistory.data);
+    }
+
+    try {
+      const [locationsRes, historyRes] = await Promise.all([
+        getAllLocationsApi(),
+        user?.email ? getHistoryApi(user.email) : Promise.resolve({ success: false, history: [] }),
+      ]);
+
+      let locData = cachedLocations?.data || [];
+      let histData = cachedHistory?.data || [];
+
+      if (locationsRes.success && locationsRes.locations) {
+        locData = locationsRes.locations;
+        allLocationsRef.current = locData;
+        setCache("allLocations", locData);
+      }
+
+      if (historyRes.success && historyRes.history) {
+        histData = historyRes.history;
+        if (user?.email) {
+          setCache(`history:${user.email}:all`, histData);
         }
       }
-    });
 
-    const recentScans = Array.from(locationMap.entries())
-      .map(([loc, data]) => ({ location: loc, ...data }))
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 5);
-
-    return { total, scannedCount, pending, progress, recentScans };
-  }, [recentHistory, totalLocations]);
+      calculateStats(locData, histData);
+    } catch (error) {
+      console.error("Failed to load dashboard data:", error);
+    }
+  }, [user, calculateStats]);
 
   useEffect(() => {
-    if (warmedRef.current) return;
-    warmedRef.current = true;
-
-    const loadAllLocations = async () => {
-      const cached = getCache<LocationResult[]>("allLocations");
-      if (cached && cached.age < 300) {
-        allLocationsRef.current = cached.data;
-        setTotalLocations(cached.data.length);
-      }
-      try {
-        const result = await getAllLocationsApi();
-        if (result.success && result.locations) {
-          allLocationsRef.current = result.locations;
-          setCache("allLocations", result.locations);
-          setTotalLocations(result.locations.length);
-        }
-      } catch {}
-    };
-    loadAllLocations();
-
-    // Load recent history for dashboard
-    if (user?.email) {
-      const cachedHist = getCache<HistoryEntry[]>(`history:${user.email}:all`);
-      if (cachedHist) setRecentHistory(cachedHist.data);
-
-      const lastSave = Number(localStorage.getItem("lastSaveTs") || "0");
-      const sinceSave = Date.now() - lastSave;
-      const refreshDelay = sinceSave < 15_000 ? Math.max(15_000 - sinceSave, 0) : 0;
-
-      setTimeout(() => {
-        getHistoryApi(user!.email, undefined)
-          .then((res) => {
-            if (res.success && res.history) {
-              setRecentHistory(res.history);
-              setCache(`history:${user!.email}:all`, res.history);
-            }
-          })
-          .catch(() => {});
-      }, refreshDelay);
-    }
-
     warmupCacheApi().catch(() => {});
-    if (user?.email) preloadHistory(user.email);
-    router.prefetch("/input");
-  }, [user, router]);
+    const cached = getCache<Product[]>("allProducts");
+    if (cached) allProductsRef.current = cached.data;
+    getAllProductsApi()
+      .then((res) => {
+        if (res.success && res.products) {
+          allProductsRef.current = res.products;
+          setCache("allProducts", res.products);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
-  const handleScan = async (code: string) => {
-    if (isSearching) return;
-    setIsSearching(true);
-    const normalized = normalizeLocationCode(code);
-    setLocationCode(normalized);
-    setShowLocationScanner(false);
-    await searchLocation(normalized);
-    setIsSearching(false);
-  };
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
-  const handleManualSearch = async () => {
-    if (!locationCode.trim()) {
-      toast.error("Masukkan kode lokasi");
-      return;
-    }
-    await searchLocation(normalizeLocationCode(locationCode));
-  };
+  const handleLocationSearch = (query: string) => {
+    setLocationCode(query);
+    if (searchTimer) clearTimeout(searchTimer);
 
-  const searchLocation = async (code: string) => {
-    if (allLocationsRef.current) {
-      const exists = allLocationsRef.current.some(
-        (loc) => loc.locationCode.toLowerCase() === code.toLowerCase()
-      );
-      if (exists) {
-        toast.success("Lokasi ditemukan!");
-        getProductsApi(code)
-          .then((result) => {
-            if (result.success && result.products) {
-              setCache(`products:${code}`, result.products);
-            }
-          })
-          .catch(() => {});
-        router.push(`/input?location=${encodeURIComponent(code)}`);
-        return;
-      }
-    }
-
-    setLoading(true);
-    try {
-      const result = await getProductsApi(code);
-      if (result.success && result.products && result.products.length > 0) {
-        setCache(`products:${code}`, result.products);
-        toast.success("Lokasi ditemukan!");
-        router.push(`/input?location=${encodeURIComponent(code)}`);
-      } else {
-        toast.error(result.message || "Lokasi tidak ditemukan");
-      }
-    } catch (error) {
-      console.error("Search error:", error);
-      toast.error("Koneksi ke server bermasalah. Coba lagi.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLocationSearch = (value: string) => {
-    const normalized = normalizeLocationCode(value);
-    setLocationCode(normalized);
-
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-
-    if (normalized.length < 1) {
+    if (query.trim().length === 0) {
       setLocationResults([]);
       setShowResults(false);
       return;
     }
 
     if (allLocationsRef.current) {
-      const q = normalized.toLowerCase();
+      const q = query.trim().toLowerCase();
       const filtered = allLocationsRef.current
-        .filter((loc) => loc.locationCode.toLowerCase().includes(q))
-        .slice(0, 15);
+        .filter((l) => l.locationCode.toLowerCase().includes(q))
+        .slice(0, 10);
       setLocationResults(filtered);
-      setShowResults(filtered.length > 0);
+      setShowResults(true);
       return;
     }
 
-    if (searchLocationApiDisabled) {
-      setLocationResults([]);
-      setShowResults(false);
-      return;
-    }
-
-    searchTimerRef.current = setTimeout(async () => {
-      setSearchLoading(true);
+    setSearchLoading(true);
+    const timer = setTimeout(async () => {
       try {
-        const result = await searchLocationsApi(normalized);
+        const result = await searchLocationsApi(query.trim());
         if (result.success && result.locations) {
           setLocationResults(result.locations);
-          setShowResults(result.locations.length > 0);
-        } else {
-          const msg = String((result as any)?.message || "").toLowerCase();
-          if (msg.includes("unknown action") || msg.includes("searchlocations")) {
-            setSearchLocationApiDisabled(true);
-            setShowResults(false);
-          }
+          setShowResults(true);
         }
       } catch (error) {
-        console.error("Location search error:", error);
-        setShowResults(false);
+        console.error("Search error:", error);
       } finally {
         setSearchLoading(false);
       }
-    }, 80);
+    }, 150);
+    setSearchTimer(timer);
   };
 
   const handleSelectLocation = (loc: LocationResult) => {
     setLocationCode(loc.locationCode);
     setShowResults(false);
-    setLocationResults([]);
-    preloadProducts(loc.locationCode);
-    searchLocation(loc.locationCode);
+    openLocation(loc.locationCode);
   };
 
-  const handleProductSearch = (value: string) => {
-    setProductQuery(value);
-    if (productSearchTimerRef.current) clearTimeout(productSearchTimerRef.current);
-    if (value.trim().length < 2) {
-      setProductResults([]);
-      setShowProductResults(false);
+  const handleLocationScan = (barcode: string) => {
+    setShowLocationScanner(false);
+    setLocationCode(barcode);
+    openLocation(barcode);
+  };
+
+  const handleManualSearch = () => {
+    if (!locationCode.trim()) {
+      toast.error("Masukkan kode lokasi");
       return;
     }
-    productSearchTimerRef.current = setTimeout(async () => {
-      setProductSearchLoading(true);
+    openLocation(locationCode.trim());
+  };
+
+  const openLocation = async (locCode: string) => {
+    setLoading(true);
+    try {
+      const result = await getProductsApi(locCode);
+      if (result.success && result.products) {
+        setCache(`products:${locCode}`, result.products);
+        router.push(`/input?location=${encodeURIComponent(locCode)}`);
+      } else {
+        toast.error(result.message || "Lokasi tidak ditemukan");
+        setLoading(false);
+      }
+    } catch {
+      toast.error("Terjadi kesalahan saat membuka lokasi");
+      setLoading(false);
+    }
+  };
+
+  // Product Finder
+  const handleProductSearch = (query: string) => {
+    setProductQuery(query);
+    if (productSearchTimer) clearTimeout(productSearchTimer);
+
+    if (query.trim().length < 2) {
+      setProductResults([]);
+      return;
+    }
+
+    setProductSearchLoading(true);
+    const timer = setTimeout(async () => {
       try {
-        const result = await searchProductsGlobalApi(value.trim());
+        const result = await searchProductsGlobalApi(query.trim());
         if (result.success && result.products) {
           setProductResults(result.products);
-          setShowProductResults(result.products.length > 0);
+        } else {
+          setProductResults([]);
         }
-      } catch {
-        setShowProductResults(false);
+      } catch (error) {
+        console.error("Product search error:", error);
       } finally {
         setProductSearchLoading(false);
       }
-    }, 250);
+    }, 200);
+    setProductSearchTimer(timer);
   };
 
-  const openQuickMove = (item: {
-    location: string;
-    sku: string;
-    batch: string;
-    productName: string;
-  }) => {
+  const handleProductBarcodeScan = (barcode: string) => {
+    setShowProductScanner(false);
+    setProductQuery(barcode);
+    handleProductSearch(barcode);
+  };
+
+  const openQuickMove = (item: GlobalProductItem) => {
     setMoveItem(item);
     setQuickMoveTarget("");
     setQuickMoveSuggestions([]);
     setShowQuickMoveSuggestions(false);
   };
 
-  const handleQuickMoveLocSearch = (value: string) => {
-    const v = value.toUpperCase().trim();
-    setQuickMoveTarget(v);
-    if (quickMoveTimerRef.current) clearTimeout(quickMoveTimerRef.current);
-    if (!v) {
+  const handleQuickMoveTargetSearch = (query: string) => {
+    setQuickMoveTarget(query);
+    if (quickMoveTimer) clearTimeout(quickMoveTimer);
+
+    if (!query.trim()) {
       setQuickMoveSuggestions([]);
       setShowQuickMoveSuggestions(false);
       return;
     }
 
-    if (allLocationsRef.current) {
-      const q = v.toLowerCase();
-      const filtered = allLocationsRef.current
-        .filter(
-          (l) =>
-            l.locationCode.toLowerCase().includes(q) &&
-            l.locationCode.toUpperCase() !== moveItem?.location.toUpperCase()
-        )
-        .slice(0, 10);
-      setQuickMoveSuggestions(filtered);
-      setShowQuickMoveSuggestions(filtered.length > 0);
-      return;
-    }
-
-    quickMoveTimerRef.current = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       try {
-        const result = await searchLocationsApi(v);
+        const result = await searchLocationsApi(query.trim());
         if (result.success && result.locations) {
           setQuickMoveSuggestions(
             result.locations.filter(
@@ -334,7 +304,8 @@ export default function ScanPage() {
           setShowQuickMoveSuggestions(true);
         }
       } catch {}
-    }, 200);
+    }, 250);
+    setQuickMoveTimer(timer);
   };
 
   const executeQuickMove = async () => {
@@ -400,13 +371,13 @@ export default function ScanPage() {
   return (
     <div className="mobile-container pb-28">
       {/* ── Top Header ── */}
-      <div className="bg-white px-5 pt-6 pb-4 border-b border-border shadow-xs">
+      <div className="bg-white px-5 pt-5 pb-4 border-b border-border shadow-xs">
         <div className="flex items-center justify-between">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">
               BLP Stock Opname
             </span>
-            <h1 className="text-lg font-bold text-text-primary mt-0.5">
+            <h1 className="text-base font-bold text-text-primary mt-0.5 leading-tight">
               Halo, {user?.name?.split(" ")[0] || "Operator"} 👋
             </h1>
           </div>
@@ -426,7 +397,7 @@ export default function ScanPage() {
             }
           >
             <span className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
-            <span className="text-[11px] font-bold text-primary">
+            <span className="text-[10px] font-bold text-primary">
               {syncProgress.status === "syncing" ? "SYNC..." : "OFFLINE READY"}
             </span>
           </button>
@@ -455,7 +426,7 @@ export default function ScanPage() {
               value={locationCode}
               onChange={(e) => handleLocationSearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleManualSearch()}
-              className="w-full pl-10 pr-14 py-3.5 bg-white border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary shadow-card text-sm uppercase font-semibold text-text-primary"
+              className="w-full pl-10 pr-14 py-3 bg-white border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary shadow-card text-xs uppercase font-bold text-text-primary"
               placeholder="Contoh: A01-B02-C03"
               disabled={loading}
               autoComplete="off"
@@ -463,10 +434,10 @@ export default function ScanPage() {
             <button
               type="button"
               onClick={() => setShowLocationScanner(true)}
-              className="absolute right-2 w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-md active:scale-95 transition"
+              className="absolute right-1.5 w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-white shadow-md active:scale-95 transition"
               title="Buka Kamera Barcode"
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
                 <path d="M7 12h10" />
                 <path d="M7 9h2M11 9h2M15 9h2M7 15h2M11 15h2M15 15h2" />
@@ -517,24 +488,27 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* ── Progress Card ── */}
-        <div className="bg-white rounded-2xl p-4.5 shadow-card border border-border">
-          <div className="flex items-center justify-between mb-2.5">
-            <div>
-              <h2 className="text-sm font-bold text-text-primary">Progress Opname Gudang</h2>
-              <p className="text-[11px] text-text-secondary">
+        {/* ── Progress Card (Spacious & Clean) ── */}
+        <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-card border border-border">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-bold text-text-primary tracking-tight leading-snug">
+                Progress Opname Gudang
+              </h2>
+              <p className="text-[11px] text-text-secondary mt-0.5 font-medium">
                 {stats.scannedCount} dari {stats.total} lokasi selesai
               </p>
             </div>
-            <span className="text-2xl font-black text-primary tracking-tight">
-              {stats.progress}%
-            </span>
+            <div className="flex items-baseline gap-0.5 bg-primary-pale px-3 py-1.5 rounded-xl border border-primary/15 flex-shrink-0">
+              <span className="text-lg font-black text-primary tracking-tight">{stats.progress}</span>
+              <span className="text-xs font-bold text-primary">%</span>
+            </div>
           </div>
 
-          <div className="w-full h-3 bg-surface-warm rounded-full overflow-hidden border border-border-subtle">
+          <div className="w-full h-3 bg-surface-warm rounded-full overflow-hidden border border-border-subtle p-0.5">
             <div
               className="h-full bg-gradient-to-r from-primary to-accent-yellow rounded-full transition-all duration-700"
-              style={{ width: `${stats.progress}%` }}
+              style={{ width: `${Math.max(stats.progress, stats.progress > 0 ? 4 : 0)}%` }}
             />
           </div>
         </div>
@@ -542,247 +516,265 @@ export default function ScanPage() {
         {/* ── Stat Cards ── */}
         <div className="grid grid-cols-3 gap-2.5">
           <div className="bg-white rounded-2xl p-3.5 shadow-card border border-border text-center">
-            <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-primary-pale text-primary flex items-center justify-center text-sm">
+            <div className="w-7 h-7 mx-auto mb-1 rounded-xl bg-primary-pale text-primary flex items-center justify-center text-xs">
               🏢
             </div>
-            <p className="text-lg font-black text-text-primary">{stats.total}</p>
-            <p className="text-[10px] text-text-secondary font-semibold">Total Lokasi</p>
+            <p className="text-base font-black text-text-primary">{stats.total}</p>
+            <p className="text-[10px] text-text-secondary font-bold">Total Lokasi</p>
           </div>
 
           <div className="bg-white rounded-2xl p-3.5 shadow-card border border-border text-center">
-            <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-accent-green/10 text-accent-green flex items-center justify-center text-sm">
+            <div className="w-7 h-7 mx-auto mb-1 rounded-xl bg-accent-green/10 text-accent-green flex items-center justify-center text-xs">
               ✓
             </div>
-            <p className="text-lg font-black text-primary">{stats.scannedCount}</p>
-            <p className="text-[10px] text-text-secondary font-semibold">Selesai</p>
+            <p className="text-base font-black text-primary">{stats.scannedCount}</p>
+            <p className="text-[10px] text-text-secondary font-bold">Selesai</p>
           </div>
 
           <div className="bg-white rounded-2xl p-3.5 shadow-card border border-border text-center">
-            <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-accent-red/10 text-accent-red flex items-center justify-center text-sm">
+            <div className="w-7 h-7 mx-auto mb-1 rounded-xl bg-accent-red/10 text-accent-red flex items-center justify-center text-xs">
               ⏳
             </div>
-            <p className="text-lg font-black text-accent-red">{stats.pending}</p>
-            <p className="text-[10px] text-text-secondary font-semibold">Pending</p>
+            <p className="text-base font-black text-accent-red">{stats.pending}</p>
+            <p className="text-[10px] text-text-secondary font-bold">Pending</p>
           </div>
         </div>
 
         {/* ── Cari & Pindah Produk ── */}
         <div className="bg-white rounded-2xl p-4 shadow-card border border-border">
-          <h2 className="text-xs font-bold text-text-primary mb-2 flex items-center gap-1.5">
-            <span className="text-accent-yellow">📦</span> Cari &amp; Pindah Produk Antar Lokasi
-          </h2>
-          <div className="relative">
-            <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
+          <div className="flex items-center justify-between mb-2.5">
+            <h3 className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+              <span>🔍</span> Cari Posisi Produk
+            </h3>
+            <span className="text-[10px] text-text-secondary">Cari di seluruh gudang</span>
+          </div>
+
+          <div className="relative flex items-center">
             <input
               type="text"
               value={productQuery}
               onChange={(e) => handleProductSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 bg-surface-warm border border-border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-text-primary font-medium"
-              placeholder="Ketik nama produk, SKU, atau batch..."
-              autoComplete="off"
+              placeholder="Ketik nama produk, SKU, atau barcode..."
+              className="w-full pl-3 pr-11 py-2.5 bg-surface-warm border border-border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-text-primary"
             />
-            {productSearchLoading && (
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={() => setShowProductScanner(true)}
+              className="absolute right-1.5 w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center text-xs shadow-xs"
+              title="Scan Barcode Produk"
+            >
+              📷
+            </button>
           </div>
 
-          {/* Product search results */}
-          {showProductResults && productResults.length > 0 && (
-            <div className="mt-2.5 max-h-56 overflow-y-auto rounded-xl border border-border divide-y divide-border-subtle bg-white">
-              {productResults.map((p, idx) => (
-                <div
-                  key={`${p.location}-${p.sku}-${p.batch}-${idx}`}
-                  className="flex items-center justify-between p-2.5 hover:bg-primary-pale/30 transition"
-                >
-                  <div className="flex-1 min-w-0 mr-2">
-                    <p className="text-xs font-bold text-text-primary truncate">{p.productName}</p>
-                    <p className="text-[10px] text-text-secondary">
-                      SKU: {p.sku}{p.batch ? ` · Batch: ${p.batch}` : ""}
+          {/* Product Results */}
+          {productSearchLoading && (
+            <div className="flex items-center justify-center py-3 text-xs text-text-secondary gap-1.5">
+              <LoadingSpinner />
+              <span>Mencari produk...</span>
+            </div>
+          )}
+
+          {productResults.length > 0 && (
+            <div className="mt-3 divide-y divide-border-subtle max-h-52 overflow-y-auto">
+              {productResults.map((item, idx) => (
+                <div key={`${item.sku}-${item.batch}-${idx}`} className="py-2.5 flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-text-primary truncate">{item.productName}</p>
+                    <p className="text-[10px] text-text-secondary mt-0.5">
+                      SKU: <strong className="text-text-primary">{item.sku}</strong> | Batch: {item.batch || "-"}
                     </p>
-                    <p className="text-[10px] text-primary font-bold mt-0.5">📍 {p.location}</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className="inline-block px-2 py-0.5 bg-primary-pale text-primary rounded-md font-bold text-[10px]">
+                        📍 {item.location}
+                      </span>
+                    </div>
                   </div>
-                  <button
-                    onClick={() =>
-                      openQuickMove({
-                        location: p.location,
-                        sku: p.sku,
-                        batch: p.batch,
-                        productName: p.productName,
-                      })
-                    }
-                    className="flex-shrink-0 px-3 py-1.5 bg-primary text-white text-[11px] font-bold rounded-lg hover:bg-primary-light active:scale-95 transition shadow-xs"
-                  >
-                    Pindah
-                  </button>
+
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => openLocation(item.location)}
+                      className="px-2.5 py-1 bg-surface-warm hover:bg-primary-pale text-text-primary rounded-lg text-[10px] font-bold border border-border"
+                    >
+                      Buka
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openQuickMove(item)}
+                      className="px-2.5 py-1 bg-primary text-white rounded-lg text-[10px] font-bold shadow-xs hover:bg-primary-light"
+                    >
+                      Pindah
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
 
-          {showProductResults &&
-            productResults.length === 0 &&
-            !productSearchLoading &&
-            productQuery.trim().length >= 2 && (
-              <p className="mt-2 text-[11px] text-text-secondary text-center py-2">
-                Produk tidak ditemukan
-              </p>
-            )}
+          {productQuery.trim().length >= 2 && !productSearchLoading && productResults.length === 0 && (
+            <p className="text-center text-xs text-text-secondary py-3">Produk tidak ditemukan</p>
+          )}
         </div>
 
-        {/* ── Scan Terakhir (Tabel Mobile Ringkas) ── */}
-        {stats.recentScans.length > 0 && (
-          <div className="bg-white rounded-2xl p-4 shadow-card border border-border">
-            <h2 className="text-xs font-bold text-text-primary mb-2.5 flex items-center justify-between">
-              <span>Scan Lokasi Terakhir</span>
-              <span className="text-[10px] text-text-secondary font-normal">Terbaru</span>
-            </h2>
-            <div className="overflow-hidden rounded-xl border border-border-subtle">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-surface-warm border-b border-border">
-                    <th className="text-left px-3 py-2 font-bold text-text-secondary text-[10px] uppercase">
-                      Lokasi
-                    </th>
-                    <th className="text-right px-3 py-2 font-bold text-text-secondary text-[10px] uppercase w-16">
-                      Item
-                    </th>
-                    <th className="text-right px-3 py-2 font-bold text-text-secondary text-[10px] uppercase w-20">
-                      Waktu
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border-subtle">
-                  {stats.recentScans.map((scan) => (
-                    <tr key={scan.location} className="hover:bg-primary-pale/20 transition">
-                      <td className="px-3 py-2.5 font-bold text-text-primary text-xs">
-                        {scan.location}
-                      </td>
-                      <td className="px-3 py-2.5 text-right font-black text-primary">
-                        {scan.items}
-                      </td>
-                      <td className="px-3 py-2.5 text-right text-text-secondary text-[10px]">
-                        {formatRelativeTime(scan.timestamp)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* ── Quick Move Modal (Bottom Sheet) ── */}
+        {moveItem && (
+          <div
+            className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+            onClick={() => setMoveItem(null)}
+          >
+            <div
+              className="bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl p-5 shadow-2xl border border-border space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto sm:hidden" />
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-text-primary text-sm">Pindah Lokasi Produk</h3>
+                <button
+                  onClick={() => setMoveItem(null)}
+                  className="w-7 h-7 rounded-full bg-surface-warm flex items-center justify-center text-xs text-text-secondary"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="bg-surface-warm p-3 rounded-xl border border-border-subtle text-xs space-y-1">
+                <p className="font-bold text-text-primary">{moveItem.productName}</p>
+                <p className="text-text-secondary text-[11px]">
+                  SKU: {moveItem.sku} | Batch: {moveItem.batch}
+                </p>
+                <p className="text-text-secondary text-[11px]">
+                  Lokasi Saat Ini: <strong className="text-primary">{moveItem.location}</strong>
+                </p>
+              </div>
+
+              <div className="relative">
+                <label className="block text-xs font-bold text-text-primary mb-1">
+                  Pindah ke Lokasi Tujuan:
+                </label>
+                <input
+                  type="text"
+                  value={quickMoveTarget}
+                  onChange={(e) => handleQuickMoveTargetSearch(e.target.value)}
+                  placeholder="Ketik lokasi tujuan..."
+                  className="w-full bg-surface-warm border border-border rounded-xl px-3 py-2.5 text-xs font-bold uppercase focus:outline-none focus:ring-2 focus:ring-primary"
+                  autoFocus
+                />
+                {showQuickMoveSuggestions && quickMoveSuggestions.length > 0 && (
+                  <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-lg max-h-36 overflow-y-auto">
+                    {quickMoveSuggestions.map((loc) => (
+                      <button
+                        key={loc.locationCode}
+                        type="button"
+                        onClick={() => {
+                          setQuickMoveTarget(loc.locationCode);
+                          setShowQuickMoveSuggestions(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-primary-pale border-b border-border last:border-b-0 flex justify-between"
+                      >
+                        <span className="font-bold text-text-primary">{loc.locationCode}</span>
+                        <span className="text-[10px] text-text-secondary">({loc.productCount} produk)</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setMoveItem(null)}
+                  className="flex-1 py-2.5 bg-surface-warm rounded-xl text-xs font-bold text-text-primary"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={executeQuickMove}
+                  disabled={quickMoving || !quickMoveTarget.trim()}
+                  className="flex-1 py-2.5 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary-light disabled:opacity-50 shadow-md flex items-center justify-center gap-1"
+                >
+                  {quickMoving ? <LoadingSpinner /> : "Konfirmasi Pindah"}
+                </button>
+              </div>
             </div>
           </div>
         )}
+
+        {/* ── Riwayat Scan Hari Ini ── */}
+        <div className="bg-white rounded-2xl p-4 shadow-card border border-border">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+              <span>🕒</span> Riwayat Terakhir
+            </h3>
+            <button
+              onClick={() => router.push("/history")}
+              className="text-[11px] font-bold text-primary hover:underline"
+            >
+              Lihat Semua →
+            </button>
+          </div>
+
+          {recentScans.length === 0 ? (
+            <p className="text-center text-xs text-text-secondary py-3">Belum ada aktivitas opname</p>
+          ) : (
+            <div className="divide-y divide-border-subtle">
+              {recentScans.map((item, idx) => (
+                <div
+                  key={`${item.location}-${idx}`}
+                  className="py-2.5 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-surface-warm text-primary flex items-center justify-center text-xs font-bold">
+                      📍
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-text-primary">{item.location}</p>
+                      <p className="text-[10px] text-text-secondary">{item.count} produk dihitung</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-text-secondary font-medium">
+                    {formatRelativeTime(item.time)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ── Location Scanner Modal ── */}
+      {/* Barcode Scanner Modal (Lokasi) */}
       {showLocationScanner && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-sm rounded-3xl p-4 shadow-2xl border border-border">
             <div className="flex items-center justify-between mb-3 px-1">
               <h3 className="font-bold text-text-primary text-sm">Scan Barcode Lokasi</h3>
               <button
                 onClick={() => setShowLocationScanner(false)}
-                className="w-8 h-8 rounded-full bg-surface-warm hover:bg-gray-200 flex items-center justify-center text-text-secondary text-xs transition active:scale-95"
+                className="w-8 h-8 rounded-full bg-surface-warm flex items-center justify-center text-text-secondary text-xs"
               >
                 ✕
               </button>
             </div>
-            <BarcodeScanner onScan={handleScan} active={showLocationScanner} />
+            <BarcodeScanner onScan={handleLocationScan} active={showLocationScanner} />
           </div>
         </div>
       )}
 
-      {/* ── Quick Move Modal (Bottom Sheet on Mobile) ── */}
-      {moveItem && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4"
-          onClick={() => setMoveItem(null)}
-        >
-          <div
-            ref={quickMoveRef}
-            className="bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl p-5 shadow-2xl border border-border"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-3 sm:hidden" />
-
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-text-primary">Pindah Lokasi Produk</h3>
+      {/* Barcode Scanner Modal (Produk Finder) */}
+      {showProductScanner && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-4 shadow-2xl border border-border">
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h3 className="font-bold text-text-primary text-sm">Scan Barcode Produk</h3>
               <button
-                onClick={() => setMoveItem(null)}
-                className="w-7 h-7 rounded-full bg-surface-warm flex items-center justify-center text-text-secondary text-xs"
+                onClick={() => setShowProductScanner(false)}
+                className="w-8 h-8 rounded-full bg-surface-warm flex items-center justify-center text-text-secondary text-xs"
               >
                 ✕
               </button>
             </div>
-
-            <div className="bg-surface-warm rounded-2xl p-3 mb-3.5 border border-border-subtle">
-              <p className="text-xs font-bold text-text-primary">{moveItem.productName}</p>
-              <p className="text-[10px] text-text-secondary mt-0.5">
-                SKU: {moveItem.sku} {moveItem.batch ? `· Batch: ${moveItem.batch}` : ""}
-              </p>
-              <p className="text-xs text-primary font-bold mt-1">📍 Asal: {moveItem.location}</p>
-            </div>
-
-            <label className="block text-xs font-bold text-text-primary mb-1">
-              Lokasi Tujuan:
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={quickMoveTarget}
-                onChange={(e) => handleQuickMoveLocSearch(e.target.value)}
-                onFocus={() => {
-                  if (quickMoveSuggestions.length > 0) setShowQuickMoveSuggestions(true);
-                }}
-                className="w-full px-3.5 py-2.5 bg-surface-warm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary uppercase text-sm font-bold"
-                placeholder="Ketik lokasi tujuan..."
-                autoComplete="off"
-              />
-              {showQuickMoveSuggestions && quickMoveSuggestions.length > 0 && (
-                <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-lg max-h-40 overflow-y-auto">
-                  {quickMoveSuggestions.map((loc) => (
-                    <button
-                      key={loc.locationCode}
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => {
-                        setQuickMoveTarget(loc.locationCode);
-                        setShowQuickMoveSuggestions(false);
-                      }}
-                      className="w-full text-left px-3 py-2 hover:bg-primary-pale border-b border-border last:border-b-0 text-xs flex justify-between"
-                    >
-                      <span className="font-bold text-text-primary">{loc.locationCode}</span>
-                      <span className="text-[10px] text-text-secondary">({loc.productCount} produk)</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2.5 mt-5">
-              <button
-                onClick={() => setMoveItem(null)}
-                className="flex-1 py-3 bg-surface-warm text-text-primary text-xs font-bold rounded-xl hover:bg-gray-200 transition"
-              >
-                Batal
-              </button>
-              <button
-                onClick={executeQuickMove}
-                disabled={!quickMoveTarget.trim() || quickMoving}
-                className="flex-1 py-3 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-light disabled:opacity-50 transition flex items-center justify-center gap-1.5 shadow-md"
-              >
-                {quickMoving ? <LoadingSpinner /> : "Pindahkan"}
-              </button>
-            </div>
+            <BarcodeScanner onScan={handleProductBarcodeScan} active={showProductScanner} />
           </div>
         </div>
       )}
