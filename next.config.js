@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Fix workspace root warning: multiple lockfiles detected
+  turbopack: {
+    root: __dirname,
+  },
   headers: async () => [
     {
       source: "/sw.js",

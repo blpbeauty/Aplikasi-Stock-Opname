@@ -3,25 +3,64 @@
 @tailwind utilities;
 
 :root {
-  --primary: #2BAE66;
-  --primary-light: #34C574;
-  --primary-dark: #219653;
-  --primary-pale: #E8F8EF;
-  --primary-bg: #F5F7FA;
-  --accent-yellow: #F4B740;
-  --accent-red: #EB5757;
-  --error: #EB5757;
-  --warning: #FFF8E1;
-  --warning-text: #856404;
-  --text-primary: #1A1A2E;
-  --text-secondary: #6B7280;
-  --border: #E5E7EB;
-  --card-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  /* ── Dark Brown & Warm Ivory Palette ── */
+  --primary: #4A3528;          /* Dark Espresso Brown */
+  --primary-light: #5E4434;    /* Medium Warm Brown */
+  --primary-dark: #36241A;     /* Deep Coffee Brown */
+  --primary-pale: #F2EAE3;     /* Warm Ivory Cream / Soft Mocha */
+  --primary-bg: #FAF7F2;       /* Warm Ivory Canvas */
+  --surface: #FFFFFF;
+  --surface-warm: #F6F0E9;     /* Soft warm card background */
+  
+  --accent-yellow: #D49B4B;    /* Warm Amber / Ochre */
+  --accent-red: #C0392B;       /* Warm Brick / Terracotta */
+  --accent-green: #2E7D32;     /* Forest Green */
+  --error: #C0392B;
+  --warning: #FEF7EE;
+  --warning-text: #8C5919;
+  
+  --text-primary: #231815;     /* Deep Espresso Black */
+  --text-secondary: #786B65;   /* Warm Slate / Cocoa Gray */
+  --border: #EBE3DA;           /* Subtle Warm Ivory Border */
+  --border-subtle: #F2ECE4;
+  --card-shadow: 0 2px 14px rgba(45, 30, 20, 0.05);
+}
+
+/* Base styles */
+body {
+  background-color: var(--primary-bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
 }
 
 /* Smooth scrolling */
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+}
+
+/* Mobile HP-only container wrapper */
+.mobile-container {
+  width: 100%;
+  max-width: 28rem; /* 448px (max-w-md) */
+  margin-left: auto;
+  margin-right: auto;
+  min-height: 100vh;
+  position: relative;
+  box-shadow: 0 0 30px rgba(74, 53, 40, 0.04);
+}
 
 /* Hide scrollbar but keep scroll */
-.hide-scrollbar::-webkit-scrollbar { display: none; }
-.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Safe area bottom padding for notch devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}

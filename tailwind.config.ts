@@ -16,9 +16,14 @@ const config: Config = {
           pale: "var(--primary-pale)",
           bg: "var(--primary-bg)",
         },
+        surface: {
+          DEFAULT: "var(--surface)",
+          warm: "var(--surface-warm)",
+        },
         accent: {
           yellow: "var(--accent-yellow)",
           red: "var(--accent-red)",
+          green: "var(--accent-green)",
         },
         error: "var(--error)",
         warning: {

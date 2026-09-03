@@ -1,4 +1,21 @@
 import { User, Product, HistoryEntry } from "./types";
+import {
+  lookupBarcodeLocal,
+  getProductsLocal,
+  getHistoryLocal,
+  searchProductsLocal,
+  searchLocationsLocal,
+  getAllLocationsLocal,
+  getAllProductsLocal,
+  searchProductsGlobalLocal,
+  addHistoryEntryLocal,
+  updateHistoryEntryLocal,
+  deleteHistoryEntryLocal,
+  addMasterProductLocal,
+  deleteMasterProductLocal,
+  syncLocationProducts,
+  hasLocalData,
+} from "./localDb";
 
 const API_URL = (process.env.NEXT_PUBLIC_APPS_SCRIPT_URL || "").trim();
 
@@ -142,7 +159,21 @@ export const loginApi = async (
 export const getProductsApi = async (
   locationCode: string
 ): Promise<{ success: boolean; products?: Product[]; message?: string }> => {
-  return apiCall("getProducts", { locationCode });
+  // Try local IndexedDB first (instant)
+  try {
+    const localProducts = await getProductsLocal(locationCode);
+    if (localProducts && localProducts.length > 0) {
+      // Also trigger background sync for this location
+      syncLocationProducts(locationCode).catch(() => {});
+      return { success: true, products: localProducts };
+    }
+  } catch { /* fallback to API */ }
+  // Fallback to GAS API + cache location products locally
+  const result = await apiCall("getProducts", { locationCode });
+  if (result.success && result.products) {
+    syncLocationProducts(locationCode).catch(() => {});
+  }
+  return result;
 };
 
 export const saveStockOpnameApi = async (
@@ -176,6 +207,17 @@ export const getHistoryApi = async (
   filter?: string,
   allOperators?: boolean
 ): Promise<{ success: boolean; history?: HistoryEntry[]; message?: string }> => {
+  // Try local IndexedDB first (instant)
+  try {
+    const hasData = await hasLocalData();
+    if (hasData) {
+      const localHistory = await getHistoryLocal();
+      if (localHistory.length > 0) {
+        // Return local data immediately
+        return { success: true, history: localHistory };
+      }
+    }
+  } catch { /* fallback to API */ }
   return apiCall("getHistory", { operator, filter, allOperators: !!allOperators });
 };
 
@@ -226,12 +268,26 @@ export const addMasterProductApi = async (
 export const lookupBarcodeApi = async (
   barcode: string
 ): Promise<{ success: boolean; product?: Product; message?: string }> => {
+  // Try local IndexedDB first (instant)
+  try {
+    const localProduct = await lookupBarcodeLocal(barcode);
+    if (localProduct) {
+      return { success: true, product: localProduct };
+    }
+  } catch { /* fallback to API */ }
   return apiCall("lookupBarcode", { barcode });
 };
 
 export const searchProductsApi = async (
   query: string
 ): Promise<{ success: boolean; products?: Product[] }> => {
+  // Try local IndexedDB first (instant)
+  try {
+    const localResults = await searchProductsLocal(query);
+    if (localResults.length > 0) {
+      return { success: true, products: localResults };
+    }
+  } catch { /* fallback to API */ }
   return apiCall("searchProducts", { query }, { cancelPrevious: true });
 };
 
@@ -245,6 +301,13 @@ export const deleteEntryApi = async (
 export const searchLocationsApi = async (
   query: string
 ): Promise<{ success: boolean; locations?: Array<{ locationCode: string; productCount: number }> }> => {
+  // Try local IndexedDB first (instant)
+  try {
+    const localResults = await searchLocationsLocal(query);
+    if (localResults.length > 0) {
+      return { success: true, locations: localResults };
+    }
+  } catch { /* fallback to API */ }
   return apiCall("searchLocations", { query }, { cancelPrevious: true });
 };
 
@@ -282,6 +345,13 @@ export const getAllLocationsApi = async (): Promise<{
   success: boolean;
   locations?: Array<{ locationCode: string; productCount: number }>;
 }> => {
+  // Try local IndexedDB first (instant)
+  try {
+    const localLocations = await getAllLocationsLocal();
+    if (localLocations.length > 0) {
+      return { success: true, locations: localLocations };
+    }
+  } catch { /* fallback to API */ }
   return apiCall("getAllLocations");
 };
 
@@ -289,12 +359,26 @@ export const getAllProductsApi = async (): Promise<{
   success: boolean;
   products?: Product[];
 }> => {
+  // Try local IndexedDB first (instant)
+  try {
+    const localProducts = await getAllProductsLocal();
+    if (localProducts.length > 0) {
+      return { success: true, products: localProducts };
+    }
+  } catch { /* fallback to API */ }
   return apiCall("getAllProducts");
 };
 
 export const searchProductsGlobalApi = async (
   query: string
 ): Promise<{ success: boolean; products?: Array<{ location: string; productName: string; sku: string; batch: string; barcode: string }> }> => {
+  // Try local IndexedDB first (instant)
+  try {
+    const localResults = await searchProductsGlobalLocal(query);
+    if (localResults.length > 0) {
+      return { success: true, products: localResults };
+    }
+  } catch { /* fallback to API */ }
   return apiCall("searchProductsGlobal", { query }, { cancelPrevious: true });
 };
 

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import AuthProvider from "@/components/AuthProvider";
+import DataSyncProvider from "@/components/DataSyncProvider";
 import { Toaster } from "react-hot-toast";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -43,8 +44,10 @@ export default function RootLayout({
       </head>
       <body className="font-sans bg-[var(--primary-bg)] text-text-primary" style={{ fontFamily: "'Inter', sans-serif" }}>
         <AuthProvider>
-          {children}
-          <Toaster position="top-center" />
+          <DataSyncProvider>
+            {children}
+            <Toaster position="top-center" />
+          </DataSyncProvider>
         </AuthProvider>
         <ServiceWorkerRegister />
         <InstallPrompt />
