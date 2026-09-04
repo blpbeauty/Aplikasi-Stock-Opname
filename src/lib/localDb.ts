@@ -578,6 +578,49 @@ export async function deleteMasterProductLocal(locationCode: string, sku: string
   } catch { /* non-critical */ }
 }
 
+/**
+ * Mirror a successful server-side move into the local master cache:
+ * re-key the affected products from the old location to the new one.
+ * items kosong/undefined = pindahkan seluruh produk lokasi asal.
+ */
+export async function moveMasterProductsLocal(
+  fromLocation: string,
+  toLocation: string,
+  items?: Array<{ sku: string; batch: string }>
+): Promise<void> {
+  try {
+    const all = await getAll<MasterProduct>(STORE_MASTER);
+    const from = fromLocation.trim().toUpperCase();
+    const to = toLocation.trim().toUpperCase();
+    if (!from || !to || from === to) return;
+
+    const updates: MasterProduct[] = [];
+    for (const p of all) {
+      if (String(p.location || "").trim().toUpperCase() !== from) continue;
+      if (items && items.length > 0) {
+        const match = items.some(
+          (i) =>
+            String(i.sku || "").trim() === String(p.sku || "").trim() &&
+            String(i.batch || "").trim() === String(p.batch || "").trim()
+        );
+        if (!match) continue;
+      }
+      updates.push({
+        ...p,
+        location: to,
+        id: `${to}__${String(p.sku).trim()}__${String(p.batch).trim()}`,
+      } as MasterProduct);
+    }
+    if (updates.length === 0) return;
+
+    for (const p of updates) {
+      await deleteOne(STORE_MASTER, `${from}__${String(p.sku).trim()}__${String(p.batch).trim()}`);
+    }
+    await putAll(STORE_MASTER, updates);
+    locationSyncCache.delete(from);
+  } catch { /* non-critical */ }
+}
+
 // ── Clear all local data ───────────────────────────────────────
 
 export async function clearLocalDb(): Promise<void> {

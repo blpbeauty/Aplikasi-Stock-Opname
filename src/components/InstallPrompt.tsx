@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import BrandBLP from "./BrandBLP";
+import { XIcon } from "./icons";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -24,7 +25,7 @@ export default function InstallPrompt() {
 
     // Detect iOS
     const ua = window.navigator.userAgent;
-    const isIOSDevice = /iPad|iPhone|iPod/.test(ua) || 
+    const isIOSDevice = /iPad|iPhone|iPod/.test(ua) ||
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     setIsIOS(isIOSDevice);
 
@@ -84,83 +85,75 @@ export default function InstallPrompt() {
   if (isStandalone || !showPrompt) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 animate-fadeIn">
-      <div className="w-full max-w-md mx-4 mb-6 bg-white rounded-2xl shadow-2xl overflow-hidden animate-slideUp">
+    <div
+      className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 animate-fadeIn"
+      role="dialog"
+      aria-label="Pasang aplikasi"
+    >
+      <div className="w-full max-w-md mx-4 mb-4 bg-paper rounded-sheet shadow-sheet border border-border overflow-hidden animate-slideUp">
         {/* Header */}
-        <div className="px-5 pt-5 pb-3 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg"
-               style={{ backgroundColor: "var(--primary)" }}>
-            <BrandBLP compact className="text-white text-sm" />
+        <div className="px-5 pt-4 pb-3 flex items-center gap-3 border-b border-border-subtle">
+          <div className="w-11 h-11 rounded-card flex items-center justify-center text-ivory font-bold"
+               style={{ backgroundColor: "var(--espresso)" }}>
+            <BrandBLP compact className="text-ivory text-sm" />
           </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-[var(--text-primary)] text-base">
-              Install BLP Stock
-            </h3>
-            <p className="text-sm text-[var(--text-secondary)]">
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold text-text-primary text-base2">
+              Pasang BLP Stock
+            </h2>
+            <p className="text-meta text-text-secondary">
               Tambahkan ke layar utama
             </p>
           </div>
           <button
             onClick={handleDismiss}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400"
+            className="tap w-11 h-11 -mr-2 flex items-center justify-center rounded-full text-text-secondary hover:bg-surface-warm"
+            aria-label="Tutup prompt instalasi"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
+            <XIcon className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="px-5 pb-4">
+        <div className="px-5 pb-4 pt-3">
           {isIOS ? (
             // iOS instructions
-            <div className="space-y-3">
-              <p className="text-sm text-[var(--text-secondary)]">
-                Untuk menginstall aplikasi ini di iPhone/iPad:
-              </p>
-              <div className="flex items-start gap-3 bg-[var(--primary-pale)] rounded-xl p-3">
-                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-[var(--primary)] text-white flex items-center justify-center text-xs font-bold">1</div>
-                <p className="text-sm text-[var(--text-primary)] pt-0.5">
-                  Tap ikon <strong>Share</strong>{" "}
-                  <svg className="inline w-4 h-4 -mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" />
-                  </svg>
-                  {" "}di bagian bawah Safari
-                </p>
-              </div>
-              <div className="flex items-start gap-3 bg-[var(--primary-pale)] rounded-xl p-3">
-                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-[var(--primary)] text-white flex items-center justify-center text-xs font-bold">2</div>
-                <p className="text-sm text-[var(--text-primary)] pt-0.5">
-                  Scroll ke bawah dan pilih <strong>&quot;Add to Home Screen&quot;</strong>
-                </p>
-              </div>
-              <div className="flex items-start gap-3 bg-[var(--primary-pale)] rounded-xl p-3">
-                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-[var(--primary)] text-white flex items-center justify-center text-xs font-bold">3</div>
-                <p className="text-sm text-[var(--text-primary)] pt-0.5">
-                  Tap <strong>&quot;Add&quot;</strong> untuk menginstall
-                </p>
-              </div>
-            </div>
+            <ol className="space-y-2.5">
+              <li className="flex items-start gap-3 bg-surface-warm rounded-input p-3 text-meta text-text-primary">
+                <span className="tnum shrink-0 w-7 h-7 rounded-full bg-primary text-ivory flex items-center justify-center text-meta font-bold">1</span>
+                <span className="pt-0.5">
+                  Ketuk ikon <strong>Share</strong> di bagian bawah Safari
+                </span>
+              </li>
+              <li className="flex items-start gap-3 bg-surface-warm rounded-input p-3 text-meta text-text-primary">
+                <span className="tnum shrink-0 w-7 h-7 rounded-full bg-primary text-ivory flex items-center justify-center text-meta font-bold">2</span>
+                <span className="pt-0.5">
+                  Gulir ke bawah dan pilih <strong>&quot;Add to Home Screen&quot;</strong>
+                </span>
+              </li>
+              <li className="flex items-start gap-3 bg-surface-warm rounded-input p-3 text-meta text-text-primary">
+                <span className="tnum shrink-0 w-7 h-7 rounded-full bg-primary text-ivory flex items-center justify-center text-meta font-bold">3</span>
+                <span className="pt-0.5">
+                  Ketuk <strong>&quot;Add&quot;</strong> untuk memasang
+                </span>
+              </li>
+            </ol>
           ) : (
             // Android / Chrome
             <div className="space-y-3">
-              <p className="text-sm text-[var(--text-secondary)]">
-                Install aplikasi ini untuk akses cepat dari layar utama HP Anda. Tidak perlu download dari Play Store!
+              <p className="text-meta text-text-secondary">
+                Pasang aplikasi ini untuk akses cepat dari layar utama HP Anda.
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={handleInstall}
-                  className="flex-1 py-3 rounded-xl text-white font-semibold text-sm transition-all active:scale-95"
-                  style={{ backgroundColor: "var(--primary)" }}
+                  className="flex-1 min-h-touch rounded-input bg-primary text-ivory font-bold text-meta transition active:scale-[0.98]"
                 >
-                  <svg className="inline w-5 h-5 mr-2 -mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-                  </svg>
-                  Install Sekarang
+                  Pasang Sekarang
                 </button>
                 <button
                   onClick={handleDismiss}
-                  className="px-4 py-3 rounded-xl text-[var(--text-secondary)] font-medium text-sm border border-gray-200 hover:bg-gray-50 transition-all"
+                  className="min-h-touch px-5 rounded-input text-text-secondary font-semibold text-meta border border-border hover:bg-surface-warm transition"
                 >
                   Nanti
                 </button>
@@ -169,23 +162,6 @@ export default function InstallPrompt() {
           )}
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideUp {
-          from { transform: translateY(100%); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-        .animate-slideUp {
-          animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-      `}</style>
     </div>
   );
 }

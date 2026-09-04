@@ -7,6 +7,7 @@ import EditModal, { EditData } from "@/components/EditModal";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import QtyInput from "@/components/QtyInput";
 import ConfirmModal from "@/components/ConfirmModal";
+import { EmptyState, IconButton } from "@/components/ui";
 import {
   getHistoryApi,
   updateEntryApi,
@@ -17,6 +18,18 @@ import {
 } from "@/lib/api";
 import { HistoryEntry, Product } from "@/lib/types";
 import { getCache, setCache, clearCache } from "@/lib/cache";
+import { parseTimestamp, formatDisplayTime, toDateStr } from "@/lib/format";
+import {
+  RefreshIcon,
+  PencilIcon,
+  TrashIcon,
+  XIcon,
+  ClipboardIcon,
+  CalculatorIcon,
+  UserIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+} from "@/components/icons";
 import toast from "react-hot-toast";
 
 export default function HistoryPage() {
@@ -42,12 +55,16 @@ export default function HistoryPage() {
   const [activeTab, setActiveTab] = useState<"all" | "today" | "week" | "month">("all");
   const [selectedLocations, setSelectedLocations] = useState<Set<string>>(new Set());
 
+  // Collapsed location groups (expanded by default while searching/filtering dates)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
   // Inline edit state
   const [editingBatch, setEditingBatch] = useState<string | null>(null);
   const [editingBatchValue, setEditingBatchValue] = useState("");
   const [editingQty, setEditingQty] = useState<string | null>(null);
   const [editingQtyValue, setEditingQtyValue] = useState(0);
   const [editingQtyFormula, setEditingQtyFormula] = useState("");
+  const [inlineSaving, setInlineSaving] = useState<string | null>(null);
 
   const allProductsRef = useRef<Product[] | null>(null);
   const allLocationsRef = useRef<Array<{ locationCode: string; productCount: number }> | null>(null);
@@ -95,6 +112,7 @@ export default function HistoryPage() {
         }
       })
       .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const normalizeEntry = (e: any): HistoryEntry => ({
@@ -145,36 +163,16 @@ export default function HistoryPage() {
     }
   };
 
-  const parseTimestamp = (raw: string): Date | null => {
-    try {
-      if (/\d{4}-\d{2}-\d{2}T/.test(raw)) return new Date(raw);
-      const m = raw.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/);
-      if (m) {
-        const months: Record<string, number> = {
-          Jan: 0, Feb: 1, Mar: 2, Apr: 3, Mei: 4, May: 4, Jun: 5, Jul: 6,
-          Agu: 7, Aug: 7, Sep: 8, Okt: 9, Oct: 9, Nov: 10, Des: 11, Dec: 11,
-        };
-        return new Date(+m[3], months[m[2]] ?? 0, +m[1]);
-      }
-      return new Date(raw);
-    } catch {
-      return null;
-    }
-  };
-
   // Filter tab change helper
   const handleTabChange = (tab: "all" | "today" | "week" | "month") => {
     setActiveTab(tab);
     const now = new Date();
-    const toDateStr = (d: Date) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
     if (tab === "all") {
       setFilterDate("");
       setFilterDateEnd("");
     } else if (tab === "today") {
-      const todayStr = toDateStr(now);
-      setFilterDate(todayStr);
+      setFilterDate(toDateStr(now));
       setFilterDateEnd("");
     } else if (tab === "week") {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -206,7 +204,7 @@ export default function HistoryPage() {
       result = result.filter((e) => {
         const d = parseTimestamp(e.timestamp);
         if (!d) return false;
-        const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const iso = toDateStr(d);
         if (filterDateEnd) {
           return iso >= filterDate && iso <= filterDateEnd;
         }
@@ -224,8 +222,8 @@ export default function HistoryPage() {
     }
 
     return [...result].sort((a, b) => {
-      const ta = new Date(a.timestamp).getTime() || 0;
-      const tb = new Date(b.timestamp).getTime() || 0;
+      const ta = parseTimestamp(a.timestamp)?.getTime() || 0;
+      const tb = parseTimestamp(b.timestamp)?.getTime() || 0;
       return tb - ta;
     });
   }, [history, searchQuery, filterDate, filterDateEnd, selectedLocations]);
@@ -238,8 +236,8 @@ export default function HistoryPage() {
       groups.get(e.location)!.push(e);
     });
     return Array.from(groups.entries()).sort((a, b) => {
-      const latestA = Math.max(...a[1].map((e) => new Date(e.timestamp).getTime() || 0));
-      const latestB = Math.max(...b[1].map((e) => new Date(e.timestamp).getTime() || 0));
+      const latestA = Math.max(...a[1].map((e) => parseTimestamp(e.timestamp)?.getTime() || 0));
+      const latestB = Math.max(...b[1].map((e) => parseTimestamp(e.timestamp)?.getTime() || 0));
       return latestB - latestA;
     });
   }, [filteredHistory]);
@@ -265,6 +263,27 @@ export default function HistoryPage() {
     });
   };
 
+  const filteredTotalQty = useMemo(
+    () => filteredHistory.reduce((sum, e) => sum + e.qty, 0),
+    [filteredHistory]
+  );
+
+  // While searching or filtering by date the user has narrowed things down on
+  // purpose, so every group is forced open; otherwise the collapsed set rules.
+  const isGroupExpanded = (loc: string) => {
+    if (searchQuery.trim() || filterDate) return true;
+    return !collapsedGroups.has(loc);
+  };
+
+  const toggleGroup = (loc: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(loc)) next.delete(loc);
+      else next.add(loc);
+      return next;
+    });
+  };
+
   const handleEdit = (entry: HistoryEntry) => {
     setSelectedEntry(entry);
     setIsModalOpen(true);
@@ -281,7 +300,7 @@ export default function HistoryPage() {
     const prev = [...history];
     const updated = history.filter((e) => e.rowId !== entry.rowId);
     setHistory(updated);
-    toast.success("Entry berhasil dihapus");
+    toast.success("Entri berhasil dihapus");
 
     const ck = `history:ALL:all`;
     setCache(ck, updated);
@@ -304,7 +323,34 @@ export default function HistoryPage() {
   const handleSaveEdit = async (data: EditData) => {
     if (!selectedEntry) return;
     const editTimestamp = new Date().toISOString();
-    const prev = [...history];
+    setIsModalOpen(false);
+    setInlineSaving(selectedEntry.rowId);
+
+    // Tunggu server sebelum mengklaim sukses — rollback bila gagal.
+    try {
+      const result = await updateEntryApi(
+        selectedEntry.rowId,
+        selectedEntry.sessionId,
+        data.newQty,
+        editTimestamp,
+        {
+          productName: data.productName,
+          sku: data.sku,
+          batch: data.batch,
+          formula: data.formula,
+          location: data.location,
+        }
+      );
+      if (!result.success) {
+        setInlineSaving(null);
+        toast.error(result.message || "Gagal mengupdate, data tidak diubah");
+        return;
+      }
+    } catch {
+      setInlineSaving(null);
+      toast.error("Gagal mengupdate, data tidak diubah");
+      return;
+    }
 
     const updated = history.map((e) =>
       e.rowId === selectedEntry.rowId
@@ -322,79 +368,76 @@ export default function HistoryPage() {
         : e
     );
     setHistory(updated);
-    setIsModalOpen(false);
-    toast.success(data.location ? `Berhasil update & pindah ke ${data.location}` : "Berhasil mengupdate entry");
-
-    const ck = `history:ALL:all`;
-    setCache(ck, updated);
-
-    try {
-      const result = await updateEntryApi(
-        selectedEntry.rowId,
-        selectedEntry.sessionId,
-        data.newQty,
-        editTimestamp,
-        {
-          productName: data.productName,
-          sku: data.sku,
-          batch: data.batch,
-          formula: data.formula,
-          location: data.location,
-        }
-      );
-      if (!result.success) {
-        setHistory(prev);
-        setCache(ck, prev);
-        toast.error(result.message || "Gagal mengupdate");
-      }
-    } catch {
-      setHistory(prev);
-      setCache(ck, prev);
-      toast.error("Gagal mengupdate");
-    }
+    setCache(`history:ALL:all`, updated);
+    clearCache("products:");
+    setInlineSaving(null);
+    toast.success(data.location ? `Berhasil update & pindah ke ${data.location}` : "Berhasil mengupdate entri");
   };
 
   const saveInlineBatch = async (entry: HistoryEntry) => {
     const newBatch = editingBatchValue.trim();
+    if (!newBatch) {
+      toast.error("Batch tidak boleh kosong");
+      return;
+    }
+    if (newBatch === entry.batch) {
+      setEditingBatch(null);
+      return;
+    }
     setEditingBatch(null);
-    if (newBatch === entry.batch) return;
-
+    setInlineSaving(entry.rowId);
     const editTimestamp = new Date().toISOString();
-    const prev = [...history];
-
-    const updated = history.map((e) =>
-      e.rowId === entry.rowId ? { ...e, batch: newBatch, edited: "Yes", editTimestamp } : e
-    );
-    setHistory(updated);
-    toast.success("Batch berhasil diupdate");
-
-    const ck = `history:ALL:all`;
-    setCache(ck, updated);
 
     try {
       const result = await updateEntryApi(entry.rowId, entry.sessionId, entry.qty, editTimestamp, {
         batch: newBatch,
       });
       if (!result.success) {
-        setHistory(prev);
-        setCache(ck, prev);
-        toast.error(result.message || "Gagal update batch");
+        setInlineSaving(null);
+        toast.error(result.message || "Gagal update batch, data tidak diubah");
+        return;
       }
     } catch {
-      setHistory(prev);
-      setCache(ck, prev);
-      toast.error("Gagal update batch");
+      setInlineSaving(null);
+      toast.error("Gagal update batch, data tidak diubah");
+      return;
     }
+
+    const updated = history.map((e) =>
+      e.rowId === entry.rowId ? { ...e, batch: newBatch, edited: "Yes", editTimestamp } : e
+    );
+    setHistory(updated);
+    setCache(`history:ALL:all`, updated);
+    clearCache("products:");
+    setInlineSaving(null);
+    toast.success("Batch berhasil diupdate");
   };
 
   const saveInlineQty = async (entry: HistoryEntry) => {
     const newQty = editingQtyValue;
     const newFormula = editingQtyFormula;
+    if (newQty === entry.qty && newFormula === (entry.formula || "")) {
+      setEditingQty(null);
+      return;
+    }
     setEditingQty(null);
-    if (newQty === entry.qty && newFormula === (entry.formula || "")) return;
-
+    setInlineSaving(entry.rowId);
     const editTimestamp = new Date().toISOString();
-    const prev = [...history];
+
+    try {
+      const result = await updateEntryApi(entry.rowId, entry.sessionId, newQty, editTimestamp, {
+        formula: newFormula,
+      });
+      if (!result.success) {
+        setInlineSaving(null);
+        toast.error(result.message || "Gagal update qty, data tidak diubah");
+        return;
+      }
+    } catch {
+      setInlineSaving(null);
+      toast.error("Gagal update qty, data tidak diubah");
+      return;
+    }
 
     const updated = history.map((e) =>
       e.rowId === entry.rowId
@@ -402,92 +445,59 @@ export default function HistoryPage() {
         : e
     );
     setHistory(updated);
+    setCache(`history:ALL:all`, updated);
+    clearCache("products:");
+    setInlineSaving(null);
     toast.success("Qty berhasil diupdate");
-
-    const ck = `history:ALL:all`;
-    setCache(ck, updated);
-
-    try {
-      const result = await updateEntryApi(entry.rowId, entry.sessionId, newQty, editTimestamp, {
-        formula: newFormula,
-      });
-      if (!result.success) {
-        setHistory(prev);
-        setCache(ck, prev);
-        toast.error(result.message || "Gagal update qty");
-      }
-    } catch {
-      setHistory(prev);
-      setCache(ck, prev);
-      toast.error("Gagal update qty");
-    }
-  };
-
-  const formatDisplayTime = (ts: string) => {
-    try {
-      const d = parseTimestamp(ts);
-      if (!d) return ts;
-      return d.toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return ts;
-    }
   };
 
   return (
-    <div className="mobile-container pb-28">
-      {/* ── Sticky Top Header ── */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border shadow-xs">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-sm font-bold text-text-primary">Riwayat Stock Opname</h1>
-            <p className="text-[11px] text-text-secondary">
-              {filteredHistory.length} produk tercatat
+    <div className="mobile-container pb-32">
+      {/* ── Header + toolbar filter ── */}
+      <div className="sticky top-0 z-30 bg-paper/95 backdrop-blur-sm px-4 sm:px-6 pt-4 pb-3 border-b border-border">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-text-primary leading-tight">Riwayat Stock Opname</h1>
+            <p className="text-meta text-text-secondary tnum">
+              {filteredHistory.length.toLocaleString("id-ID")} entri ·{" "}
+              {filteredTotalQty.toLocaleString("id-ID")} item
             </p>
           </div>
           <button
             onClick={() => fetchHistory()}
-            className="px-3 py-1.5 bg-primary-pale rounded-full text-primary text-[11px] font-bold border border-primary/20 hover:bg-primary/20 transition active:scale-95 flex items-center gap-1"
+            disabled={loading}
+            className="tap px-4 bg-primary-pale rounded-label text-primary text-meta font-bold border border-primary/20 transition active:scale-95 flex items-center gap-1.5 disabled:opacity-50"
           >
-            <span>🔄</span> Refresh
+            <RefreshIcon className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Muat ulang
           </button>
         </div>
 
-        {/* ── Search Input ── */}
-        <div className="mt-3 relative">
-          <svg
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <path d="M21 21l-4.35-4.35" />
-          </svg>
+        {/* ── Pencarian ── */}
+        <div className="mt-2.5 relative">
+          <label htmlFor="history-search" className="sr-only">
+            Cari riwayat
+          </label>
           <input
+            id="history-search"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-8 py-2 bg-surface-warm border border-border rounded-xl text-xs font-semibold text-text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white"
-            placeholder="Cari produk, SKU, batch, lokasi, operator..."
+            className="w-full min-h-touch pl-3 pr-10 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary"
+            placeholder="Cari produk, SKU, batch, lokasi, operator…"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[10px]"
+              className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-surface-warm text-text-secondary flex items-center justify-center active:scale-95 transition"
+              aria-label="Bersihkan pencarian"
             >
-              ✕
+              <XIcon className="w-4 h-4" />
             </button>
           )}
         </div>
 
-        {/* ── Quick Filter Tabs (Pills) ── */}
-        <div className="flex gap-1.5 mt-2.5 overflow-x-auto hide-scrollbar">
+        {/* ── Filter cepat ── */}
+        <div className="flex gap-1.5 mt-2 overflow-x-auto hide-scrollbar" role="group" aria-label="Filter rentang waktu">
           {[
             { id: "all", label: "Semua" },
             { id: "today", label: "Hari Ini" },
@@ -497,10 +507,11 @@ export default function HistoryPage() {
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id as any)}
-              className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition active:scale-95 ${
+              aria-pressed={activeTab === tab.id}
+              className={`min-h-touch px-3.5 rounded-label text-meta font-bold whitespace-nowrap transition active:scale-95 ${
                 activeTab === tab.id
-                  ? "bg-primary text-white shadow-xs"
-                  : "bg-surface-warm text-text-secondary hover:bg-gray-200"
+                  ? "bg-primary text-ivory"
+                  : "bg-surface-warm text-text-secondary"
               }`}
             >
               {tab.label}
@@ -509,13 +520,11 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      <div className="px-4 pt-3 space-y-4">
-        {/* ── Area / Location Filters Chips ── */}
+      <div className="px-4 sm:px-6 pt-3 space-y-4">
+        {/* ── Filter area gudang ── */}
         {uniqueLocations.length > 1 && (
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-text-secondary px-1">
-              Filter Area Gudang:
-            </span>
+            <p className="text-meta font-bold text-text-secondary px-1">Filter Area Gudang:</p>
             <div className="flex gap-1.5 mt-1.5 overflow-x-auto hide-scrollbar pb-1">
               {uniqueLocations.map((loc) => {
                 const isSelected = selectedLocations.has(loc.location);
@@ -523,16 +532,17 @@ export default function HistoryPage() {
                   <button
                     key={loc.location}
                     onClick={() => toggleLocation(loc.location)}
-                    className={`px-3 py-1 rounded-xl text-[11px] font-semibold border transition flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
+                    aria-pressed={isSelected}
+                    className={`min-h-touch px-3 rounded-label text-meta font-semibold border transition flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
                       isSelected
-                        ? "bg-primary text-white border-primary shadow-xs"
-                        : "bg-white text-text-primary border-border hover:bg-surface-warm"
+                        ? "bg-primary text-ivory border-primary"
+                        : "bg-paper text-text-primary border-border"
                     }`}
                   >
                     <span>{loc.location}</span>
                     <span
-                      className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
-                        isSelected ? "bg-white/25 text-white" : "bg-primary-pale text-primary"
+                      className={`tnum px-1.5 py-0.5 rounded-full text-meta font-bold ${
+                        isSelected ? "bg-ivory/25 text-ivory" : "bg-primary-pale text-primary"
                       }`}
                     >
                       {loc.count}
@@ -544,91 +554,132 @@ export default function HistoryPage() {
           </div>
         )}
 
-        {/* ── History Grouped List ── */}
-        {loading ? (
+        {/* ── Daftar riwayat berkelompok lokasi ── */}
+        {loading && history.length === 0 ? (
           <div className="flex items-center justify-center py-12">
             <LoadingSpinner />
           </div>
         ) : groupedHistory.length === 0 ? (
-          <div className="bg-white rounded-2xl p-8 text-center border border-border shadow-xs mt-4">
-            <div className="w-12 h-12 rounded-2xl bg-primary-pale text-primary mx-auto flex items-center justify-center text-xl mb-2">
-              📋
-            </div>
-            <p className="text-xs font-bold text-text-primary">Tidak ada riwayat opname</p>
-            <p className="text-[11px] text-text-secondary mt-1">
-              {searchQuery || filterDate ? "Coba ubah kata kunci atau filter tanggal" : "Belum ada produk yang disimpan"}
-            </p>
-          </div>
+          <EmptyState
+            icon={<ClipboardIcon className="w-6 h-6" />}
+            title="Tidak ada riwayat opname"
+            description={
+              searchQuery || filterDate
+                ? "Coba ubah kata kunci atau filter tanggal."
+                : "Belum ada produk yang disimpan. Mulai hitung dari halaman Scan."
+            }
+          />
         ) : (
           groupedHistory.map(([loc, entries]) => {
             const locTotalQty = entries.reduce((s, e) => s + e.qty, 0);
+            const expanded = isGroupExpanded(loc);
 
             return (
-              <div key={loc} className="bg-white rounded-2xl border border-border shadow-card overflow-hidden">
-                {/* Location Group Header */}
-                <div className="bg-surface-warm px-4 py-2.5 border-b border-border flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-primary" />
-                    <span className="font-bold text-xs text-text-primary">{loc}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-[11px]">
-                    <span className="text-text-secondary">{entries.length} produk</span>
-                    <span className="font-black text-primary bg-primary-pale px-2 py-0.5 rounded-full border border-primary/20">
-                      {locTotalQty} item
+              <section
+                key={loc}
+                className="bg-paper rounded-card border border-border shadow-subtle overflow-hidden"
+              >
+                {/* Kepala grup gaya label rak */}
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(loc)}
+                  className="w-full min-h-touch bg-surface-warm px-4 py-2.5 border-b border-border flex items-center justify-between gap-2 text-left active:bg-primary-pale/60 transition"
+                  aria-expanded={expanded}
+                  aria-label={`${expanded ? "Tutup" : "Buka"} grup ${loc}`}
+                >
+                  <span className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-1.5 h-6 bg-ochre rounded-full shrink-0" aria-hidden="true" />
+                    <span className="font-bold text-meta uppercase text-text-primary break-all leading-snug tnum">
+                      {loc}
                     </span>
-                  </div>
-                </div>
+                  </span>
+                  <span className="flex items-center gap-2 text-meta shrink-0 tnum">
+                    <span className="text-text-secondary">{entries.length} entri</span>
+                    <span className="font-bold text-primary bg-primary-pale px-2 py-0.5 rounded-full border border-primary/20 whitespace-nowrap">
+                      {locTotalQty.toLocaleString("id-ID")} item
+                    </span>
+                    {expanded ? (
+                      <ChevronDownIcon className="w-4 h-4 text-text-secondary" />
+                    ) : (
+                      <ChevronRightIcon className="w-4 h-4 text-text-secondary" />
+                    )}
+                  </span>
+                </button>
 
-                {/* Entry Items */}
+                {/* Entri */}
+                {expanded && (
                 <div className="divide-y divide-border-subtle">
                   {entries.map((entry) => (
                     <div key={entry.rowId} className="p-3.5 sm:p-4 hover:bg-primary-pale/10 transition">
                       <div className="flex items-start justify-between gap-2 mb-1.5">
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-xs font-bold text-text-primary leading-snug break-words">
+                          <h3 className="text-meta font-bold text-text-primary leading-snug break-words">
                             {entry.productName}
-                          </h4>
-                          <p className="text-[10px] text-text-secondary mt-0.5">
+                          </h3>
+                          <p className="text-meta text-text-secondary mt-0.5 tnum">
                             SKU: <span className="font-semibold text-text-primary">{entry.sku}</span>
                           </p>
                         </div>
 
-                        {/* Actions (Edit & Delete Buttons) */}
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <button
-                            type="button"
+                        {/* Tindakan per entri */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <IconButton
+                            label={`Edit ${entry.productName}`}
                             onClick={() => handleEdit(entry)}
-                            className="w-8 h-8 rounded-xl bg-surface-warm hover:bg-primary-pale text-text-primary flex items-center justify-center text-xs transition active:scale-95"
-                            title="Edit"
+                            disabled={inlineSaving === entry.rowId}
                           >
-                            ✏️
-                          </button>
-                          <button
-                            type="button"
+                            <PencilIcon className="w-4 h-4" />
+                          </IconButton>
+                          <IconButton
+                            label={`Hapus ${entry.productName}`}
+                            variant="danger"
                             onClick={() => promptDelete(entry)}
-                            className="w-8 h-8 rounded-xl bg-accent-red/10 hover:bg-accent-red hover:text-white text-accent-red flex items-center justify-center text-xs transition active:scale-95"
-                            title="Hapus"
+                            disabled={inlineSaving === entry.rowId}
                           >
-                            🗑️
-                          </button>
+                            <TrashIcon className="w-4 h-4" />
+                          </IconButton>
                         </div>
                       </div>
 
-                      {/* Row 2: Batch, Qty, Operator & Time */}
-                      <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border-subtle mt-1.5">
-                        <div className="flex items-center gap-2">
+                      {/* Baris: batch, qty, operator & waktu */}
+                      <div className="flex flex-wrap items-center justify-between gap-y-1.5 text-meta pt-1.5 border-t border-border-subtle mt-1.5">
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
                           {editingBatch === entry.rowId ? (
                             <div className="flex items-center gap-1">
                               <input
                                 type="text"
                                 value={editingBatchValue}
                                 onChange={(e) => setEditingBatchValue(e.target.value)}
-                                className="w-24 px-1.5 py-0.5 bg-white border border-primary rounded text-xs font-bold"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") saveInlineBatch(entry);
+                                  if (e.key === "Escape") setEditingBatch(null);
+                                }}
+                                aria-label="Batch baru"
+                                className="w-28 min-h-touch px-2 bg-surface-warm border border-primary rounded-input text-meta font-bold"
                                 autoFocus
                               />
+                              {inlineBatchesForSku.length > 0 && (
+                                <select
+                                  value=""
+                                  onChange={(e) => {
+                                    if (e.target.value) {
+                                      setEditingBatchValue(e.target.value);
+                                    }
+                                  }}
+                                  aria-label="Pilih batch yang ada"
+                                  className="min-h-touch px-1 bg-surface-warm border border-border rounded-input text-meta"
+                                >
+                                  <option value="">Pilih…</option>
+                                  {inlineBatchesForSku.map((b) => (
+                                    <option key={b} value={b}>
+                                      {b}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
                               <button
                                 onClick={() => saveInlineBatch(entry)}
-                                className="px-2 py-0.5 bg-primary text-white text-[10px] font-bold rounded"
+                                className="min-h-touch px-3 bg-primary text-ivory text-meta font-bold rounded-label"
                               >
                                 OK
                               </button>
@@ -639,18 +690,21 @@ export default function HistoryPage() {
                                 setEditingBatch(entry.rowId);
                                 setEditingBatchValue(entry.batch);
                               }}
-                              className="px-2 py-0.5 bg-surface-warm hover:bg-primary-pale rounded-md font-semibold text-text-primary text-[10px]"
+                              disabled={inlineSaving === entry.rowId}
+                              className="inline-flex items-center gap-1 min-h-touch px-2.5 bg-surface-warm hover:bg-primary-pale rounded-label font-semibold text-text-primary text-meta"
+                              aria-label={`Edit batch ${entry.batch || "-"} untuk ${entry.productName}`}
                             >
-                              Batch: {entry.batch || "-"} ✏️
+                              Batch: {entry.batch || "-"}
+                              <PencilIcon className="w-3.5 h-3.5 text-text-secondary" />
                             </button>
                           )}
-                          <span className="text-[10px] text-text-secondary">
-                            👤 {entry.operator?.split("@")[0]}
+                          <span className="inline-flex items-center gap-1 text-meta text-text-secondary">
+                            <UserIcon className="w-3.5 h-3.5" aria-hidden="true" /> {entry.operator?.split("@")[0]}
                           </span>
                         </div>
 
-                        {/* Qty with formula */}
-                        <div className="flex items-center gap-1.5">
+                        {/* Qty dengan rumus */}
+                        <div className="flex items-center gap-1.5 shrink-0">
                           {editingQty === entry.rowId ? (
                             <div className="flex flex-col items-end gap-1">
                               <QtyInput
@@ -658,19 +712,20 @@ export default function HistoryPage() {
                                 value={editingQtyValue}
                                 onChange={(v) => setEditingQtyValue(v)}
                                 onExprCommit={(expr) => setEditingQtyFormula(expr)}
+                                ariaLabel={`Kuantitas baru untuk ${entry.productName}`}
                               />
-                              <div className="flex gap-1 mt-1">
+                              <div className="flex gap-1.5">
                                 <button
                                   type="button"
                                   onClick={() => saveInlineQty(entry)}
-                                  className="px-3 py-1 bg-primary text-white text-[10px] font-bold rounded-lg shadow-xs"
+                                  className="min-h-touch px-4 bg-primary text-ivory text-meta font-bold rounded-label"
                                 >
                                   Simpan
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setEditingQty(null)}
-                                  className="px-2.5 py-1 bg-surface-warm text-text-primary text-[10px] font-bold rounded-lg"
+                                  className="min-h-touch px-4 bg-surface-warm text-text-primary text-meta font-bold rounded-label"
                                 >
                                   Batal
                                 </button>
@@ -683,42 +738,46 @@ export default function HistoryPage() {
                                 setEditingQtyValue(entry.qty);
                                 setEditingQtyFormula(entry.formula || "");
                               }}
-                              className="flex items-center gap-1 font-black text-xs text-primary bg-primary-pale px-2.5 py-1 rounded-lg border border-primary/20 hover:bg-primary/20 transition active:scale-95"
-                              title="Klik untuk edit Qty"
+                              disabled={inlineSaving === entry.rowId}
+                              className="flex items-center gap-1 min-h-touch px-3 font-bold text-base2 text-primary bg-primary-pale rounded-label border border-primary/20 hover:bg-primary/20 transition active:scale-95 tnum"
+                              aria-label={`Edit kuantitas ${entry.qty} untuk ${entry.productName}`}
                             >
-                              <span>{entry.qty} pcs</span>
-                              <span className="text-[10px] opacity-70">✏️</span>
+                              <span>{entry.qty.toLocaleString("id-ID")} pcs</span>
+                              <PencilIcon className="w-3.5 h-3.5 opacity-70" />
                             </button>
                           )}
                         </div>
                       </div>
 
-                      {/* Explicit Formula Breakdown (Perkalian & Penjumlahan) */}
+                      {/* Rumus eksplisit */}
                       {entry.formula && (
-                        <div className="mt-2 flex items-center gap-1.5 px-2.5 py-1 bg-surface-warm border border-border-subtle rounded-lg text-primary">
-                          <span className="text-xs">🧮</span>
-                          <span className="text-[11px] font-bold font-mono tracking-tight">
-                            Rumus: {entry.formula}
-                          </span>
+                        <div className="mt-2 flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-warm border border-border-subtle rounded-label text-amber-text">
+                          <CalculatorIcon className="w-4 h-4 shrink-0" aria-hidden="true" />
+                          <span className="text-meta font-bold tnum">Rumus: {entry.formula}</span>
                         </div>
                       )}
 
-                      <div className="flex items-center justify-between text-[9px] text-text-secondary mt-1.5">
+                      <div className="flex items-center justify-between text-meta text-text-secondary mt-1.5">
                         <span>{formatDisplayTime(entry.timestamp)}</span>
-                        {entry.edited === "Yes" && (
-                          <span className="text-accent-yellow font-bold">Telah diedit</span>
-                        )}
+                        {inlineSaving === entry.rowId ? (
+                          <span className="text-info font-bold" role="status">
+                            Menyimpan…
+                          </span>
+                        ) : entry.edited === "Yes" ? (
+                          <span className="text-amber-text font-bold">Telah diedit</span>
+                        ) : null}
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
+                )}
+              </section>
             );
           })
         )}
       </div>
 
-      {/* ── Edit Modal ── */}
+      {/* ── Modal edit ── */}
       {selectedEntry && (
         <EditModal
           entry={selectedEntry}
@@ -732,7 +791,7 @@ export default function HistoryPage() {
         />
       )}
 
-      {/* ── Delete Confirmation Modal ── */}
+      {/* ── Konfirmasi hapus ── */}
       <ConfirmModal
         isOpen={deleteModal.isOpen}
         title="Hapus Riwayat Opname?"

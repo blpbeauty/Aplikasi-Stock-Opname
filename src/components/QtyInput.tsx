@@ -92,6 +92,8 @@ interface QtyInputProps {
   onExprCommit?: (expr: string) => void;
   onFocus?: () => void;
   onCommit?: () => void;
+  /** Nama aksesibel untuk input kuantitas. */
+  ariaLabel?: string;
 }
 
 export default function QtyInput({
@@ -102,6 +104,7 @@ export default function QtyInput({
   onExprCommit,
   onFocus,
   onCommit,
+  ariaLabel,
 }: QtyInputProps) {
   const [display, setDisplay] = useState(String(value));
   const [preview, setPreview] = useState<number | null>(null);
@@ -172,12 +175,12 @@ export default function QtyInput({
   };
 
   const defaultCls = wide
-    ? "w-full h-10 text-center bg-surface-warm border border-border focus:border-primary focus:bg-white rounded-xl text-base font-bold text-text-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition"
-    : "w-16 h-8 text-center bg-surface-warm border border-border focus:border-primary focus:bg-white rounded-lg text-sm font-bold text-text-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition";
+    ? "w-full h-12 text-center bg-surface-warm border border-border focus:border-primary focus:bg-paper rounded-input text-xl font-bold text-text-primary tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition"
+    : "w-20 h-11 text-center bg-surface-warm border border-border focus:border-primary focus:bg-paper rounded-input text-lg font-bold text-text-primary tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition";
 
   const opBtnCls = wide
-    ? "flex-1 h-10 rounded-xl bg-surface-warm border border-border text-text-primary text-base font-bold hover:bg-primary-pale active:bg-primary active:text-white transition select-none flex items-center justify-center shadow-xs"
-    : "w-9 h-8 rounded-lg bg-surface-warm border border-border text-text-primary text-sm font-bold hover:bg-primary-pale active:bg-primary active:text-white transition select-none flex items-center justify-center";
+    ? "flex-1 min-h-[44px] rounded-input bg-surface-warm border border-border text-text-primary text-xl font-bold hover:bg-primary-pale active:bg-primary active:text-ivory transition select-none flex items-center justify-center"
+    : "w-11 h-11 rounded-input bg-surface-warm border border-border text-text-primary text-lg font-bold hover:bg-primary-pale active:bg-primary active:text-ivory transition select-none flex items-center justify-center";
 
   return (
     <div className={`relative inline-flex flex-col items-center gap-1 ${wide ? "w-full" : ""}`}>
@@ -204,6 +207,7 @@ export default function QtyInput({
               (e.target as HTMLInputElement).blur();
             }
           }}
+          aria-label={ariaLabel}
           className={className || defaultCls}
         />
         {wide && focused && (
@@ -211,7 +215,8 @@ export default function QtyInput({
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={commit}
-            className="h-10 px-4 rounded-xl bg-primary text-white text-sm font-bold whitespace-nowrap active:bg-primary-light transition select-none shadow-sm"
+            className="h-12 px-5 rounded-input bg-primary text-ivory text-lg font-bold whitespace-nowrap active:bg-primary-light transition select-none"
+            aria-label="Hitung rumus"
           >
             =
           </button>
@@ -219,11 +224,12 @@ export default function QtyInput({
       </div>
 
       {wide && (
-        <div className="flex gap-1.5 w-full items-center mt-0.5">
+        <div className="flex gap-1.5 w-full items-center mt-1">
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => insertOp("+")}
+            aria-label="Tambah"
             className={opBtnCls}
           >
             +
@@ -232,6 +238,7 @@ export default function QtyInput({
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => insertOp("-")}
+            aria-label="Kurangi"
             className={opBtnCls}
           >
             −
@@ -240,6 +247,7 @@ export default function QtyInput({
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => insertOp("x")}
+            aria-label="Kalikan"
             className={opBtnCls}
           >
             ×
@@ -252,7 +260,9 @@ export default function QtyInput({
               inputRef.current?.focus();
             }}
             title={textMode ? "Keypad angka" : "Keyboard penuh (bisa ketik +−×)"}
-            className={`${opBtnCls} ${textMode ? "!bg-primary !text-white !border-primary" : ""}`}
+            aria-label={textMode ? "Ganti ke keypad angka" : "Ganti ke keyboard penuh"}
+            aria-pressed={textMode}
+            className={`${opBtnCls} ${textMode ? "!bg-primary !text-ivory !border-primary" : ""}`}
           >
             {textMode ? "123" : "abc"}
           </button>
@@ -260,7 +270,10 @@ export default function QtyInput({
       )}
 
       {isExpr && preview !== null && (
-        <span className="text-[11px] font-bold text-primary bg-primary-pale px-2.5 py-0.5 rounded-full mt-0.5 border border-primary/20 animate-pulse">
+        <span
+          className="text-meta font-bold text-amber-text bg-amber-bg px-3 py-1 rounded-label mt-1 tnum"
+          role="status"
+        >
           = {preview}
         </span>
       )}

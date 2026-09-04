@@ -13,6 +13,7 @@ import {
   deleteHistoryEntryLocal,
   addMasterProductLocal,
   deleteMasterProductLocal,
+  moveMasterProductsLocal,
   syncLocationProducts,
   hasLocalData,
 } from "./localDb";
@@ -205,7 +206,8 @@ export const saveStockOpnameApi = async (
 export const getHistoryApi = async (
   operator: string,
   filter?: string,
-  allOperators?: boolean
+  allOperators?: boolean,
+  operatorName?: string
 ): Promise<{ success: boolean; history?: HistoryEntry[]; message?: string }> => {
   // Try local IndexedDB first (instant)
   try {
@@ -213,8 +215,18 @@ export const getHistoryApi = async (
     if (hasData) {
       const localHistory = await getHistoryLocal();
       if (localHistory.length > 0) {
-        // Return local data immediately
-        return { success: true, history: localHistory };
+        if (allOperators) {
+          return { success: true, history: localHistory };
+        }
+        // Personal scope: mirror the server (GAS stores the operator's first
+        // name; optimistic local entries store the email). Without this filter
+        // every page would silently count other operators' entries.
+        const firstName = (operatorName || "").trim().split(/\s+/)[0]?.toLowerCase();
+        const rows = localHistory.filter((e) => {
+          const op = String(e.operator || "").trim().toLowerCase();
+          return op === operator.trim().toLowerCase() || (!!firstName && op === firstName);
+        });
+        return { success: true, history: rows };
       }
     }
   } catch { /* fallback to API */ }
@@ -234,13 +246,26 @@ export const updateEntryApi = async (
     invalidateMemCache("getAllLocations");
     invalidateMemCache("getAllProducts");
   }
-  return apiCall("updateEntry", {
+  const result = await apiCall("updateEntry", {
     rowId,
     sessionId,
     newQty,
     editTimestamp,
     ...extra,
   });
+  if (result.success) {
+    await updateHistoryEntryLocal(rowId, {
+      qty: newQty,
+      edited: "Yes",
+      editTimestamp,
+      ...(extra?.productName !== undefined ? { productName: extra.productName } : {}),
+      ...(extra?.sku !== undefined ? { sku: extra.sku } : {}),
+      ...(extra?.batch !== undefined ? { batch: extra.batch } : {}),
+      ...(extra?.formula !== undefined ? { formula: extra.formula } : {}),
+      ...(extra?.location !== undefined ? { location: extra.location } : {}),
+    });
+  }
+  return result;
 };
 
 export const deleteProductApi = async (
@@ -250,7 +275,11 @@ export const deleteProductApi = async (
 ): Promise<{ success: boolean; message?: string }> => {
   invalidateMemCache("getProducts");
   invalidateMemCache("getHistory");
-  return apiCall("deleteProduct", { locationCode, sku, batch });
+  const result = await apiCall("deleteProduct", { locationCode, sku, batch });
+  if (result.success) {
+    await deleteMasterProductLocal(locationCode, sku, batch);
+  }
+  return result;
 };
 
 export const addMasterProductApi = async (
@@ -262,7 +291,17 @@ export const addMasterProductApi = async (
 ): Promise<{ success: boolean; message?: string }> => {
   invalidateMemCache("getProducts");
   invalidateMemCache("getAllProducts");
-  return apiCall("addMasterProduct", { locationCode, productName, sku, batch, barcode: barcode || "" });
+  const result = await apiCall("addMasterProduct", { locationCode, productName, sku, batch, barcode: barcode || "" });
+  if (result.success) {
+    await addMasterProductLocal({
+      location: locationCode,
+      productName,
+      sku,
+      batch,
+      barcode: barcode || "",
+    });
+  }
+  return result;
 };
 
 export const lookupBarcodeApi = async (
@@ -295,7 +334,11 @@ export const deleteEntryApi = async (
   rowId: string
 ): Promise<{ success: boolean; message?: string }> => {
   invalidateMemCache("getHistory");
-  return apiCall("deleteEntry", { rowId });
+  const result = await apiCall("deleteEntry", { rowId });
+  if (result.success) {
+    await deleteHistoryEntryLocal(rowId);
+  }
+  return result;
 };
 
 export const searchLocationsApi = async (
@@ -321,11 +364,11 @@ export const warmupCacheApi = async (
 let preloadedPages: Record<string, boolean> = {};
 
 /** Preload history data so tab switch is instant */
-export function preloadHistory(operator: string, filter?: string): void {
+export function preloadHistory(operator: string, filter?: string, operatorName?: string): void {
   const key = `preload:history:${operator}:${filter || "all"}`;
   if (preloadedPages[key]) return;
   preloadedPages[key] = true;
-  getHistoryApi(operator, filter).catch(() => {});
+  getHistoryApi(operator, filter, undefined, operatorName).catch(() => {});
   // Reset flag after TTL so it can be preloaded again
   setTimeout(() => { delete preloadedPages[key]; }, 15_000);
 }
@@ -390,5 +433,10 @@ export const moveProductsApi = async (
   invalidateMemCache("getProducts");
   invalidateMemCache("getAllProducts");
   invalidateMemCache("getAllLocations");
-  return apiCall("moveProducts", { fromLocation, toLocation, items: items || [] });
+  const result = await apiCall("moveProducts", { fromLocation, toLocation, items: items || [] });
+  if (result.success) {
+    // Mirror ke cache master lokal agar hasil baca offline tidak basi
+    await moveMasterProductsLocal(fromLocation, toLocation, items);
+  }
+  return result;
 };

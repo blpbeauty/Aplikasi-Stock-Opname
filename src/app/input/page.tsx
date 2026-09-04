@@ -5,9 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import BottomNav from "@/components/BottomNav";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import BarcodeScanner from "@/components/BarcodeScanner";
+import ScannerModal from "@/components/ScannerModal";
+import MoveSheet from "@/components/MoveSheet";
 import QtyInput from "@/components/QtyInput";
 import ConfirmModal from "@/components/ConfirmModal";
+import { PageHeader, LocationBand, EmptyState, Field, IconButton } from "@/components/ui";
+import Autocomplete from "@/components/Autocomplete";
 import {
   getProductsApi,
   saveStockOpnameApi,
@@ -18,12 +21,22 @@ import {
   warmupCacheApi,
   preloadHistory,
   getAllProductsApi,
-  moveProductsApi,
-  searchLocationsApi,
   invalidateMemCache,
 } from "@/lib/api";
 import { Product, HistoryEntry } from "@/lib/types";
 import { getCache, setCache, clearCache } from "@/lib/cache";
+import { addHistoryEntryLocal } from "@/lib/localDb";
+import {
+  SearchIcon,
+  CameraIcon,
+  ChevronDownIcon,
+  BoxIcon,
+  TrashIcon,
+  PencilIcon,
+  CalculatorIcon,
+  SwapIcon,
+  PlusIcon,
+} from "@/components/icons";
 import toast from "react-hot-toast";
 
 function InputPageContent() {
@@ -41,6 +54,12 @@ function InputPageContent() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [scanningBarcode, setScanningBarcode] = useState(false);
+  const [filterQuery, setFilterQuery] = useState("");
+
+  // Exit (unsaved changes) confirm modal state
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  // Semua-kuantitas-nol: simpan hanya lewat konfirmasi eksplisit
+  const [showZeroConfirm, setShowZeroConfirm] = useState(false);
 
   // Delete confirm modal state
   const [deleteModal, setDeleteModal] = useState<{
@@ -65,8 +84,6 @@ function InputPageContent() {
     qty: 0,
   });
   const [searchResults, setSearchResults] = useState<Product[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
   const [newProductFormula, setNewProductFormula] = useState("");
   const [savingMasterData, setSavingMasterData] = useState(false);
 
@@ -83,22 +100,11 @@ function InputPageContent() {
   const [showInlineBatchDropdown, setShowInlineBatchDropdown] = useState(false);
   const inlineBatchDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Move location
+  // Move location (shared MoveSheet)
   const [showMoveModal, setShowMoveModal] = useState(false);
-  const [moveTarget, setMoveTarget] = useState("");
-  const [moveMode, setMoveMode] = useState<"all" | "select">("all");
-  const [moveSelected, setMoveSelected] = useState<Set<string>>(new Set());
-  const [movingProducts, setMovingProducts] = useState(false);
-  const [moveLocSuggestions, setMoveLocSuggestions] = useState<
-    Array<{ locationCode: string; productCount: number }>
-  >([]);
-  const [showMoveLocSuggestions, setShowMoveLocSuggestions] = useState(false);
-  const [moveLocSearchTimer, setMoveLocSearchTimer] = useState<NodeJS.Timeout | null>(null);
-  const moveLocRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll refs
   const addFormQtyRef = useRef<HTMLDivElement>(null);
-  const addFormSubmitRef = useRef<HTMLDivElement>(null);
   const productListRef = useRef<HTMLDivElement>(null);
 
   // Unique key per product row
@@ -182,7 +188,7 @@ function InputPageContent() {
 
   useEffect(() => {
     warmupCacheApi().catch(() => {});
-    if (user?.email) preloadHistory(user.email);
+    if (user?.email) preloadHistory(user.email, undefined, user?.name);
     const loadAllProducts = async () => {
       const cached = getCache<Product[]>("allProducts");
       if (cached && cached.age < 120) {
@@ -205,6 +211,7 @@ function InputPageContent() {
       return;
     }
     fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location, router]);
 
   const fetchProducts = async () => {
@@ -314,37 +321,20 @@ function InputPageContent() {
     }
   };
 
-  const handleProductNameSearch = (value: string) => {
-    setNewProductForm((prev) => ({ ...prev, productName: value }));
-    if (searchTimer) clearTimeout(searchTimer);
-    if (value.trim().length < 2) {
-      setSearchResults([]);
-      setShowSuggestions(false);
-      return;
-    }
-
+  const resolveProductNames = async (query: string): Promise<Product[]> => {
+    const q = query.trim().toLowerCase();
     if (allProductsRef.current) {
-      const q = value.trim().toLowerCase();
       const filtered = allProductsRef.current
         .filter((p) => String(p.productName || "").toLowerCase().includes(q))
         .slice(0, 10);
-      setSearchResults(filtered);
-      setShowSuggestions(filtered.length > 0);
-      return;
+      if (filtered.length > 0) return filtered;
     }
-
-    const timer = setTimeout(async () => {
-      try {
-        const result = await searchProductsApi(value.trim());
-        if (result.success && result.products) {
-          setSearchResults(result.products);
-          setShowSuggestions(result.products.length > 0);
-        }
-      } catch (error) {
-        console.error("Search error:", error);
-      }
-    }, 80);
-    setSearchTimer(timer);
+    try {
+      const result = await searchProductsApi(query.trim());
+      return result.success && result.products ? result.products : [];
+    } catch {
+      return [];
+    }
   };
 
   const handleSelectSuggestion = (product: Product) => {
@@ -355,8 +345,6 @@ function InputPageContent() {
       batch: product.batch,
       barcode: product.barcode || prev.barcode,
     }));
-    setShowSuggestions(false);
-    setSearchResults([]);
     toast.success(`Produk dipilih: ${product.productName}`);
     setTimeout(() => {
       addFormQtyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -437,6 +425,19 @@ function InputPageContent() {
 
   const handleBatchSave = (sku: string, oldBatch: string, isNew: boolean) => {
     const newBatch = editingBatchValue.trim();
+    if (!newBatch) {
+      toast.error("Batch tidak boleh kosong");
+      return;
+    }
+    const all = [...products, ...newProducts];
+    if (
+      all.some(
+        (p) => p.sku === sku && p.batch === newBatch && String(p.batch) !== oldBatch
+      )
+    ) {
+      toast.error("Batch tersebut sudah dipakai SKU ini di lokasi");
+      return;
+    }
     setEditingBatchKey(null);
     setEditingBatchValue("");
     setEditingBatchSku("");
@@ -474,137 +475,77 @@ function InputPageContent() {
     toast.success("Batch diperbarui");
   };
 
-  const openMoveModal = () => {
-    setMoveTarget("");
-    setMoveMode("all");
-    setMoveSelected(new Set());
-    setMoveLocSuggestions([]);
-    setShowMoveLocSuggestions(false);
-    setShowMoveModal(true);
+  const handleMoveProducts = () => {
+    setShowMoveModal(false);
+    // Refetch produk lokasi ini setelah MoveSheet menyelesaikan pemindahan.
+    clearCache("products:");
+    invalidateMemCache("getProducts");
+    invalidateMemCache("getAllProducts");
+    invalidateMemCache("getAllLocations");
+    fetchProducts();
   };
 
-  const handleMoveLocSearch = (query: string) => {
-    setMoveTarget(query);
-    if (moveLocSearchTimer) clearTimeout(moveLocSearchTimer);
-    if (!query.trim()) {
-      setMoveLocSuggestions([]);
-      setShowMoveLocSuggestions(false);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      try {
-        const result = await searchLocationsApi(query.trim());
-        if (result.success && result.locations) {
-          setMoveLocSuggestions(
-            result.locations.filter((l) => l.locationCode.toUpperCase() !== location.toUpperCase())
+  const doSave = async (zeroMode: boolean) => {
+    if (saving) return;
+
+    const buildItem = (product: Product, isNew: boolean) => {
+      const k = productKey(product.sku, product.batch);
+      return {
+        productName: product.productName,
+        sku: product.sku,
+        batch: product.batch,
+        barcode: product.barcode || "",
+        qty: zeroMode ? 0 : quantities[k] || 0,
+        formula: zeroMode ? "" : formulas[k] || "",
+        isNew,
+      };
+    };
+
+    const items = zeroMode
+      ? products.map((p) => buildItem(p, false))
+      : [...products, ...newProducts]
+          .filter((product) => quantities[productKey(product.sku, product.batch)] > 0)
+          .map((p) =>
+            buildItem(
+              p,
+              newProducts.some((n) => n.sku === p.sku && n.batch === p.batch)
+            )
           );
-          setShowMoveLocSuggestions(true);
-        }
-      } catch {}
-    }, 300);
-    setMoveLocSearchTimer(timer);
-  };
 
-  const toggleMoveSelect = (sku: string, batch: string) => {
-    const key = productKey(sku, batch);
-    setMoveSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
-  const handleMoveProducts = async () => {
-    const target = moveTarget.trim().toUpperCase();
-    if (!target) {
-      toast.error("Masukkan lokasi tujuan");
-      return;
-    }
-    if (target === location.toUpperCase()) {
-      toast.error("Lokasi tujuan tidak boleh sama");
-      return;
-    }
-
-    const items =
-      moveMode === "select"
-        ? products
-            .filter((p) => moveSelected.has(productKey(p.sku, p.batch)))
-            .map((p) => ({ sku: p.sku, batch: String(p.batch) }))
-        : [];
-
-    if (moveMode === "select" && items.length === 0) {
-      toast.error("Pilih minimal 1 produk");
-      return;
-    }
-
-    setMovingProducts(true);
-    try {
-      const result = await moveProductsApi(location, target, items);
-      if (result.success) {
-        toast.success(result.message || "Produk berhasil dipindah");
-        setShowMoveModal(false);
-        clearCache("products:");
-        invalidateMemCache("getProducts");
-        invalidateMemCache("getAllProducts");
-        invalidateMemCache("getAllLocations");
-        const refreshed = await getProductsApi(location);
-        if (refreshed.success && refreshed.products) {
-          setProducts(refreshed.products);
-        } else {
-          setProducts([]);
-        }
-      } else {
-        toast.error(result.message || "Gagal memindahkan produk");
-      }
-    } catch {
-      toast.error("Gagal memindahkan produk");
-    } finally {
-      setMovingProducts(false);
-    }
-  };
-
-  const handleSave = () => {
-    const existingItems = products
-      .filter((product) => quantities[productKey(product.sku, product.batch)] > 0)
-      .map((product) => {
-        const k = productKey(product.sku, product.batch);
-        return {
-          productName: product.productName,
-          sku: product.sku,
-          batch: product.batch,
-          barcode: product.barcode || "",
-          qty: quantities[k],
-          formula: formulas[k] || "",
-          isNew: false,
-        };
-      });
-
-    const newItems = newProducts
-      .filter((product) => quantities[productKey(product.sku, product.batch)] > 0)
-      .map((product) => {
-        const k = productKey(product.sku, product.batch);
-        return {
-          productName: product.productName,
-          sku: product.sku,
-          batch: product.batch,
-          barcode: product.barcode || "",
-          qty: quantities[k],
-          formula: formulas[k] || "",
-          isNew: true,
-        };
-      });
-
-    const items = [...existingItems, ...newItems];
     if (items.length === 0) {
       toast.error("Tidak ada produk dengan quantity > 0");
       return;
     }
 
     setSaving(true);
+    setShowZeroConfirm(false);
     const sessionId = `${user?.email}_${Date.now()}`;
     const timestamp = new Date().toISOString();
 
+    // Tunggu server benar-benar menyimpan sebelum mengklaim sukses.
+    // Jika gagal, tetap di halaman ini agar operator bisa mencoba lagi
+    // tanpa mengetik ulang.
+    try {
+      const result = await saveStockOpnameApi(
+        sessionId,
+        user?.email || "",
+        location,
+        timestamp,
+        items
+      );
+      if (!result.success) {
+        toast.error(result.message || "Gagal menyimpan ke server. Data masih ada, coba lagi.");
+        setSaving(false);
+        return;
+      }
+    } catch {
+      toast.error("Gagal menyimpan ke server. Data masih ada, coba lagi.");
+      setSaving(false);
+      return;
+    }
+
+    // Optimistic history cache so new entries appear immediately
+    // (Google Sheets replication can lag a few seconds)
     const historyCacheKey = `history:${user?.email}:all`;
     const cachedHistory = getCache<HistoryEntry[]>(historyCacheKey);
     const optimisticEntries: HistoryEntry[] = items.map((item, idx) => ({
@@ -621,14 +562,9 @@ function InputPageContent() {
       editTimestamp: "",
       formula: item.formula || "",
     }));
-    const updatedHistory = [...optimisticEntries, ...(cachedHistory?.data || [])];
-    setCache(historyCacheKey, updatedHistory);
-
-    saveStockOpnameApi(sessionId, user?.email || "", location, timestamp, items)
-      .then((result) => {
-        if (!result.success) toast.error(result.message || "Gagal sinkron ke server");
-      })
-      .catch(() => toast.error("Gagal sinkron ke server"));
+    setCache(historyCacheKey, [...optimisticEntries, ...(cachedHistory?.data || [])]);
+    // Mirror ke IndexedDB agar Riwayat (semua operator) langsung melihatnya
+    optimisticEntries.forEach((entry) => addHistoryEntryLocal(entry).catch(() => {}));
 
     if (typeof window !== "undefined") {
       window.localStorage.setItem("lastSaveTs", String(Date.now()));
@@ -636,11 +572,35 @@ function InputPageContent() {
 
     invalidateMemCache("getHistory");
     clearCache("products:");
-    toast.success("Stock opname berhasil disimpan!");
+    toast.success(
+      zeroMode ? "Disimpan: semua kuantitas 0 untuk lokasi ini" : "Stock opname berhasil disimpan!"
+    );
     router.push("/scan");
   };
 
+  const handleSaveClick = () => {
+    if (totalItems === 0) {
+      // Lokasi boleh selesai dengan seluruh kuantitas nol, lewat konfirmasi eksplisit
+      setShowZeroConfirm(true);
+      return;
+    }
+    doSave(false);
+  };
+
   const allProducts = [...products, ...newProducts];
+
+  const visibleProducts = useMemo(() => {
+    const q = filterQuery.trim().toLowerCase();
+    if (!q) return allProducts.map((product, idx) => ({ product, idx, isNew: idx >= products.length }));
+    return allProducts
+      .map((product, idx) => ({ product, idx, isNew: idx >= products.length }))
+      .filter(
+        ({ product }) =>
+          product.productName.toLowerCase().includes(q) ||
+          product.sku.toLowerCase().includes(q) ||
+          String(product.batch).toLowerCase().includes(q)
+      );
+  }, [allProducts, products.length, filterQuery]);
 
   const scrollToNextProduct = (currentGlobalIdx: number) => {
     const totalCount = allProducts.length;
@@ -659,6 +619,29 @@ function InputPageContent() {
   };
 
   const totalItems = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
+  const countedCount = allProducts.filter(
+    (p) => (quantities[productKey(p.sku, p.batch)] || 0) > 0
+  ).length;
+
+  const hasUnsavedChanges = totalItems > 0 || newProducts.length > 0;
+
+  const handleBackClick = () => {
+    if (hasUnsavedChanges) {
+      setShowExitConfirm(true);
+    } else {
+      router.push("/scan");
+    }
+  };
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasUnsavedChanges]);
 
   if (loading) {
     return (
@@ -669,71 +652,54 @@ function InputPageContent() {
   }
 
   return (
-    <div className="mobile-container pb-36">
-      {/* ── Sticky Top Header ── */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-border shadow-xs">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => router.push("/scan")}
-              className="w-9 h-9 rounded-xl bg-surface-warm flex items-center justify-center hover:bg-gray-200 text-text-primary transition active:scale-95 shadow-xs"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-            </button>
-            <div>
-              <h1 className="text-sm font-bold text-text-primary leading-tight">Input Quantity</h1>
-              <p className="text-[11px] text-text-secondary">
-                Lokasi: <span className="font-bold text-primary">{location}</span>
-              </p>
-            </div>
-          </div>
+    <div className="mobile-container pb-44">
+      <PageHeader
+        title="Input Hitung"
+        subtitle={`Operator: ${user?.name?.split(" ")[0] || "—"}`}
+        onBack={handleBackClick}
+        backLabel="Kembali ke halaman scan"
+      />
 
-          <div className="text-right">
-            <span className="text-[10px] font-bold text-text-secondary uppercase">Total Terhitung</span>
-            <p className="text-base font-black text-primary leading-none">{totalItems} item</p>
-          </div>
-        </div>
-      </div>
+      <div className="px-4 sm:px-6 pt-3 space-y-4">
+        {/* ── Location band: lokasi aktif selalu paling menonjol ── */}
+        <LocationBand
+          code={location}
+          sub={`${countedCount}/${allProducts.length} produk sudah dihitung · total ${totalItems} item`}
+        />
 
-      <div className="px-4 pt-3 space-y-3">
-        {/* ── Action Buttons (+ Tambah & Pindah) ── */}
+        {/* ── Aksi sekunder ── */}
         <div className="flex gap-2">
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="flex-1 bg-primary text-white py-2.5 px-3 rounded-xl font-bold hover:bg-primary-light transition text-xs shadow-md active:scale-[0.98] flex items-center justify-center gap-1.5"
+            aria-expanded={showAddForm}
+            className="flex-1 min-h-touch bg-surface-warm border border-border text-text-primary rounded-input font-bold text-meta flex items-center justify-center gap-1.5 active:scale-[0.98] transition"
           >
-            {showAddForm ? (
-              <>✕ Tutup Form</>
-            ) : (
-              <>
-                <span className="text-base leading-none">+</span> Tambah Produk
-              </>
-            )}
+            {showAddForm ? "Tutup Form" : (<><PlusIcon className="w-4 h-4" /> Tambah Produk</>)}
           </button>
           {products.length > 0 && (
             <button
-              onClick={openMoveModal}
-              className="bg-surface-warm border border-border text-text-primary px-3.5 py-2.5 rounded-xl font-bold hover:bg-gray-200 transition text-xs active:scale-[0.98] flex items-center gap-1.5 shadow-xs"
+              onClick={() => setShowMoveModal(true)}
+              className="min-h-touch bg-surface-warm border border-border text-text-primary px-4 rounded-input font-bold text-meta flex items-center gap-1.5 active:scale-[0.98] transition"
             >
-              <span>⇄</span> Pindah
+              <SwapIcon className="w-4 h-4" /> Pindah
             </button>
           )}
         </div>
 
         {/* ── Form Tambah Produk Baru ── */}
         {showAddForm && (
-          <div className="bg-white border border-border rounded-2xl p-4 shadow-card animate-fadeIn space-y-3">
-            <h3 className="text-xs font-bold text-text-primary">Tambah Produk ke Lokasi Ini</h3>
+          <div className="bg-paper border border-border rounded-card p-4 shadow-card space-y-3.5">
+            <h2 className="text-base2 font-bold text-text-primary">Tambah Produk ke Lokasi Ini</h2>
 
-            {/* Barcode Scanner */}
-            <div>
-              <label className="block text-[11px] font-bold text-text-secondary mb-1">
-                Scan Barcode Produk
-              </label>
-              <div className="relative">
+            {/* Barcode */}
+            <Field
+              id="add-barcode"
+              label="Barcode (opsional)"
+              hint="Pindai, atau ketik lalu tekan Enter untuk mencari produk."
+            >
+              <div className="relative flex items-center">
                 <input
+                  id="add-barcode"
                   type="text"
                   value={newProductForm.barcode}
                   onChange={(e) =>
@@ -746,8 +712,9 @@ function InputPageContent() {
                       handleBarcodeScan(b);
                     }
                   }}
-                  className="w-full pl-3 pr-20 py-2 bg-surface-warm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-xs font-semibold"
-                  placeholder="Scan / ketik barcode..."
+                  className="w-full min-h-touch pl-3 pr-24 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary"
+                  placeholder="Scan / ketik barcode…"
+                  autoComplete="off"
                 />
                 <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
                   <button
@@ -757,78 +724,66 @@ function InputPageContent() {
                       if (b) handleBarcodeScan(b);
                     }}
                     disabled={!String(newProductForm.barcode || "").trim() || scanningBarcode}
-                    className="w-7 h-7 rounded-lg bg-white border border-border flex items-center justify-center text-primary disabled:opacity-50"
+                    className="w-11 h-11 rounded-label bg-paper border border-border flex items-center justify-center text-primary disabled:opacity-50 active:scale-95 transition"
+                    aria-label="Cari produk berdasarkan barcode"
                   >
-                    🔍
+                    <SearchIcon className="w-4 h-4" />
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowBarcodeScanner(true)}
                     disabled={scanningBarcode}
-                    className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center disabled:opacity-50 shadow-xs"
+                    className="w-11 h-11 rounded-label bg-primary text-ivory flex items-center justify-center disabled:opacity-50 active:scale-95 transition"
+                    aria-label="Pindai barcode dengan kamera"
                   >
-                    📷
+                    <CameraIcon className="w-4 h-4" />
                   </button>
                 </div>
               </div>
-            </div>
+            </Field>
 
-            {/* Nama Produk Search */}
-            <div className="relative">
-              <label className="block text-[11px] font-bold text-text-secondary mb-1">
-                Nama Produk
-              </label>
-              <input
-                type="text"
-                value={newProductForm.productName}
-                onChange={(e) => handleProductNameSearch(e.target.value)}
-                onFocus={() => {
-                  if (searchResults.length > 0) setShowSuggestions(true);
-                }}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                className="w-full px-3 py-2 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-xs font-semibold"
-                placeholder="Ketik min. 2 huruf..."
-                autoComplete="off"
-              />
-              {showSuggestions && searchResults.length > 0 && (
-                <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-xl max-h-44 overflow-y-auto">
-                  {searchResults.map((p, idx) => (
-                    <button
-                      key={`${p.sku}-${idx}`}
-                      type="button"
-                      className="w-full text-left px-3 py-2 hover:bg-primary-pale border-b border-border last:border-b-0"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => handleSelectSuggestion(p)}
-                    >
-                      <p className="font-bold text-text-primary text-xs">{p.productName}</p>
-                      <p className="text-[10px] text-text-secondary">
-                        SKU: {p.sku} | Batch: {p.batch}
-                      </p>
-                    </button>
-                  ))}
-                </div>
+            {/* Nama Produk dengan autocomplete */}
+            <Autocomplete<Product>
+              id="add-product-name"
+              label="Nama Produk"
+              value={newProductForm.productName}
+              onValueChange={(v) => setNewProductForm((prev) => ({ ...prev, productName: v }))}
+              resolve={resolveProductNames}
+              getKey={(p, i) => `${p.sku}-${i}`}
+              renderItem={(p) => (
+                <>
+                  <p className="font-bold text-text-primary text-meta">{p.productName}</p>
+                  <p className="text-meta text-text-secondary">
+                    SKU: {p.sku} | Batch: {p.batch}
+                  </p>
+                </>
               )}
-            </div>
+              onSelect={handleSelectSuggestion}
+              placeholder="Ketik min. 2 huruf…"
+              minChars={2}
+              debounceMs={120}
+              emptyText="Produk tidak ditemukan — isi manual"
+            />
 
             {/* SKU & Batch */}
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[11px] font-bold text-text-secondary mb-1">SKU</label>
+            <div className="grid grid-cols-2 gap-3">
+              <Field id="add-sku" label="SKU" required>
                 <input
+                  id="add-sku"
                   type="text"
                   value={newProductForm.sku}
                   onChange={(e) =>
                     setNewProductForm({ ...newProductForm, sku: e.target.value })
                   }
-                  className="w-full px-3 py-2 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-xs font-semibold"
-                  placeholder="SKU..."
+                  className="w-full min-h-touch px-3 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary"
+                  placeholder="SKU…"
                 />
-              </div>
+              </Field>
 
-              <div ref={batchDropdownRef} className="relative">
-                <label className="block text-[11px] font-bold text-text-secondary mb-1">Batch</label>
-                <div className="relative">
+              <Field id="add-batch" label="Batch" required>
+                <div className="relative" ref={batchDropdownRef}>
                   <input
+                    id="add-batch"
                     type="text"
                     value={newProductForm.batch}
                     onChange={(e) => {
@@ -838,66 +793,69 @@ function InputPageContent() {
                     onFocus={() => {
                       if (newProductForm.sku.trim()) setShowBatchDropdown(true);
                     }}
-                    className="w-full px-3 py-2 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-xs font-semibold pr-6"
-                    placeholder="Batch..."
+                    className="w-full min-h-touch pl-3 pr-10 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary"
+                    placeholder="Batch…"
                   />
                   {batchesForSku.length > 0 && (
                     <button
                       type="button"
                       onClick={() => setShowBatchDropdown(!showBatchDropdown)}
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-secondary hover:text-primary p-0.5"
+                      className="absolute right-0.5 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-text-secondary hover:text-primary active:scale-95 transition"
+                      aria-label="Tampilkan pilihan batch"
+                      aria-expanded={showBatchDropdown}
                     >
-                      ▼
+                      <ChevronDownIcon className="w-4 h-4" />
                     </button>
                   )}
-                </div>
 
-                {showBatchDropdown && newProductForm.sku.trim() && (
-                  <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-lg overflow-hidden max-h-36 overflow-y-auto">
-                    {filteredBatches.length > 0 ? (
-                      filteredBatches.map((batch) => (
-                        <button
-                          key={batch}
-                          type="button"
-                          onClick={() => {
-                            setNewProductForm({ ...newProductForm, batch });
-                            setShowBatchDropdown(false);
-                          }}
-                          className={`w-full text-left px-3 py-1.5 text-xs hover:bg-primary-pale border-b border-border last:border-b-0 ${
-                            newProductForm.batch === batch ? "bg-primary/10 text-primary font-bold" : ""
-                          }`}
-                        >
-                          {batch}
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-3 py-2 text-[10px] text-text-secondary">
-                        Batch baru: &quot;{newProductForm.batch.trim()}&quot;
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                  {showBatchDropdown && newProductForm.sku.trim() && (
+                    <div className="absolute z-20 left-0 right-0 mt-1 bg-paper border border-border rounded-input shadow-card overflow-hidden max-h-36 overflow-y-auto">
+                      {filteredBatches.length > 0 ? (
+                        filteredBatches.map((batch) => (
+                          <button
+                            key={batch}
+                            type="button"
+                            onClick={() => {
+                              setNewProductForm({ ...newProductForm, batch });
+                              setShowBatchDropdown(false);
+                            }}
+                            className={`w-full min-h-touch text-left px-3 py-2 text-meta hover:bg-primary-pale border-b border-border-subtle last:border-b-0 ${
+                              newProductForm.batch === batch ? "bg-primary-pale/60 text-primary font-bold" : ""
+                            }`}
+                          >
+                            {batch}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-meta text-text-secondary">
+                          Batch baru: &quot;{newProductForm.batch.trim()}&quot;
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Field>
             </div>
 
             {/* Qty Input */}
-            <div ref={addFormQtyRef}>
-              <label className="block text-[11px] font-bold text-text-secondary mb-1">Quantity</label>
-              <QtyInput
-                value={newProductForm.qty}
-                onChange={(v) => setNewProductForm((prev) => ({ ...prev, qty: v }))}
-                onExprCommit={(expr) => setNewProductFormula(expr)}
-                wide
-              />
-            </div>
+            <Field id="add-qty" label="Quantity" required>
+              <div ref={addFormQtyRef}>
+                <QtyInput
+                  value={newProductForm.qty}
+                  onChange={(v) => setNewProductForm((prev) => ({ ...prev, qty: v }))}
+                  onExprCommit={(expr) => setNewProductFormula(expr)}
+                  wide
+                />
+              </div>
+            </Field>
 
-            <div ref={addFormSubmitRef} className="pt-2 space-y-2">
+            <div className="pt-1 space-y-2">
               <button
                 type="button"
                 onClick={handleAddNewProduct}
-                className="w-full bg-primary text-white py-3 rounded-xl font-bold text-xs hover:bg-primary-light transition shadow-md active:scale-[0.98]"
+                className="w-full min-h-touch bg-primary text-ivory rounded-input font-bold text-meta active:scale-[0.98] transition"
               >
-                + Masukkan ke Hitungan Opname
+                Masukkan ke Hitungan Opname
               </button>
 
               <button
@@ -941,29 +899,67 @@ function InputPageContent() {
                   }
                 }}
                 disabled={savingMasterData}
-                className="w-full bg-surface-warm border border-border text-text-primary py-2.5 rounded-xl font-bold text-xs hover:bg-gray-200 transition active:scale-[0.98]"
+                className="w-full min-h-touch bg-surface-warm border border-border text-text-primary rounded-input font-bold text-meta active:scale-[0.98] transition disabled:opacity-50"
               >
-                {savingMasterData ? "Menyimpan..." : "Simpan ke Master Data Saja"}
+                {savingMasterData ? "Menyimpan…" : "Simpan ke Master Data Saja"}
               </button>
             </div>
           </div>
         )}
 
-        {/* ── Product List (Card Layout) ── */}
+        {/* ── Filter produk dalam lokasi ── */}
+        {allProducts.length > 6 && (
+          <div className="relative">
+            <label htmlFor="input-filter" className="sr-only">
+              Filter produk dalam daftar
+            </label>
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none" />
+            <input
+              id="input-filter"
+              type="text"
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.target.value)}
+              placeholder="Filter produk di lokasi ini…"
+              className="w-full min-h-touch pl-9 pr-3 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary"
+              autoComplete="off"
+            />
+          </div>
+        )}
+
+        {/* ── Daftar produk ── */}
         <div ref={productListRef} className="space-y-2.5">
           {allProducts.length === 0 ? (
-            <div className="bg-white rounded-2xl p-8 text-center border border-border shadow-xs">
-              <div className="w-12 h-12 rounded-2xl bg-primary-pale text-primary mx-auto flex items-center justify-center text-xl mb-2">
-                📦
-              </div>
-              <p className="text-xs font-bold text-text-primary">Belum ada produk di lokasi ini</p>
-              <p className="text-[11px] text-text-secondary mt-1">
-                Gunakan tombol &quot;+ Tambah Produk&quot; untuk memasukkan barang
-              </p>
-            </div>
+            <EmptyState
+              icon={<BoxIcon className="w-6 h-6" />}
+              title="Belum ada produk di lokasi ini"
+              description="Gunakan tombol Tambah Produk untuk memasukkan barang yang ada di rak."
+              action={
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(true)}
+                  className="min-h-touch px-5 bg-primary text-ivory rounded-input font-bold text-meta"
+                >
+                  + Tambah Produk
+                </button>
+              }
+            />
+          ) : visibleProducts.length === 0 ? (
+            <EmptyState
+              icon={<SearchIcon className="w-6 h-6" />}
+              title="Tidak ada produk yang cocok"
+              description={`Tidak ada produk yang cocok dengan "${filterQuery}".`}
+              action={
+                <button
+                  type="button"
+                  onClick={() => setFilterQuery("")}
+                  className="min-h-touch px-5 bg-surface-warm border border-border rounded-input font-bold text-meta"
+                >
+                  Bersihkan filter
+                </button>
+              }
+            />
           ) : (
-            allProducts.map((product, idx) => {
-              const isNew = idx >= products.length;
+            visibleProducts.map(({ product, idx, isNew }) => {
               const k = productKey(product.sku, product.batch);
               const qty = quantities[k] || 0;
               const formula = formulas[k] || "";
@@ -972,40 +968,39 @@ function InputPageContent() {
                 <div
                   key={`${product.sku}-${product.batch}-${idx}`}
                   data-product-idx={idx}
-                  className={`bg-white rounded-2xl p-3.5 border transition shadow-card ${
-                    qty > 0 ? "border-primary/40 bg-primary-pale/10" : "border-border"
+                  className={`bg-paper rounded-card border p-3.5 transition shadow-subtle ${
+                    qty > 0 ? "border-primary/50" : "border-border"
                   }`}
                 >
-                  {/* Row 1: Header (Product Name + Delete Button) */}
+                  {/* Baris 1: nama produk + tindakan sekunder */}
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex-1 min-w-0">
-                      {isNew && (
-                        <span className="inline-block px-2 py-0.5 bg-accent-yellow/20 text-accent-yellow text-[9px] font-bold rounded-md mb-1">
-                          PRODUK BARU
-                        </span>
-                      )}
-                      <h3 className="text-xs font-bold text-text-primary leading-tight break-words">
+                      <h3 className="text-meta font-bold text-text-primary leading-snug break-words">
                         {product.productName}
                       </h3>
-                      <p className="text-[10px] text-text-secondary mt-0.5">
-                        SKU: <span className="font-semibold">{product.sku}</span>
+                      <p className="text-meta text-text-secondary mt-0.5 tnum">
+                        SKU: <span className="font-semibold text-text-primary">{product.sku}</span>
                       </p>
                     </div>
 
-                    {/* Delete button (Ergonomic 36x36px target) */}
-                    <button
-                      type="button"
-                      onClick={() => promptDeleteProduct(product, isNew)}
-                      className="w-9 h-9 rounded-xl bg-accent-red/10 text-accent-red hover:bg-accent-red hover:text-white transition flex-shrink-0 flex items-center justify-center active:scale-90"
-                      title="Hapus produk"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                      </svg>
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {isNew && (
+                        <span className="px-2 py-1 bg-amber-bg text-amber-text text-meta font-bold rounded-label">
+                          Baru
+                        </span>
+                      )}
+                      <IconButton
+                        label={`Hapus ${product.productName}`}
+                        variant="danger"
+                        size="md"
+                        onClick={() => promptDeleteProduct(product, isNew)}
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                      </IconButton>
+                    </div>
                   </div>
 
-                  {/* Row 2: Batch (Inline Edit) */}
+                  {/* Baris 2: batch (edit inline, aksi sekunder) */}
                   <div className="mb-2.5">
                     <div
                       className="relative inline-block"
@@ -1016,7 +1011,7 @@ function InputPageContent() {
                       }
                     >
                       {editingBatchKey === `${isNew ? "new" : "exist"}-${product.sku}-${product.batch}` ? (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5">
                           <input
                             type="text"
                             value={editingBatchValue}
@@ -1028,13 +1023,14 @@ function InputPageContent() {
                               if (e.key === "Enter") handleBatchSave(product.sku, product.batch, isNew);
                               if (e.key === "Escape") setEditingBatchKey(null);
                             }}
-                            className="w-32 px-2 py-1 bg-surface-warm border border-primary rounded-lg text-xs font-bold text-text-primary focus:outline-none"
+                            aria-label={`Batch untuk ${product.productName}`}
+                            className="w-32 min-h-touch px-2 bg-surface-warm border border-primary rounded-input text-meta font-bold text-text-primary"
                             autoFocus
                           />
                           <button
                             type="button"
                             onClick={() => handleBatchSave(product.sku, product.batch, isNew)}
-                            className="px-2 py-1 bg-primary text-white text-[10px] font-bold rounded-lg"
+                            className="min-h-touch px-3 bg-primary text-ivory text-meta font-bold rounded-label"
                           >
                             Simpan
                           </button>
@@ -1049,28 +1045,59 @@ function InputPageContent() {
                               product.sku
                             )
                           }
-                          className="flex items-center gap-1.5 px-2.5 py-1 bg-surface-warm hover:bg-primary-pale rounded-lg border border-border-subtle transition active:scale-95"
+                          className="flex items-center gap-1.5 min-h-touch px-2.5 bg-surface-warm hover:bg-primary-pale rounded-label border border-border-subtle transition active:scale-95"
+                          aria-label={`Edit batch ${product.batch} untuk ${product.productName}`}
                         >
-                          <span className="text-[10px] text-text-secondary">Batch:</span>
-                          <span className="text-[11px] font-bold text-text-primary">{product.batch}</span>
-                          <span className="text-[10px] text-text-secondary">✏️</span>
+                          <span className="text-meta text-text-secondary">Batch:</span>
+                          <span className="text-meta font-bold text-text-primary">{product.batch}</span>
+                          <PencilIcon className="w-3.5 h-3.5 text-text-secondary" />
                         </button>
                       )}
+
+                      {editingBatchKey === `${isNew ? "new" : "exist"}-${product.sku}-${product.batch}` &&
+                        showInlineBatchDropdown &&
+                        inlineBatchesForSku.length > 0 && (
+                          <div className="absolute z-20 left-0 right-0 mt-1 bg-paper border border-border rounded-input shadow-card overflow-hidden max-h-36 overflow-y-auto">
+                            {inlineFilteredBatches.length > 0 ? (
+                              inlineFilteredBatches.map((batch) => (
+                                <button
+                                  key={batch}
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingBatchValue(batch);
+                                    setShowInlineBatchDropdown(false);
+                                    handleBatchSave(product.sku, product.batch, isNew);
+                                  }}
+                                  className={`w-full min-h-touch text-left px-3 py-2 text-meta hover:bg-primary-pale border-b border-border-subtle last:border-b-0 ${
+                                    editingBatchValue === batch ? "bg-primary-pale/60 text-primary font-bold" : ""
+                                  }`}
+                                >
+                                  {batch}
+                                </button>
+                              ))
+                            ) : (
+                              <div className="px-3 py-2 text-meta text-text-secondary">
+                                Batch baru: &quot;{editingBatchValue.trim()}&quot;
+                              </div>
+                            )}
+                          </div>
+                        )}
                     </div>
                   </div>
 
-                  {/* Row 3: Qty Input */}
-                  <div className="pt-1 border-t border-border-subtle">
+                  {/* Baris 3: kuantitas — fokus utama kartu */}
+                  <div className="pt-2 border-t border-border-subtle">
                     <QtyInput
                       wide
                       value={qty}
                       onChange={(v) => handleQuantityChange(k, v)}
                       onExprCommit={(expr) => handleExprCommit(k, expr)}
                       onCommit={() => scrollToNextProduct(idx)}
+                      ariaLabel={`Kuantitas ${product.productName}, batch ${product.batch}`}
                     />
                     {formula && (
-                      <p className="text-[10px] text-primary font-bold mt-1 text-center">
-                        🧮 Rumus: {formula}
+                      <p className="inline-flex items-center gap-1 text-meta text-amber-text font-bold mt-1.5">
+                        <CalculatorIcon className="w-4 h-4" aria-hidden="true" /> Rumus: {formula}
                       </p>
                     )}
                   </div>
@@ -1081,26 +1108,49 @@ function InputPageContent() {
         </div>
       </div>
 
-      {/* ── Fixed Floating Bottom Save Bar ── */}
+      {/* ── Sticky save bar — di atas bottom nav, aman dari keyboard ── */}
       {!showAddForm && allProducts.length > 0 && (
         <div className="fixed bottom-16 left-0 right-0 z-30 pointer-events-none">
-          <div className="max-w-md mx-auto p-4 pointer-events-auto">
+          <div className="max-w-[720px] mx-auto p-3 pointer-events-auto">
             <button
               type="button"
-              onClick={handleSave}
-              disabled={saving || totalItems === 0}
-              className="w-full bg-primary text-white py-3.5 px-6 rounded-2xl font-bold text-sm hover:bg-primary-light transition shadow-xl border border-primary-light/30 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] flex items-center justify-between"
+              onClick={handleSaveClick}
+              disabled={saving}
+              className="w-full min-h-touch bg-primary text-ivory px-5 rounded-card font-bold text-base2 shadow-card disabled:opacity-60 active:scale-[0.99] transition flex items-center justify-between gap-3"
             >
-              <span>{saving ? "Menyimpan Data..." : "Simpan Hasil Opname"}</span>
-              <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-black">
-                {totalItems} Item
+              <span>{saving ? "Menyimpan…" : "Simpan Hasil Hitung"}</span>
+              <span className="bg-ivory/20 px-3 py-1 rounded-full text-meta font-bold tnum">
+                {totalItems} item
               </span>
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Confirmation Modal Hapus Produk ── */}
+      {/* ── Konfirmasi keluar tanpa menyimpan ── */}
+      <ConfirmModal
+        isOpen={showExitConfirm}
+        title="Keluar Tanpa Menyimpan?"
+        message={`Ada ${totalItems} item yang sudah dihitung di lokasi ${location} tetapi belum disimpan. Jika keluar sekarang, hitungan tersebut akan hilang.`}
+        confirmText="Buang & Keluar"
+        cancelText="Tetap di Halaman"
+        isDanger
+        onConfirm={() => router.push("/scan")}
+        onClose={() => setShowExitConfirm(false)}
+      />
+
+      {/* ── Konfirmasi simpan semua-nol ── */}
+      <ConfirmModal
+        isOpen={showZeroConfirm}
+        title="Simpan dengan Semua Kuantitas Nol?"
+        message={`Semua ${products.length} produk di lokasi ${location} akan dicatat dengan kuantitas 0 (stok kosong). Lanjutkan?`}
+        confirmText="Ya, Semua 0"
+        cancelText="Batal"
+        onConfirm={() => doSave(true)}
+        onClose={() => setShowZeroConfirm(false)}
+      />
+
+      {/* ── Konfirmasi hapus produk ── */}
       <ConfirmModal
         isOpen={deleteModal.isOpen}
         title="Hapus Produk dari Lokasi?"
@@ -1112,170 +1162,27 @@ function InputPageContent() {
         onClose={() => setDeleteModal((prev) => ({ ...prev, isOpen: false }))}
       />
 
-      {/* ── Move Location Modal ── */}
-      {showMoveModal && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-          onClick={() => setShowMoveModal(false)}
-        >
-          <div
-            className="bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl border border-border"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mt-3 sm:hidden" />
+      {/* ── Sheet pindah lokasi (bersama) ── */}
+      <MoveSheet
+        isOpen={showMoveModal}
+        onClose={() => setShowMoveModal(false)}
+        fromLocation={location}
+        items={products.map((p) => ({
+          sku: p.sku,
+          batch: String(p.batch),
+          productName: p.productName,
+        }))}
+        allowSelection
+        onMoved={handleMoveProducts}
+      />
 
-            <div className="px-5 pt-3 pb-3 border-b border-border flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-bold text-text-primary">Pindah Lokasi</h2>
-                <p className="text-[11px] text-text-secondary">
-                  Dari: <span className="font-bold text-primary">{location}</span>
-                </p>
-              </div>
-              <button
-                onClick={() => setShowMoveModal(false)}
-                className="w-7 h-7 rounded-full bg-surface-warm flex items-center justify-center text-text-secondary text-xs"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="px-5 py-3 overflow-y-auto flex-1 space-y-3">
-              {/* Lokasi Tujuan */}
-              <div ref={moveLocRef} className="relative">
-                <label className="block text-xs font-bold text-text-primary mb-1">
-                  Lokasi Tujuan:
-                </label>
-                <input
-                  type="text"
-                  value={moveTarget}
-                  onChange={(e) => handleMoveLocSearch(e.target.value)}
-                  onFocus={() => {
-                    if (moveLocSuggestions.length > 0) setShowMoveLocSuggestions(true);
-                  }}
-                  placeholder="Ketik kode lokasi tujuan..."
-                  className="w-full bg-surface-warm border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold uppercase focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-                {showMoveLocSuggestions && moveLocSuggestions.length > 0 && (
-                  <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-lg max-h-36 overflow-y-auto">
-                    {moveLocSuggestions.map((loc) => (
-                      <button
-                        key={loc.locationCode}
-                        type="button"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => {
-                          setMoveTarget(loc.locationCode);
-                          setShowMoveLocSuggestions(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-xs hover:bg-primary-pale border-b border-border last:border-b-0 flex justify-between"
-                      >
-                        <span className="font-bold text-text-primary">{loc.locationCode}</span>
-                        <span className="text-[10px] text-text-secondary">({loc.productCount} produk)</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Mode Pindah */}
-              <div>
-                <label className="block text-xs font-bold text-text-primary mb-1.5">
-                  Pilihan Produk
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setMoveMode("all")}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition border ${
-                      moveMode === "all"
-                        ? "bg-primary text-white border-primary shadow-xs"
-                        : "bg-surface-warm text-text-primary border-border"
-                    }`}
-                  >
-                    Semua ({products.length})
-                  </button>
-                  <button
-                    onClick={() => setMoveMode("select")}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition border ${
-                      moveMode === "select"
-                        ? "bg-primary text-white border-primary shadow-xs"
-                        : "bg-surface-warm text-text-primary border-border"
-                    }`}
-                  >
-                    Pilih Produk
-                  </button>
-                </div>
-              </div>
-
-              {/* Selection list */}
-              {moveMode === "select" && (
-                <div className="border border-border rounded-xl overflow-hidden max-h-40 overflow-y-auto divide-y divide-border-subtle bg-white">
-                  {products.map((p) => {
-                    const key = productKey(p.sku, p.batch);
-                    const isSelected = moveSelected.has(key);
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => toggleMoveSelect(p.sku, p.batch)}
-                        className={`w-full text-left px-3 py-2 flex items-center gap-2 transition ${
-                          isSelected ? "bg-primary-pale/40" : ""
-                        }`}
-                      >
-                        <span className={`text-sm ${isSelected ? "text-primary" : "text-gray-300"}`}>
-                          {isSelected ? "☑" : "☐"}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-text-primary truncate">{p.productName}</p>
-                          <p className="text-[10px] text-text-secondary">
-                            SKU: {p.sku} | Batch: {p.batch}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="px-5 py-4 border-t border-border flex gap-2.5">
-              <button
-                onClick={() => setShowMoveModal(false)}
-                className="flex-1 py-2.5 bg-surface-warm rounded-xl text-xs font-bold text-text-primary"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleMoveProducts}
-                disabled={
-                  movingProducts ||
-                  !moveTarget.trim() ||
-                  (moveMode === "select" && moveSelected.size === 0)
-                }
-                className="flex-1 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-light disabled:opacity-50 shadow-md"
-              >
-                {movingProducts ? <LoadingSpinner /> : "Pindahkan"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Barcode Scanner Modal */}
-      {showBarcodeScanner && (
-        <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-4 shadow-2xl border border-border">
-            <div className="flex items-center justify-between mb-3 px-1">
-              <h3 className="font-bold text-text-primary text-sm">Scan Barcode Produk</h3>
-              <button
-                onClick={() => setShowBarcodeScanner(false)}
-                className="w-8 h-8 rounded-full bg-surface-warm flex items-center justify-center text-text-secondary text-xs"
-              >
-                ✕
-              </button>
-            </div>
-            <BarcodeScanner onScan={handleBarcodeScan} active={showBarcodeScanner} />
-          </div>
-        </div>
-      )}
+      {/* ── Scanner modal ── */}
+      <ScannerModal
+        isOpen={showBarcodeScanner}
+        onClose={() => setShowBarcodeScanner(false)}
+        onScan={handleBarcodeScan}
+        title="Pindai Barcode Produk"
+      />
 
       <BottomNav activePage="scan" />
     </div>

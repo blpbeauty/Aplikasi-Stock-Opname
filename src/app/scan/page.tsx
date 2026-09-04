@@ -4,22 +4,34 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import BottomNav from "@/components/BottomNav";
-import BarcodeScanner from "@/components/BarcodeScanner";
+import ScannerModal from "@/components/ScannerModal";
+import MoveSheet from "@/components/MoveSheet";
+import { Dialog, EmptyState, SyncStatusBadge } from "@/components/ui";
+import Autocomplete from "@/components/Autocomplete";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   getProductsApi,
   getHistoryApi,
-  searchProductsApi,
-  searchLocationsApi,
-  warmupCacheApi,
   getAllProductsApi,
   getAllLocationsApi,
+  searchLocationsApi,
   searchProductsGlobalApi,
-  moveProductsApi,
+  warmupCacheApi,
 } from "@/lib/api";
 import { useDataSync } from "@/components/DataSyncProvider";
+import {
+  MapPinIcon,
+  CameraIcon,
+  SearchIcon,
+  BuildingIcon,
+  CheckIcon,
+  HourglassIcon,
+  ClockIcon,
+  ChevronRightIcon,
+} from "@/components/icons";
 import { Product, HistoryEntry } from "@/lib/types";
 import { getCache, setCache } from "@/lib/cache";
+import { formatRelativeTime } from "@/lib/format";
 import toast from "react-hot-toast";
 
 type LocationResult = {
@@ -38,17 +50,11 @@ type GlobalProductItem = {
 export default function ScanDashboard() {
   const { user } = useAuth();
   const router = useRouter();
-  const { isReady, syncProgress, lastSyncTime, forceSync } = useDataSync();
+  const { lastSyncTime } = useDataSync();
 
   const [locationCode, setLocationCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [showLocationScanner, setShowLocationScanner] = useState(false);
-
-  // Search locations state
-  const [locationResults, setLocationResults] = useState<LocationResult[]>([]);
-  const [showResults, setShowResults] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Statistics state
   const [stats, setStats] = useState({
@@ -57,6 +63,9 @@ export default function ScanDashboard() {
     pending: 0,
     progress: 0,
   });
+  const [pendingLocations, setPendingLocations] = useState<LocationResult[]>([]);
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [locationsLoaded, setLocationsLoaded] = useState(false);
 
   // Recent scans
   const [recentScans, setRecentScans] = useState<
@@ -67,16 +76,10 @@ export default function ScanDashboard() {
   const [productQuery, setProductQuery] = useState("");
   const [productResults, setProductResults] = useState<GlobalProductItem[]>([]);
   const [productSearchLoading, setProductSearchLoading] = useState(false);
-  const [productSearchTimer, setProductSearchTimer] = useState<NodeJS.Timeout | null>(null);
   const [showProductScanner, setShowProductScanner] = useState(false);
 
   // Quick move product state
   const [moveItem, setMoveItem] = useState<GlobalProductItem | null>(null);
-  const [quickMoveTarget, setQuickMoveTarget] = useState("");
-  const [quickMoving, setQuickMoving] = useState(false);
-  const [quickMoveSuggestions, setQuickMoveSuggestions] = useState<LocationResult[]>([]);
-  const [showQuickMoveSuggestions, setShowQuickMoveSuggestions] = useState(false);
-  const [quickMoveTimer, setQuickMoveTimer] = useState<NodeJS.Timeout | null>(null);
 
   const allLocationsRef = useRef<LocationResult[] | null>(null);
   const allProductsRef = useRef<Product[] | null>(null);
@@ -90,6 +93,8 @@ export default function ScanDashboard() {
       const progress = total > 0 ? Math.round((scannedCount / total) * 100) : 0;
 
       setStats({ total, scannedCount, pending, progress });
+      setPendingLocations(locations.filter((l) => !scannedLocations.has(l.locationCode)));
+      setLocationsLoaded(true);
 
       const locationMap = new Map<string, { time: string; count: number }>();
       history.forEach((h) => {
@@ -124,7 +129,7 @@ export default function ScanDashboard() {
     try {
       const [locationsRes, historyRes] = await Promise.all([
         getAllLocationsApi(),
-        user?.email ? getHistoryApi(user.email) : Promise.resolve({ success: false, history: [] }),
+        user?.email ? getHistoryApi(user.email, undefined, false, user?.name) : Promise.resolve({ success: false, history: [] }),
       ]);
 
       let locData = cachedLocations?.data || [];
@@ -146,6 +151,7 @@ export default function ScanDashboard() {
       calculateStats(locData, histData);
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
+      setLocationsLoaded(true);
     }
   }, [user, calculateStats]);
 
@@ -167,70 +173,34 @@ export default function ScanDashboard() {
     loadDashboardData();
   }, [loadDashboardData]);
 
-  const handleLocationSearch = (query: string) => {
-    setLocationCode(query);
-    if (searchTimer) clearTimeout(searchTimer);
-
-    if (query.trim().length === 0) {
-      setLocationResults([]);
-      setShowResults(false);
-      return;
-    }
-
+  const resolveLocations = useCallback(async (query: string) => {
+    const q = query.trim();
     if (allLocationsRef.current) {
-      const q = query.trim().toLowerCase();
       const filtered = allLocationsRef.current
-        .filter((l) => l.locationCode.toLowerCase().includes(q))
+        .filter((l) => l.locationCode.toLowerCase().includes(q.toLowerCase()))
         .slice(0, 10);
-      setLocationResults(filtered);
-      setShowResults(true);
-      return;
+      if (filtered.length > 0) return filtered;
     }
+    try {
+      const result = await searchLocationsApi(q);
+      return result.success && result.locations ? result.locations.slice(0, 10) : [];
+    } catch {
+      return [];
+    }
+  }, []);
 
-    setSearchLoading(true);
-    const timer = setTimeout(async () => {
-      try {
-        const result = await searchLocationsApi(query.trim());
-        if (result.success && result.locations) {
-          setLocationResults(result.locations);
-          setShowResults(true);
-        }
-      } catch (error) {
-        console.error("Search error:", error);
-      } finally {
-        setSearchLoading(false);
-      }
-    }, 150);
-    setSearchTimer(timer);
-  };
-
-  const handleSelectLocation = (loc: LocationResult) => {
-    setLocationCode(loc.locationCode);
-    setShowResults(false);
-    openLocation(loc.locationCode);
-  };
-
-  const handleLocationScan = (barcode: string) => {
-    setShowLocationScanner(false);
-    setLocationCode(barcode);
-    openLocation(barcode);
-  };
-
-  const handleManualSearch = () => {
-    if (!locationCode.trim()) {
+  const openLocation = async (locCode: string) => {
+    const code = locCode.trim();
+    if (!code) {
       toast.error("Masukkan kode lokasi");
       return;
     }
-    openLocation(locationCode.trim());
-  };
-
-  const openLocation = async (locCode: string) => {
     setLoading(true);
     try {
-      const result = await getProductsApi(locCode);
+      const result = await getProductsApi(code);
       if (result.success && result.products) {
-        setCache(`products:${locCode}`, result.products);
-        router.push(`/input?location=${encodeURIComponent(locCode)}`);
+        setCache(`products:${code}`, result.products);
+        router.push(`/input?location=${encodeURIComponent(code)}`);
       } else {
         toast.error(result.message || "Lokasi tidak ditemukan");
         setLoading(false);
@@ -241,33 +211,30 @@ export default function ScanDashboard() {
     }
   };
 
-  // Product Finder
-  const handleProductSearch = (query: string) => {
-    setProductQuery(query);
-    if (productSearchTimer) clearTimeout(productSearchTimer);
+  const handleLocationScan = (barcode: string) => {
+    setShowLocationScanner(false);
+    setLocationCode(barcode);
+    openLocation(barcode);
+  };
 
-    if (query.trim().length < 2) {
+  // Product Finder
+  const handleProductSearch = useCallback(async (query: string) => {
+    const q = query.trim();
+    if (q.length < 2) {
       setProductResults([]);
       return;
     }
-
     setProductSearchLoading(true);
-    const timer = setTimeout(async () => {
-      try {
-        const result = await searchProductsGlobalApi(query.trim());
-        if (result.success && result.products) {
-          setProductResults(result.products);
-        } else {
-          setProductResults([]);
-        }
-      } catch (error) {
-        console.error("Product search error:", error);
-      } finally {
-        setProductSearchLoading(false);
-      }
-    }, 200);
-    setProductSearchTimer(timer);
-  };
+    try {
+      const result = await searchProductsGlobalApi(q);
+      setProductResults(result.success && result.products ? result.products : []);
+    } catch (error) {
+      console.error("Product search error:", error);
+      setProductResults([]);
+    } finally {
+      setProductSearchLoading(false);
+    }
+  }, []);
 
   const handleProductBarcodeScan = (barcode: string) => {
     setShowProductScanner(false);
@@ -277,507 +244,363 @@ export default function ScanDashboard() {
 
   const openQuickMove = (item: GlobalProductItem) => {
     setMoveItem(item);
-    setQuickMoveTarget("");
-    setQuickMoveSuggestions([]);
-    setShowQuickMoveSuggestions(false);
   };
 
-  const handleQuickMoveTargetSearch = (query: string) => {
-    setQuickMoveTarget(query);
-    if (quickMoveTimer) clearTimeout(quickMoveTimer);
-
-    if (!query.trim()) {
-      setQuickMoveSuggestions([]);
-      setShowQuickMoveSuggestions(false);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      try {
-        const result = await searchLocationsApi(query.trim());
-        if (result.success && result.locations) {
-          setQuickMoveSuggestions(
-            result.locations.filter(
-              (l) => l.locationCode.toUpperCase() !== moveItem?.location.toUpperCase()
-            )
-          );
-          setShowQuickMoveSuggestions(true);
-        }
-      } catch {}
-    }, 250);
-    setQuickMoveTimer(timer);
-  };
-
-  const executeQuickMove = async () => {
-    if (!moveItem || !quickMoveTarget.trim()) return;
-    const target = quickMoveTarget.trim().toUpperCase();
-    if (target === moveItem.location.toUpperCase()) {
-      toast.error("Lokasi tujuan tidak boleh sama");
-      return;
-    }
-    setQuickMoving(true);
-    try {
-      const result = await moveProductsApi(moveItem.location, target, [
-        { sku: moveItem.sku, batch: moveItem.batch },
-      ]);
-      if (result.success) {
-        toast.success(result.message || "Produk berhasil dipindah");
-        setMoveItem(null);
-        if (productQuery.trim().length >= 2) {
-          const refreshed = await searchProductsGlobalApi(productQuery.trim());
-          if (refreshed.success && refreshed.products) {
-            setProductResults(refreshed.products);
-          }
-        }
-      } else {
-        toast.error(result.message || "Gagal memindah");
-      }
-    } catch {
-      toast.error("Gagal memindah produk");
-    } finally {
-      setQuickMoving(false);
-    }
-  };
-
-  const formatRelativeTime = (ts: string) => {
-    try {
-      const date = new Date(ts);
-      if (isNaN(date.getTime())) {
-        const m = ts.match(/(\d{1,2})\s+(\w+)\s+(\d{4})\s+(\d{1,2}):(\d{2})/);
-        if (!m) return ts;
-        const months: Record<string, number> = {
-          Jan: 0, Feb: 1, Mar: 2, Apr: 3, Mei: 4, May: 4, Jun: 5, Jul: 6,
-          Agu: 7, Aug: 7, Sep: 8, Okt: 9, Oct: 9, Nov: 10, Des: 11, Dec: 11,
-        };
-        const d = new Date(+m[3], months[m[2]] ?? 0, +m[1], +m[4], +m[5]);
-        if (isNaN(d.getTime())) return ts;
-        return formatRelativeFromDate(d);
-      }
-      return formatRelativeFromDate(date);
-    } catch {
-      return ts;
-    }
-  };
-
-  const formatRelativeFromDate = (date: Date) => {
-    const diff = Math.floor((Date.now() - date.getTime()) / 1000);
-    if (diff < 60) return "Baru saja";
-    if (diff < 3600) return `${Math.floor(diff / 60)} mnt lalu`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} jam lalu`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)} hari lalu`;
-    return date.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-  };
+  const lastSyncLabel = useMemo(() => {
+    if (!lastSyncTime) return null;
+    return `Sinkron ${formatRelativeTime(new Date(lastSyncTime).toISOString())}`;
+  }, [lastSyncTime]);
 
   return (
-    <div className="mobile-container pb-28">
-      {/* ── Top Header ── */}
-      <div className="bg-white px-5 pt-5 pb-4 border-b border-border shadow-xs">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">
-              BLP Stock Opname
-            </span>
-            <h1 className="text-base font-bold text-text-primary mt-0.5 leading-tight">
-              Halo, {user?.name?.split(" ")[0] || "Operator"} 👋
+    <div className="mobile-container pb-32">
+      {/* ── Header + status sinkronisasi ── */}
+      <header className="bg-paper px-4 sm:px-6 pt-5 pb-4 border-b border-border">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-text-primary leading-tight">
+              Stock Opname
             </h1>
+            <p className="text-meta text-text-secondary mt-0.5">
+              Halo, {user?.name?.split(" ")[0] || "Operator"} — cari atau pindai lokasi untuk mulai menghitung.
+            </p>
           </div>
-
-          {/* Sync status badge */}
-          <button
-            type="button"
-            onClick={() => {
-              forceSync();
-              toast.success("Memulai sinkronisasi...");
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-pale rounded-full border border-primary/20 hover:bg-primary/20 transition active:scale-95"
-            title={
-              lastSyncTime
-                ? `Terakhir sync: ${new Date(lastSyncTime).toLocaleTimeString("id-ID")}`
-                : "Sinkronisasi"
-            }
-          >
-            <span className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
-            <span className="text-[10px] font-bold text-primary">
-              {syncProgress.status === "syncing" ? "SYNC..." : "OFFLINE READY"}
-            </span>
-          </button>
+          <SyncStatusBadge />
         </div>
-      </div>
+      </header>
 
-      <div className="px-4 pt-4 space-y-4">
-        {/* ── Search Bar Lokasi ── */}
-        <div className="relative">
-          <label className="block text-xs font-bold text-text-primary mb-1.5">
-            Cari / Scan Lokasi Gudang
-          </label>
-          <div className="relative flex items-center">
-            <svg
-              className="absolute left-3.5 w-4 h-4 text-text-secondary pointer-events-none"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
-            <input
-              type="text"
+      <div className="px-4 sm:px-6 pt-4 space-y-6">
+        {/* ── Tindakan utama: cari / pindai lokasi ── */}
+        <section aria-label="Buka lokasi">
+          <div className="flex gap-2 items-end">
+            <Autocomplete<LocationResult>
+              id="scan-location-input"
+              label="Cari atau pindai lokasi"
               value={locationCode}
-              onChange={(e) => handleLocationSearch(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleManualSearch()}
-              className="w-full pl-10 pr-14 py-3 bg-white border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary shadow-card text-xs uppercase font-bold text-text-primary"
-              placeholder="Contoh: A01-B02-C03"
-              disabled={loading}
-              autoComplete="off"
+              onValueChange={setLocationCode}
+              resolve={resolveLocations}
+              getKey={(l) => l.locationCode}
+              renderItem={(l) => (
+                <span className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2 min-w-0">
+                    <MapPinIcon className="w-4 h-4 text-text-secondary shrink-0" />
+                    <span className="font-bold text-text-primary uppercase">{l.locationCode}</span>
+                  </span>
+                  <span className="text-meta text-text-secondary shrink-0">{l.productCount} produk</span>
+                </span>
+              )}
+              onSelect={(l) => openLocation(l.locationCode)}
+              placeholder="Contoh: A-01-03"
+              uppercase
+              minChars={1}
+              emptyText="Lokasi tidak ditemukan di Master Data"
+              className="flex-1"
             />
             <button
               type="button"
               onClick={() => setShowLocationScanner(true)}
-              className="absolute right-1.5 w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-white shadow-md active:scale-95 transition"
-              title="Buka Kamera Barcode"
+              className="tap w-12 h-12 shrink-0 rounded-input bg-primary text-ivory flex items-center justify-center active:scale-95 transition"
+              aria-label="Pindai barcode lokasi dengan kamera"
+              title="Pindai barcode lokasi"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
-                <path d="M7 12h10" />
-                <path d="M7 9h2M11 9h2M15 9h2M7 15h2M11 15h2M15 15h2" />
-              </svg>
+              <CameraIcon className="w-5 h-5" />
             </button>
           </div>
+          <button
+            type="button"
+            onClick={() => openLocation(locationCode)}
+            disabled={!locationCode.trim() || loading}
+            className="mt-2 w-full min-h-touch bg-primary text-ivory rounded-input font-bold text-meta disabled:opacity-40 active:scale-[0.98] transition"
+          >
+            Buka Lokasi
+          </button>
 
-          {/* Search Results Dropdown */}
-          {showResults && locationResults.length > 0 && (
-            <div className="mt-2 bg-white border border-border rounded-2xl shadow-xl overflow-hidden max-h-56 overflow-y-auto z-20 relative">
-              {locationResults.map((loc, index) => (
-                <button
-                  key={loc.locationCode}
-                  onClick={() => handleSelectLocation(loc)}
-                  className={`w-full flex items-center justify-between px-4 py-3 hover:bg-primary-pale transition text-left active:bg-primary/10 ${
-                    index < locationResults.length - 1 ? "border-b border-border-subtle" : ""
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-primary-pale text-primary flex items-center justify-center flex-shrink-0 font-bold text-xs">
-                      📍
-                    </div>
-                    <div>
-                      <p className="font-bold text-text-primary text-xs">{loc.locationCode}</p>
-                      <p className="text-[10px] text-text-secondary">{loc.productCount} produk terdaftar</p>
-                    </div>
-                  </div>
-                  <svg className="w-4 h-4 text-text-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9 18l6-6-6-6" />
-                  </svg>
-                </button>
-              ))}
-            </div>
+          {loading && (
+            <p className="mt-2 flex items-center justify-center gap-2 text-meta text-text-secondary" role="status">
+              <LoadingSpinner /> Membuka lokasi…
+            </p>
           )}
+        </section>
 
-          {showResults && locationResults.length === 0 && !searchLoading && locationCode.trim().length >= 1 && (
-            <div className="mt-2 bg-white border border-border rounded-2xl p-3 text-center shadow-card">
-              <p className="text-xs text-text-secondary">Lokasi tidak ditemukan di Master Data</p>
-            </div>
-          )}
-        </div>
-
-        {/* Loading indicator */}
-        {loading && (
-          <div className="flex items-center justify-center gap-2 py-3 bg-white rounded-2xl border border-border shadow-xs">
-            <LoadingSpinner />
-            <span className="text-xs text-text-secondary font-medium">Membuka lokasi...</span>
+        {/* ── Progres opname (label jujur: rentang data riwayat) ── */}
+        <section aria-label="Progres opname" className="rail rail-espresso">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-lg font-bold text-text-primary">Progres Opname</h2>
+            <span className="text-2xl font-bold text-text-primary tnum">{stats.progress}%</span>
           </div>
-        )}
-
-        {/* ── Progress Card (Spacious & Clean) ── */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-card border border-border">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-bold text-text-primary tracking-tight leading-snug">
-                Progress Opname Gudang
-              </h2>
-              <p className="text-[11px] text-text-secondary mt-0.5 font-medium">
-                {stats.scannedCount} dari {stats.total} lokasi selesai
-              </p>
-            </div>
-            <div className="flex items-baseline gap-0.5 bg-primary-pale px-3 py-1.5 rounded-xl border border-primary/15 flex-shrink-0">
-              <span className="text-lg font-black text-primary tracking-tight">{stats.progress}</span>
-              <span className="text-xs font-bold text-primary">%</span>
-            </div>
-          </div>
-
-          <div className="w-full h-3 bg-surface-warm rounded-full overflow-hidden border border-border-subtle p-0.5">
+          <p className="text-meta text-text-secondary mt-0.5">
+            {stats.scannedCount} dari {stats.total} lokasi pernah dihitung
+            {stats.total > 0 && " — seluruh riwayat tersimpan, bukan hanya hari ini"}
+          </p>
+          <div
+            className="mt-2 w-full h-3 bg-surface-warm rounded-full overflow-hidden border border-border-subtle"
+            role="progressbar"
+            aria-valuenow={stats.progress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Progres opname ${stats.progress} persen`}
+          >
             <div
-              className="h-full bg-gradient-to-r from-primary to-accent-yellow rounded-full transition-all duration-700"
+              className="h-full bg-primary rounded-full transition-all duration-500"
               style={{ width: `${Math.max(stats.progress, stats.progress > 0 ? 4 : 0)}%` }}
             />
           </div>
-        </div>
-
-        {/* ── Stat Cards ── */}
-        <div className="grid grid-cols-3 gap-2.5">
-          <div className="bg-white rounded-2xl p-3.5 shadow-card border border-border text-center">
-            <div className="w-7 h-7 mx-auto mb-1 rounded-xl bg-primary-pale text-primary flex items-center justify-center text-xs">
-              🏢
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="bg-paper rounded-card border border-border p-3 text-center">
+              <BuildingIcon className="w-4 h-4 mx-auto text-text-secondary" aria-hidden="true" />
+              <p className="text-lg font-bold text-text-primary tnum mt-1">{stats.total}</p>
+              <p className="text-meta text-text-secondary">Total Lokasi</p>
             </div>
-            <p className="text-base font-black text-text-primary">{stats.total}</p>
-            <p className="text-[10px] text-text-secondary font-bold">Total Lokasi</p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-3.5 shadow-card border border-border text-center">
-            <div className="w-7 h-7 mx-auto mb-1 rounded-xl bg-accent-green/10 text-accent-green flex items-center justify-center text-xs">
-              ✓
+            <div className="bg-paper rounded-card border border-border p-3 text-center">
+              <CheckIcon className="w-4 h-4 mx-auto text-success" aria-hidden="true" />
+              <p className="text-lg font-bold text-text-primary tnum mt-1">{stats.scannedCount}</p>
+              <p className="text-meta text-text-secondary">Selesai</p>
             </div>
-            <p className="text-base font-black text-primary">{stats.scannedCount}</p>
-            <p className="text-[10px] text-text-secondary font-bold">Selesai</p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-3.5 shadow-card border border-border text-center">
-            <div className="w-7 h-7 mx-auto mb-1 rounded-xl bg-accent-red/10 text-accent-red flex items-center justify-center text-xs">
-              ⏳
-            </div>
-            <p className="text-base font-black text-accent-red">{stats.pending}</p>
-            <p className="text-[10px] text-text-secondary font-bold">Pending</p>
-          </div>
-        </div>
-
-        {/* ── Cari & Pindah Produk ── */}
-        <div className="bg-white rounded-2xl p-4 shadow-card border border-border">
-          <div className="flex items-center justify-between mb-2.5">
-            <h3 className="text-xs font-bold text-text-primary flex items-center gap-1.5">
-              <span>🔍</span> Cari Posisi Produk
-            </h3>
-            <span className="text-[10px] text-text-secondary">Cari di seluruh gudang</span>
-          </div>
-
-          <div className="relative flex items-center">
-            <input
-              type="text"
-              value={productQuery}
-              onChange={(e) => handleProductSearch(e.target.value)}
-              placeholder="Ketik nama produk, SKU, atau barcode..."
-              className="w-full pl-3 pr-11 py-2.5 bg-surface-warm border border-border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-text-primary"
-            />
             <button
               type="button"
-              onClick={() => setShowProductScanner(true)}
-              className="absolute right-1.5 w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center text-xs shadow-xs"
-              title="Scan Barcode Produk"
+              onClick={() => setShowPendingModal(true)}
+              disabled={stats.pending === 0}
+              className="bg-paper rounded-card border border-border p-3 text-center transition active:scale-95 disabled:active:scale-100 disabled:opacity-60"
+              aria-label={`Lihat daftar ${stats.pending} lokasi yang belum dihitung`}
             >
-              📷
+              <HourglassIcon className="w-4 h-4 mx-auto text-danger" aria-hidden="true" />
+              <p className="text-lg font-bold text-danger tnum mt-1">{stats.pending}</p>
+              <p className="text-meta text-text-secondary">
+                {stats.pending > 0 ? "Belum dihitung" : "Belum dihitung"}
+              </p>
+            </button>
+          </div>
+        </section>
+
+        {/* ── Terakhir dikerjakan ── */}
+        <section aria-label="Terakhir dikerjakan">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold text-text-primary flex items-center gap-1.5">
+              <ClockIcon className="w-5 h-5 text-text-secondary" aria-hidden="true" /> Terakhir Dikerjakan
+            </h2>
+            <button
+              onClick={() => router.push("/history")}
+              className="text-meta font-bold text-primary hover:underline min-h-touch"
+            >
+              Lihat semua
             </button>
           </div>
 
-          {/* Product Results */}
-          {productSearchLoading && (
-            <div className="flex items-center justify-center py-3 text-xs text-text-secondary gap-1.5">
-              <LoadingSpinner />
-              <span>Mencari produk...</span>
+          {recentScans.length === 0 ? (
+            <EmptyState
+              icon={<ClockIcon className="w-6 h-6" />}
+              title="Belum ada aktivitas opname"
+              description="Mulai dengan mencari atau memindai lokasi di atas."
+            />
+          ) : (
+            <ul className="bg-paper rounded-card border border-border divide-y divide-border-subtle overflow-hidden">
+              {recentScans.map((item, idx) => (
+                <li key={`${item.location}-${idx}`}>
+                  <button
+                    type="button"
+                    onClick={() => openLocation(item.location)}
+                    className="w-full min-h-touch px-4 py-3 flex items-center justify-between text-left hover:bg-primary-pale/40 transition"
+                    aria-label={`Buka lokasi ${item.location}`}
+                  >
+                    <span className="flex items-center gap-3 min-w-0">
+                      <span className="w-9 h-9 rounded-label bg-surface-warm text-primary flex items-center justify-center shrink-0">
+                        <MapPinIcon className="w-4 h-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-meta font-bold text-text-primary uppercase break-all">
+                          {item.location}
+                        </span>
+                        <span className="block text-meta text-text-secondary tnum">
+                          {item.count} item dihitung
+                        </span>
+                      </span>
+                    </span>
+                    <span className="text-meta text-text-secondary shrink-0 ml-2 flex items-center gap-1">
+                      {formatRelativeTime(item.time)}
+                      <ChevronRightIcon className="w-4 h-4" aria-hidden="true" />
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* ── Cari & pindah produk ── */}
+        <section aria-label="Cari posisi produk" className="rail rail-ochre">
+          <h2 className="text-lg font-bold text-text-primary">Cari Posisi Produk</h2>
+          <p className="text-meta text-text-secondary mt-0.5 mb-2">
+            Cari di seluruh gudang berdasarkan nama, SKU, atau barcode.
+          </p>
+
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <label htmlFor="scan-product-input" className="sr-only">
+                Cari produk
+              </label>
+              <input
+                id="scan-product-input"
+                type="text"
+                value={productQuery}
+                onChange={(e) => {
+                  setProductQuery(e.target.value);
+                  handleProductSearch(e.target.value);
+                }}
+                placeholder="Nama produk, SKU, atau barcode…"
+                className="w-full min-h-touch px-3 bg-surface-warm border border-border rounded-input text-base2 font-semibold text-text-primary focus:bg-paper"
+              />
             </div>
+            <button
+              type="button"
+              onClick={() => setShowProductScanner(true)}
+              className="tap w-12 h-12 shrink-0 rounded-input bg-surface-warm border border-border text-primary flex items-center justify-center active:scale-95 transition"
+              aria-label="Pindai barcode produk dengan kamera"
+              title="Pindai barcode produk"
+            >
+              <CameraIcon className="w-5 h-5" />
+            </button>
+          </div>
+
+          {productSearchLoading && (
+            <p className="mt-2 flex items-center justify-center gap-2 text-meta text-text-secondary" role="status">
+              <LoadingSpinner /> Mencari produk…
+            </p>
           )}
 
           {productResults.length > 0 && (
-            <div className="mt-3 divide-y divide-border-subtle max-h-52 overflow-y-auto">
+            <ul className="mt-3 divide-y divide-border-subtle max-h-72 overflow-y-auto">
               {productResults.map((item, idx) => (
-                <div key={`${item.sku}-${item.batch}-${idx}`} className="py-2.5 flex items-start justify-between gap-2">
+                <li key={`${item.sku}-${item.batch}-${idx}`} className="py-3 flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-text-primary truncate">{item.productName}</p>
-                    <p className="text-[10px] text-text-secondary mt-0.5">
-                      SKU: <strong className="text-text-primary">{item.sku}</strong> | Batch: {item.batch || "-"}
+                    <p className="text-meta font-bold text-text-primary leading-snug line-clamp-2">
+                      {item.productName}
                     </p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <span className="inline-block px-2 py-0.5 bg-primary-pale text-primary rounded-md font-bold text-[10px]">
-                        📍 {item.location}
-                      </span>
-                    </div>
+                    <p className="text-meta text-text-secondary mt-0.5 tnum">
+                      SKU <strong className="text-text-primary">{item.sku}</strong>
+                      {item.batch ? ` · Batch ${item.batch}` : ""}
+                    </p>
+                    <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-primary-pale text-primary rounded-label font-bold text-meta tnum">
+                      <MapPinIcon className="w-3.5 h-3.5" aria-hidden="true" /> {item.location}
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <div className="flex flex-col gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => openLocation(item.location)}
-                      className="px-2.5 py-1 bg-surface-warm hover:bg-primary-pale text-text-primary rounded-lg text-[10px] font-bold border border-border"
+                      className="min-h-touch px-3 bg-surface-warm hover:bg-primary-pale text-text-primary rounded-label text-meta font-bold border border-border"
+                      aria-label={`Buka lokasi ${item.location}`}
                     >
                       Buka
                     </button>
                     <button
                       type="button"
                       onClick={() => openQuickMove(item)}
-                      className="px-2.5 py-1 bg-primary text-white rounded-lg text-[10px] font-bold shadow-xs hover:bg-primary-light"
+                      className="min-h-touch px-3 bg-primary text-ivory rounded-label text-meta font-bold"
+                      aria-label={`Pindah ${item.productName} ke lokasi lain`}
                     >
                       Pindah
                     </button>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
 
           {productQuery.trim().length >= 2 && !productSearchLoading && productResults.length === 0 && (
-            <p className="text-center text-xs text-text-secondary py-3">Produk tidak ditemukan</p>
+            <EmptyState
+              icon={<SearchIcon className="w-6 h-6" />}
+              title="Produk tidak ditemukan"
+              description="Coba kata kunci lain, atau pindai barcode produknya."
+            />
           )}
-        </div>
+        </section>
 
-        {/* ── Quick Move Modal (Bottom Sheet) ── */}
-        {moveItem && (
-          <div
-            className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-            onClick={() => setMoveItem(null)}
-          >
-            <div
-              className="bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl p-5 shadow-2xl border border-border space-y-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto sm:hidden" />
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-text-primary text-sm">Pindah Lokasi Produk</h3>
-                <button
-                  onClick={() => setMoveItem(null)}
-                  className="w-7 h-7 rounded-full bg-surface-warm flex items-center justify-center text-xs text-text-secondary"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="bg-surface-warm p-3 rounded-xl border border-border-subtle text-xs space-y-1">
-                <p className="font-bold text-text-primary">{moveItem.productName}</p>
-                <p className="text-text-secondary text-[11px]">
-                  SKU: {moveItem.sku} | Batch: {moveItem.batch}
-                </p>
-                <p className="text-text-secondary text-[11px]">
-                  Lokasi Saat Ini: <strong className="text-primary">{moveItem.location}</strong>
-                </p>
-              </div>
-
-              <div className="relative">
-                <label className="block text-xs font-bold text-text-primary mb-1">
-                  Pindah ke Lokasi Tujuan:
-                </label>
-                <input
-                  type="text"
-                  value={quickMoveTarget}
-                  onChange={(e) => handleQuickMoveTargetSearch(e.target.value)}
-                  placeholder="Ketik lokasi tujuan..."
-                  className="w-full bg-surface-warm border border-border rounded-xl px-3 py-2.5 text-xs font-bold uppercase focus:outline-none focus:ring-2 focus:ring-primary"
-                  autoFocus
-                />
-                {showQuickMoveSuggestions && quickMoveSuggestions.length > 0 && (
-                  <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-lg max-h-36 overflow-y-auto">
-                    {quickMoveSuggestions.map((loc) => (
-                      <button
-                        key={loc.locationCode}
-                        type="button"
-                        onClick={() => {
-                          setQuickMoveTarget(loc.locationCode);
-                          setShowQuickMoveSuggestions(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-xs hover:bg-primary-pale border-b border-border last:border-b-0 flex justify-between"
-                      >
-                        <span className="font-bold text-text-primary">{loc.locationCode}</span>
-                        <span className="text-[10px] text-text-secondary">({loc.productCount} produk)</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setMoveItem(null)}
-                  className="flex-1 py-2.5 bg-surface-warm rounded-xl text-xs font-bold text-text-primary"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  onClick={executeQuickMove}
-                  disabled={quickMoving || !quickMoveTarget.trim()}
-                  className="flex-1 py-2.5 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary-light disabled:opacity-50 shadow-md flex items-center justify-center gap-1"
-                >
-                  {quickMoving ? <LoadingSpinner /> : "Konfirmasi Pindah"}
-                </button>
-              </div>
-            </div>
-          </div>
+        {lastSyncLabel && (
+          <p className="text-meta text-text-secondary text-center pb-2">
+            Data tersimpan di perangkat · {lastSyncLabel}
+          </p>
         )}
-
-        {/* ── Riwayat Scan Hari Ini ── */}
-        <div className="bg-white rounded-2xl p-4 shadow-card border border-border">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold text-text-primary flex items-center gap-1.5">
-              <span>🕒</span> Riwayat Terakhir
-            </h3>
-            <button
-              onClick={() => router.push("/history")}
-              className="text-[11px] font-bold text-primary hover:underline"
-            >
-              Lihat Semua →
-            </button>
-          </div>
-
-          {recentScans.length === 0 ? (
-            <p className="text-center text-xs text-text-secondary py-3">Belum ada aktivitas opname</p>
-          ) : (
-            <div className="divide-y divide-border-subtle">
-              {recentScans.map((item, idx) => (
-                <div
-                  key={`${item.location}-${idx}`}
-                  className="py-2.5 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-surface-warm text-primary flex items-center justify-center text-xs font-bold">
-                      📍
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-text-primary">{item.location}</p>
-                      <p className="text-[10px] text-text-secondary">{item.count} produk dihitung</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] text-text-secondary font-medium">
-                    {formatRelativeTime(item.time)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* Barcode Scanner Modal (Lokasi) */}
-      {showLocationScanner && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-4 shadow-2xl border border-border">
-            <div className="flex items-center justify-between mb-3 px-1">
-              <h3 className="font-bold text-text-primary text-sm">Scan Barcode Lokasi</h3>
-              <button
-                onClick={() => setShowLocationScanner(false)}
-                className="w-8 h-8 rounded-full bg-surface-warm flex items-center justify-center text-text-secondary text-xs"
-              >
-                ✕
-              </button>
-            </div>
-            <BarcodeScanner onScan={handleLocationScan} active={showLocationScanner} />
-          </div>
-        </div>
-      )}
+      {/* ── Quick move sheet (produk dari pencarian) ── */}
+      <MoveSheet
+        isOpen={!!moveItem}
+        onClose={() => setMoveItem(null)}
+        fromLocation={moveItem?.location || ""}
+        items={
+          moveItem
+            ? [{ sku: moveItem.sku, batch: moveItem.batch, productName: moveItem.productName }]
+            : []
+        }
+      />
 
-      {/* Barcode Scanner Modal (Produk Finder) */}
-      {showProductScanner && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-4 shadow-2xl border border-border">
-            <div className="flex items-center justify-between mb-3 px-1">
-              <h3 className="font-bold text-text-primary text-sm">Scan Barcode Produk</h3>
-              <button
-                onClick={() => setShowProductScanner(false)}
-                className="w-8 h-8 rounded-full bg-surface-warm flex items-center justify-center text-text-secondary text-xs"
-              >
-                ✕
-              </button>
-            </div>
-            <BarcodeScanner onScan={handleProductBarcodeScan} active={showProductScanner} />
-          </div>
-        </div>
-      )}
+      {/* ── Scanner modal (lokasi) ── */}
+      <ScannerModal
+        isOpen={showLocationScanner}
+        onClose={() => setShowLocationScanner(false)}
+        onScan={handleLocationScan}
+        title="Pindai Barcode Lokasi"
+      />
+
+      {/* ── Scanner modal (produk) ── */}
+      <ScannerModal
+        isOpen={showProductScanner}
+        onClose={() => setShowProductScanner(false)}
+        onScan={handleProductBarcodeScan}
+        title="Pindai Barcode Produk"
+      />
+
+      {/* ── Lokasi belum dihitung ── */}
+      <Dialog
+        isOpen={showPendingModal}
+        onClose={() => setShowPendingModal(false)}
+        title="Lokasi Belum Dihitung"
+        description={`${pendingLocations.length} lokasi tersisa dari ${stats.total}`}
+        footer={
+          <button
+            type="button"
+            onClick={() => setShowPendingModal(false)}
+            className="w-full min-h-touch bg-surface-warm rounded-input text-meta font-bold text-text-primary"
+          >
+            Tutup
+          </button>
+        }
+      >
+        {pendingLocations.length === 0 ? (
+          <EmptyState
+            icon={<CheckIcon className="w-6 h-6" />}
+            title="Semua lokasi sudah dihitung"
+          />
+        ) : (
+          <ul className="divide-y divide-border-subtle">
+            {pendingLocations.map((loc) => (
+              <li key={loc.locationCode} className="flex items-center justify-between gap-2 py-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-9 h-9 rounded-label bg-danger-bg text-danger flex items-center justify-center shrink-0">
+                    <MapPinIcon className="w-4 h-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-meta font-bold text-text-primary uppercase break-all leading-snug">
+                      {loc.locationCode}
+                    </p>
+                    <p className="text-meta text-text-secondary tnum">{loc.productCount} produk terdaftar</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPendingModal(false);
+                    openLocation(loc.locationCode);
+                  }}
+                  className="shrink-0 min-h-touch px-4 bg-primary text-ivory rounded-label text-meta font-bold active:scale-95 transition"
+                >
+                  Buka
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Dialog>
 
       <BottomNav activePage="scan" />
     </div>

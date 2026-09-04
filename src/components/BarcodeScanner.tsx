@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { playScanSuccessSound } from "@/lib/sound";
+import { ZapIcon } from "./icons";
 
 interface BarcodeScannerProps {
   onScan: (code: string) => void;
@@ -273,34 +274,37 @@ export default function BarcodeScanner({ onScan, active }: BarcodeScannerProps) 
 
   if (!mounted || !active) {
     return (
-      <div className="w-full h-72 bg-gray-900 rounded-xl flex items-center justify-center">
+      <div className="w-full h-72 bg-espresso rounded-input flex items-center justify-center">
         <div className="text-center">
-          <svg className="w-12 h-12 mx-auto mb-2 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg className="w-12 h-12 mx-auto mb-2 text-ivory/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
             <circle cx="12" cy="13" r="4" />
           </svg>
-          <p className="text-gray-400 text-sm">Kamera tidak aktif</p>
+          <p className="text-ivory/70 text-meta">Kamera tidak aktif</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full rounded-xl overflow-hidden relative bg-black">
+    <div className="w-full rounded-input overflow-hidden relative bg-black">
       {error ? (
-        <div className="w-full h-72 bg-gray-900 rounded-xl flex items-center justify-center">
-          <div className="text-center text-white p-4">
-            <svg className="w-10 h-10 mx-auto mb-2 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <div className="w-full h-72 bg-espresso rounded-input flex items-center justify-center">
+          <div className="text-center text-ivory p-4 max-w-xs">
+            <svg className="w-10 h-10 mx-auto mb-2 text-ochre" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10" />
-              <path d="M15 9l-6 6M9 9l6 6" />
+              <path d="M12 8v4M12 16h.01" />
             </svg>
-            <p className="text-sm mb-3">{error}</p>
-            <button
-              onClick={() => { setError(null); startScanner(); }}
-              className="px-5 py-2 bg-white text-gray-800 rounded-lg text-sm font-semibold active:scale-95 transition"
-            >
-              Coba Lagi
-            </button>
+            <p className="text-meta mb-1 font-bold">Kamera tidak dapat dibuka</p>
+            <p className="text-meta text-ivory/80 mb-3">{error}</p>
+            <div className="flex justify-center gap-2">
+              <button
+                onClick={() => { setError(null); startScanner(); }}
+                className="px-5 min-h-touch bg-paper text-espresso rounded-input text-meta font-bold active:scale-95 transition"
+              >
+                Coba Lagi
+              </button>
+            </div>
           </div>
         </div>
       ) : (
@@ -309,7 +313,7 @@ export default function BarcodeScanner({ onScan, active }: BarcodeScannerProps) 
           {scanMode === "native" && (
             <video
               ref={videoRef}
-              className="w-full rounded-xl"
+              className="w-full rounded-input"
               style={{ minHeight: "300px", objectFit: "cover" }}
               autoPlay
               playsInline
@@ -332,10 +336,10 @@ export default function BarcodeScanner({ onScan, active }: BarcodeScannerProps) 
 
           {/* Loading overlay */}
           {!cameraReady && (
-            <div className="absolute inset-0 bg-gray-900 flex items-center justify-center rounded-xl">
+            <div className="absolute inset-0 bg-espresso flex items-center justify-center rounded-input">
               <div className="text-center">
-                <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                <p className="text-gray-300 text-sm">Membuka kamera...</p>
+                <div className="w-8 h-8 border-4 border-ivory border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                <p className="text-ivory/80 text-meta">Membuka kamera…</p>
               </div>
             </div>
           )}
@@ -346,15 +350,15 @@ export default function BarcodeScanner({ onScan, active }: BarcodeScannerProps) 
               {/* Corner brackets */}
               <div className="relative" style={{ width: "70%", height: "55%", maxWidth: "300px", maxHeight: "250px" }}>
                 {/* Top-left */}
-                <div className="absolute top-0 left-0 w-6 h-6 border-t-[3px] border-l-[3px] border-amber-400 rounded-tl-md" />
+                <div className="absolute top-0 left-0 w-7 h-7 border-t-4 border-l-4 border-ochre rounded-tl-md" />
                 {/* Top-right */}
-                <div className="absolute top-0 right-0 w-6 h-6 border-t-[3px] border-r-[3px] border-amber-400 rounded-tr-md" />
+                <div className="absolute top-0 right-0 w-7 h-7 border-t-4 border-r-4 border-ochre rounded-tr-md" />
                 {/* Bottom-left */}
-                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-[3px] border-l-[3px] border-amber-400 rounded-bl-md" />
+                <div className="absolute bottom-0 left-0 w-7 h-7 border-b-4 border-l-4 border-ochre rounded-bl-md" />
                 {/* Bottom-right */}
-                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-[3px] border-r-[3px] border-amber-400 rounded-br-md" />
+                <div className="absolute bottom-0 right-0 w-7 h-7 border-b-4 border-r-4 border-ochre rounded-br-md" />
                 {/* Scan line animation */}
-                <div className="absolute left-2 right-2 h-0.5 bg-amber-400/80 animate-pulse shadow-[0_0_8px_rgba(212,155,75,0.8)]" style={{ top: "50%" }} />
+                <div className="absolute left-2 right-2 h-0.5 bg-ochre/80 animate-pulse" style={{ top: "50%" }} />
               </div>
             </div>
           )}
@@ -366,17 +370,18 @@ export default function BarcodeScanner({ onScan, active }: BarcodeScannerProps) 
                 <button
                   type="button"
                   onClick={toggleTorch}
-                  className={`absolute top-2 right-2 z-10 w-9 h-9 rounded-full flex items-center justify-center transition ${
-                    torchOn ? "bg-yellow-400 text-gray-900" : "bg-black/50 text-white"
+                  className={`absolute top-2 right-2 z-10 w-11 h-11 rounded-full flex items-center justify-center transition active:scale-95 ${
+                    torchOn ? "bg-ochre text-espresso" : "bg-black/60 text-ivory"
                   }`}
                   title={torchOn ? "Matikan flash" : "Nyalakan flash"}
+                  aria-label={torchOn ? "Matikan flash" : "Nyalakan flash"}
                 >
-                  {torchOn ? "🔦" : "💡"}
+                  <ZapIcon className="w-5 h-5" />
                 </button>
               )}
               <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none">
-                <span className="bg-black/60 text-white text-[11px] px-3 py-1 rounded-full backdrop-blur-sm">
-                  {scanMode === "native" ? "⚡ Native Scanner" : "📷 Scanner"} — Arahkan ke QR / Barcode
+                <span className="bg-black/70 text-ivory text-meta px-3 py-1.5 rounded-full">
+                  Arahkan ke QR / Barcode
                 </span>
               </div>
             </>

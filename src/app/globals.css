@@ -3,54 +3,144 @@
 @tailwind utilities;
 
 :root {
-  /* ── Dark Brown & Warm Ivory Palette ── */
-  --primary: #4A3528;          /* Dark Espresso Brown */
-  --primary-light: #5E4434;    /* Medium Warm Brown */
-  --primary-dark: #36241A;     /* Deep Coffee Brown */
-  --primary-pale: #F2EAE3;     /* Warm Ivory Cream / Soft Mocha */
-  --primary-bg: #FAF7F2;       /* Warm Ivory Canvas */
-  --surface: #FFFFFF;
-  --surface-warm: #F6F0E9;     /* Soft warm card background */
-  
-  --accent-yellow: #D49B4B;    /* Warm Amber / Ochre */
-  --accent-red: #C0392B;       /* Warm Brick / Terracotta */
-  --accent-green: #2E7D32;     /* Forest Green */
-  --error: #C0392B;
-  --warning: #FEF7EE;
-  --warning-text: #8C5919;
-  
-  --text-primary: #231815;     /* Deep Espresso Black */
-  --text-secondary: #786B65;   /* Warm Slate / Cocoa Gray */
-  --border: #E8E0D7;           /* Subtle Warm Ivory Border */
-  --border-subtle: #F2ECE4;
+  /* ── Konsep "Label Rak Operasional" ──
+     Espresso = teks/header/tombol primer. Cocoa = teks sekunder.
+     Ivory = latar aplikasi. Paper = permukaan input/daftar/modal.
+     Ochre = aksen dekoratif saja (bukan teks kecil).
+     Amber text = teks status/peringatan di latar terang (WCAG AA). */
+  --espresso: #2f2119;
+  --cocoa: #654c3e;
+  --ivory: #f7f3ea;
+  --paper: #fffdf8;
+  --ochre: #d49b4b;
+  --amber-text: #7a4b08;
+
+  /* Warna semantik (kontras AA di atas latar terang) */
+  --success: #1e6b33;
+  --success-bg: #e6f1e8;
+  --danger: #b3261e;
+  --danger-bg: #fbeae8;
+  --info: #1f4e79;
+  --info-bg: #e7eef6;
+  --warning: #fdf3e0;
+  --warning-text: #7a4b08;
+
+  /* Alias yang dipakai luas di seluruh aplikasi */
+  --primary: #2f2119;
+  --primary-light: #4a382c;
+  --primary-dark: #1d140e;
+  --primary-pale: #efe6d4;
+  --primary-bg: #f7f3ea;
+  --surface: #fffdf8;
+  --surface-warm: #f2ecdf;
+
+  --accent-yellow: #d49b4b;
+  --accent-red: #b3261e;
+  --accent-green: #1e6b33;
+  --error: #b3261e;
+
+  --text-primary: #2f2119;
+  --text-secondary: #5f4b3e;
+  --border: #e3dac8;
+  --border-subtle: #eee7d8;
+
+  --focus-ring: 0 0 0 3px rgba(212, 155, 75, 0.65);
 }
 
 /* Base styles */
 body {
   background-color: var(--primary-bg);
   color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
 
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
 
-/* Mobile HP-only container wrapper */
-.mobile-container {
+/* Angka kuantitas & kode lokasi: digit selebar sama agar mudah dibandingkan */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Shell aplikasi ──
+   Ponsel tetap prioritas, tapi desktop/tablet tidak memperkecil
+   konten ke 448px: konten utama maksimum 720px. */
+.app-shell {
   width: 100%;
-  max-width: 28rem; /* 448px (max-w-md) */
+  max-width: 45rem; /* 720px */
   margin-left: auto;
   margin-right: auto;
   min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
   background-color: var(--primary-bg);
-  box-shadow: 0 0 32px rgba(74, 53, 40, 0.05);
+}
+
+.mobile-container {
+  width: 100%;
+  max-width: 45rem;
+  margin-left: auto;
+  margin-right: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  position: relative;
+  background-color: var(--primary-bg);
+}
+
+/* ── Location band: pita lokasi bergaya label rak ──
+   Selalu menjawab "saya sedang bekerja di lokasi mana?". */
+.location-band {
+  background-color: var(--espresso);
+  color: var(--ivory);
+  border-left: 6px solid var(--ochre);
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+}
+.location-band .location-band-code {
+  font-size: 1.75rem; /* 28px — tetap terbaca di 320px */
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  word-break: break-all;
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 640px) {
+  .location-band .location-band-code {
+    font-size: 2.25rem; /* 36px */
+  }
+}
+.location-band .location-band-sub {
+  color: #d8cdbd;
+  font-size: 0.875rem;
+}
+
+/* ── Bidang status / sektor gaya lembar kerja ── */
+.rail {
+  border-left: 4px solid var(--border);
+  padding-left: 0.75rem;
+}
+.rail-espresso {
+  border-left-color: var(--espresso);
+}
+.rail-ochre {
+  border-left-color: var(--ochre);
+}
+.rail-success {
+  border-left-color: var(--success);
+}
+.rail-danger {
+  border-left-color: var(--danger);
+}
+
+/* Target sentuh minimum 44px */
+.tap {
+  min-width: 44px;
+  min-height: 44px;
 }
 
 /* Hide scrollbar but keep scroll */
@@ -64,5 +154,44 @@ html {
 
 /* Safe area bottom padding for notch devices */
 .pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 1rem);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Focus ring yang terlihat untuk navigasi keyboard ── */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 2px;
+}
+
+/* ── Animasi bersama (dipakai dialog / sheet / prompt) ── */
+@keyframes so-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes so-slideUp {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-fadeIn {
+  animation: so-fadeIn 0.2s ease-out;
+}
+.animate-slideUp {
+  animation: so-slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Hormati preferensi reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

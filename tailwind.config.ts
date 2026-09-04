@@ -9,6 +9,32 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        /* Palet inti "Label Rak Operasional" */
+        espresso: "var(--espresso)",
+        cocoa: "var(--cocoa)",
+        ivory: "var(--ivory)",
+        paper: "var(--paper)",
+        ochre: "var(--ochre)",
+        amber: {
+          text: "var(--amber-text)",
+          bg: "var(--warning)",
+        },
+
+        /* Warna semantik */
+        success: {
+          DEFAULT: "var(--success)",
+          bg: "var(--success-bg)",
+        },
+        danger: {
+          DEFAULT: "var(--danger)",
+          bg: "var(--danger-bg)",
+        },
+        info: {
+          DEFAULT: "var(--info)",
+          bg: "var(--info-bg)",
+        },
+
+        /* Alias yang sudah dipakai luas di aplikasi */
         primary: {
           DEFAULT: "var(--primary)",
           light: "var(--primary-light)",
@@ -37,14 +63,28 @@ const config: Config = {
           subtle: "var(--border-subtle)",
         },
       },
+      fontSize: {
+        /* Skala minimum: 16px isi/form, 14px metadata */
+        meta: ["0.875rem", { lineHeight: "1.35" }],
+        base2: ["1rem", { lineHeight: "1.45" }],
+      },
       boxShadow: {
-        card: "0 2px 14px rgba(45, 30, 20, 0.06)",
-        cardHover: "0 4px 20px rgba(45, 30, 20, 0.10)",
-        subtle: "0 1px 3px rgba(45, 30, 20, 0.04)",
+        card: "0 1px 3px rgba(45, 30, 20, 0.08), 0 4px 14px rgba(45, 30, 20, 0.06)",
+        subtle: "0 1px 2px rgba(45, 30, 20, 0.05)",
+        bar: "0 -4px 20px rgba(45, 30, 20, 0.08)",
+        sheet: "0 -8px 40px rgba(30, 20, 12, 0.25)",
       },
       borderRadius: {
-        "2xl": "1rem",
-        "3xl": "1.5rem",
+        /* Radius berbeda berdasar fungsi: input 10px, kartu 14px,
+           lembar/sheet 20px, label/status 4px. */
+        input: "0.625rem",
+        card: "0.875rem",
+        sheet: "1.25rem",
+        label: "0.25rem",
+      },
+      minHeight: {
+        touch: "2.75rem", /* 44px */
+        touchLg: "3rem", /* 48px */
       },
     },
   },

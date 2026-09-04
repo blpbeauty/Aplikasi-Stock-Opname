@@ -162,33 +162,35 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
     <DataSyncContext.Provider value={{ isReady, syncProgress, forceSync, lastSyncTime }}>
       {/* Sync Loading Overlay — only shown during first-time sync when no local data */}
       {user && !isReady && syncProgress.status === "syncing" && (
-        <div className="fixed inset-0 z-[9999] bg-white flex items-center justify-center">
-          <div className="w-full max-w-sm px-8 text-center">
-            {/* Animated icon */}
-            <div className="mb-6">
-              <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary-light flex items-center justify-center shadow-lg">
-                <svg className="w-10 h-10 text-white animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
-                </svg>
-              </div>
+        <div className="fixed inset-0 z-[9999] bg-ivory flex items-center justify-center px-6">
+          <div className="w-full max-w-sm text-center">
+            <div className="location-band text-left mb-6" aria-hidden="true">
+              <p className="location-band-code">STOCK OPNAME</p>
+              <p className="location-band-sub">Menyiapkan data gudang</p>
             </div>
 
-            <h2 className="text-lg font-bold text-text-primary mb-2">
-              Menyiapkan Data
+            <h2 className="text-lg font-bold text-text-primary mb-1.5">
+              Mengunduh data
             </h2>
-            <p className="text-sm text-text-secondary mb-6">
+            <p className="text-meta text-text-secondary mb-5">
               {syncProgress.step}
             </p>
 
-            {/* Progress bar */}
-            <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden mb-3">
+            <div
+              className="w-full h-2.5 bg-surface-warm rounded-full overflow-hidden mb-2"
+              role="progressbar"
+              aria-valuenow={syncProgress.percent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Progres sinkronisasi"
+            >
               <div
-                className="h-full bg-gradient-to-r from-primary to-primary-light rounded-full transition-all duration-500 ease-out"
+                className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${syncProgress.percent}%` }}
               />
             </div>
-            <p className="text-xs text-text-secondary">
-              {syncProgress.percent}% — Mohon tunggu, hanya sekali saat pertama buka
+            <p className="text-meta text-text-secondary tnum">
+              {syncProgress.percent}% — hanya sekali saat pertama buka
             </p>
           </div>
         </div>
@@ -196,27 +198,15 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
 
       {/* Error overlay — only when no local data and sync failed */}
       {user && !isReady && syncProgress.status === "error" && (
-        <div className="fixed inset-0 z-[9999] bg-white flex items-center justify-center">
-          <div className="w-full max-w-sm px-8 text-center">
-            <div className="mb-6">
-              <div className="w-20 h-20 mx-auto rounded-2xl bg-red-50 flex items-center justify-center">
-                <svg className="w-10 h-10 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 8v4M12 16h.01" />
-                </svg>
-              </div>
+        <div className="fixed inset-0 z-[9999] bg-ivory flex items-center justify-center px-6">
+          <div className="w-full max-w-sm text-center">
+            <div className="rail rail-danger mb-5 py-3 text-left">
+              <h2 className="text-lg font-bold text-danger">Gagal mengunduh data</h2>
+              <p className="text-meta text-text-secondary mt-1">{syncProgress.step}</p>
             </div>
-
-            <h2 className="text-lg font-bold text-text-primary mb-2">
-              Gagal Mengunduh Data
-            </h2>
-            <p className="text-sm text-text-secondary mb-6">
-              {syncProgress.step}
-            </p>
-
             <button
               onClick={() => doSync(false)}
-              className="w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition active:scale-95"
+              className="w-full min-h-touch bg-primary text-ivory font-bold rounded-input transition active:scale-[0.98]"
             >
               Coba Lagi
             </button>

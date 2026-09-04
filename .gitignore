@@ -37,3 +37,5 @@ next-env.d.ts
 
 .vercel
 .zed
+.claude
+hist_head_tmp.tsx
