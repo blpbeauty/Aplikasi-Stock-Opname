@@ -102,6 +102,10 @@ export default function Autocomplete<T>({
         setItems(result);
         setOpen(true);
         setActiveIdx(-1);
+        // Scroll dropdown into view inside scrollable parent (e.g. Dialog)
+        requestAnimationFrame(() => {
+          containerRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+        });
       } catch {
         if (seq === seqRef.current) {
           setItems([]);
@@ -211,7 +215,7 @@ export default function Autocomplete<T>({
         <div
           id={listId}
           role="listbox"
-          className="absolute z-20 left-0 right-0 mt-1 bg-paper border border-border rounded-input shadow-card overflow-hidden max-h-60 overflow-y-auto"
+          className="absolute z-50 left-0 right-0 mt-1 bg-paper border border-border rounded-input shadow-card overflow-hidden max-h-60 overflow-y-auto"
         >
           {loading && (
             <p className="px-3 py-2 text-meta text-text-secondary">Mencari…</p>

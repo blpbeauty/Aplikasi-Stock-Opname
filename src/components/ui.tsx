@@ -138,7 +138,7 @@ export function Dialog({
           </button>
         </div>
 
-        <div className="px-5 py-4 overflow-y-auto flex-1">{children}</div>
+        <div className="px-5 py-4 pb-16 overflow-y-auto flex-1">{children}</div>
 
         {footer && (
           <div className="px-5 py-3 border-t border-border-subtle pb-safe">{footer}</div>

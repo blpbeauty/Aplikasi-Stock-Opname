@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import BottomNav from "@/components/BottomNav";
 import EditModal, { EditData } from "@/components/EditModal";
+import AddHistoryEntryModal from "@/components/AddHistoryEntryModal";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import QtyInput from "@/components/QtyInput";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -29,6 +30,7 @@ import {
   UserIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  PlusIcon,
 } from "@/components/icons";
 import toast from "react-hot-toast";
 
@@ -38,6 +40,15 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Add modal state
+  const [addModal, setAddModal] = useState<{
+    isOpen: boolean;
+    location: string;
+  }>({
+    isOpen: false,
+    location: "",
+  });
 
   // Delete modal state
   const [deleteModal, setDeleteModal] = useState<{
@@ -374,6 +385,16 @@ export default function HistoryPage() {
     toast.success(data.location ? `Berhasil update & pindah ke ${data.location}` : "Berhasil mengupdate entri");
   };
 
+  const handleAddSuccess = (newEntry: HistoryEntry) => {
+    const updated = [newEntry, ...history];
+    setHistory(updated);
+    setCache(`history:ALL:all`, updated);
+    if (user?.email) {
+      setCache(`history:${user.email}:all`, updated);
+    }
+    clearCache("products:");
+  };
+
   const saveInlineBatch = async (entry: HistoryEntry) => {
     const newBatch = editingBatchValue.trim();
     if (!newBatch) {
@@ -580,34 +601,50 @@ export default function HistoryPage() {
                 className="bg-paper rounded-card border border-border shadow-subtle overflow-hidden"
               >
                 {/* Kepala grup gaya label rak */}
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(loc)}
-                  className="w-full min-h-touch bg-surface-warm px-4 py-2.5 border-b border-border flex items-center justify-between gap-2 text-left active:bg-primary-pale/60 transition"
-                  aria-expanded={expanded}
-                  aria-label={`${expanded ? "Tutup" : "Buka"} grup ${loc}`}
-                >
-                  <span className="flex items-center gap-2.5 min-w-0">
-                    <span className="w-1.5 h-6 bg-ochre rounded-full shrink-0" aria-hidden="true" />
-                    <span className="font-bold text-meta uppercase text-text-primary break-all leading-snug tnum">
-                      {loc}
-                    </span>
-                  </span>
-                  <span className="flex items-center gap-2 text-meta shrink-0 tnum">
+                <div className="w-full bg-surface-warm px-3.5 sm:px-4 py-2 border-b border-border">
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(loc)}
+                      className="flex-1 min-w-0 flex items-center gap-2 text-left active:opacity-80 transition py-1"
+                      aria-expanded={expanded}
+                      aria-label={`${expanded ? "Tutup" : "Buka"} grup ${loc}`}
+                    >
+                      <span className="w-1.5 h-6 bg-ochre rounded-full shrink-0" aria-hidden="true" />
+                      <span className="font-bold text-meta uppercase text-text-primary leading-snug tnum min-w-0">
+                        {loc}
+                      </span>
+                      {expanded ? (
+                        <ChevronDownIcon className="w-4 h-4 text-text-secondary shrink-0" />
+                      ) : (
+                        <ChevronRightIcon className="w-4 h-4 text-text-secondary shrink-0" />
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAddModal({ isOpen: true, location: loc });
+                      }}
+                      className="min-h-touch px-2.5 py-1.5 bg-primary text-ivory rounded-label text-meta font-bold flex items-center gap-1 shrink-0 active:scale-95 transition shadow-subtle hover:bg-primary/90"
+                      aria-label={`Tambah produk di ${loc}`}
+                      title={`Tambah produk di ${loc}`}
+                    >
+                      <PlusIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 text-meta tnum pl-4 mt-0.5">
                     <span className="text-text-secondary">{entries.length} entri</span>
                     <span className="font-bold text-primary bg-primary-pale px-2 py-0.5 rounded-full border border-primary/20 whitespace-nowrap">
                       {locTotalQty.toLocaleString("id-ID")} item
                     </span>
-                    {expanded ? (
-                      <ChevronDownIcon className="w-4 h-4 text-text-secondary" />
-                    ) : (
-                      <ChevronRightIcon className="w-4 h-4 text-text-secondary" />
-                    )}
-                  </span>
-                </button>
+                  </div>
+                </div>
 
                 {/* Entri */}
                 {expanded && (
+                <div>
                 <div className="divide-y divide-border-subtle">
                   {entries.map((entry) => (
                     <div key={entry.rowId} className="p-3.5 sm:p-4 hover:bg-primary-pale/10 transition">
@@ -770,6 +807,17 @@ export default function HistoryPage() {
                     </div>
                   ))}
                 </div>
+                <div className="p-3 bg-surface-warm/40 border-t border-border-subtle flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setAddModal({ isOpen: true, location: loc })}
+                    className="min-h-touch px-3 py-1.5 bg-primary-pale border border-primary/20 text-primary hover:bg-primary/20 rounded-label text-meta font-bold flex items-center gap-1.5 active:scale-95 transition"
+                  >
+                    <PlusIcon className="w-4 h-4" />
+                    <span>Tambah produk di {loc}</span>
+                  </button>
+                </div>
+                </div>
                 )}
               </section>
             );
@@ -787,6 +835,17 @@ export default function HistoryPage() {
             setSelectedEntry(null);
           }}
           onSave={handleSaveEdit}
+          allProducts={allProductsRef.current || undefined}
+        />
+      )}
+
+      {/* ── Modal tambah produk di lokasi ── */}
+      {addModal.isOpen && (
+        <AddHistoryEntryModal
+          isOpen={addModal.isOpen}
+          initialLocation={addModal.location}
+          onClose={() => setAddModal({ isOpen: false, location: "" })}
+          onSuccess={handleAddSuccess}
           allProducts={allProductsRef.current || undefined}
         />
       )}
