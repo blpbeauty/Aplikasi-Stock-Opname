@@ -611,7 +611,7 @@ export default function HistoryPage() {
                       aria-label={`${expanded ? "Tutup" : "Buka"} grup ${loc}`}
                     >
                       <span className="w-1.5 h-6 bg-ochre rounded-full shrink-0" aria-hidden="true" />
-                      <span className="font-bold text-meta uppercase text-text-primary leading-snug tnum min-w-0">
+                      <span className="font-bold text-meta uppercase text-text-primary leading-snug tnum break-all min-w-0 flex-1">
                         {loc}
                       </span>
                       {expanded ? (

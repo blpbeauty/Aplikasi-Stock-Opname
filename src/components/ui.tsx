@@ -373,7 +373,7 @@ export function SyncStatusBadge() {
 
   const toneCls =
     tone === "ok"
-      ? "bg-success-bg text-success border-success/30"
+      ? "bg-surface-warm text-text-primary border-border"
       : tone === "warn"
       ? "bg-amber-bg text-amber-text border-amber-text/30"
       : tone === "busy"
@@ -409,7 +409,7 @@ export function SyncStatusBadge() {
         <span
           aria-hidden="true"
           className={`w-2 h-2 rounded-full ${
-            tone === "ok" ? "bg-success" : tone === "busy" ? "bg-info" : "bg-text-secondary"
+            tone === "ok" ? "bg-primary" : tone === "busy" ? "bg-info" : "bg-text-secondary"
           }`}
         />
       )}

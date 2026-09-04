@@ -270,7 +270,7 @@ export default function ScanDashboard() {
 
       <div className="px-4 sm:px-6 pt-4 space-y-6">
         {/* ── Tindakan utama: cari / pindai lokasi ── */}
-        <section aria-label="Buka lokasi" className="relative z-10">
+        <section aria-label="Buka lokasi" className="relative z-30">
           <div className="flex gap-2 items-end">
             <Autocomplete<LocationResult>
               id="scan-location-input"
@@ -280,13 +280,13 @@ export default function ScanDashboard() {
               resolve={resolveLocations}
               getKey={(l) => l.locationCode}
               renderItem={(l) => (
-                <span className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     <MapPinIcon className="w-4 h-4 text-text-secondary shrink-0" />
-                    <span className="font-bold text-text-primary uppercase">{l.locationCode}</span>
-                  </span>
-                  <span className="text-meta text-text-secondary shrink-0">{l.productCount} produk</span>
-                </span>
+                    <span className="font-bold text-text-primary uppercase truncate">{l.locationCode}</span>
+                  </div>
+                  <span className="text-meta text-text-secondary shrink-0 pl-2">{l.productCount} produk</span>
+                </div>
               )}
               onSelect={(l) => openLocation(l.locationCode)}
               placeholder="Contoh: A-01-03"

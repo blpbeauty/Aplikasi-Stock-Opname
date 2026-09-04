@@ -215,7 +215,7 @@ export default function Autocomplete<T>({
         <div
           id={listId}
           role="listbox"
-          className="absolute z-50 left-0 right-0 mt-1 bg-paper border border-border rounded-input shadow-card overflow-hidden max-h-60 overflow-y-auto"
+          className="absolute z-[100] left-0 right-0 mt-1 bg-paper border border-border rounded-input shadow-card overflow-hidden max-h-60 overflow-y-auto"
         >
           {loading && (
             <p className="px-3 py-2 text-meta text-text-secondary">Mencari…</p>
@@ -228,7 +228,7 @@ export default function Autocomplete<T>({
               aria-selected={idx === activeIdx}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => select(item)}
-              className={`w-full text-left px-3 py-2.5 border-b border-border-subtle last:border-b-0 transition ${
+              className={`w-full text-left px-3 py-2.5 border-b border-border-subtle last:border-b-0 transition overflow-hidden ${
                 idx === activeIdx ? "bg-primary-pale" : "hover:bg-primary-pale/60"
               }`}
             >

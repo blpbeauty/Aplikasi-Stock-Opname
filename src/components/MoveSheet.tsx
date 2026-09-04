@@ -162,10 +162,10 @@ export default function MoveSheet({
           resolve={resolveLocations}
           getKey={(l) => l.locationCode}
           renderItem={(l) => (
-            <span className="flex items-center justify-between gap-2">
-              <span className="font-bold text-text-primary uppercase">{l.locationCode}</span>
-              <span className="text-meta text-text-secondary">{l.productCount} produk</span>
-            </span>
+            <div className="flex items-center justify-between gap-2 w-full min-w-0">
+              <span className="font-bold text-text-primary uppercase truncate flex-1 min-w-0">{l.locationCode}</span>
+              <span className="text-meta text-text-secondary shrink-0 pl-2">{l.productCount} produk</span>
+            </div>
           )}
           onSelect={(l) => {
             setTarget(l.locationCode);
