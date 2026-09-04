@@ -8,20 +8,28 @@ import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import InstallPrompt from "@/components/InstallPrompt";
 
 /* Font di-host lokal agar konsisten saat offline (kondisi gudang).
-   Atkinson Hyperlegible: dibuat untuk keterbacaan maksimal — penting
-   untuk angka, SKU, dan karakter mirip (I/l/1, O/0). */
-const atkinson = localFont({
-  src: [
-    { path: "../fonts/atkinson-hyperlegible-latin-400-normal.woff2", weight: "400", style: "normal" },
-    { path: "../fonts/atkinson-hyperlegible-latin-700-normal.woff2", weight: "700", style: "normal" },
-  ],
+   Inter: sans modern untuk UI; JetBrains Mono: kode lokasi, SKU, batch,
+   dan angka jumlah — nuansa data industri dengan digit tabular. */
+const inter = localFont({
+  src: "../fonts/inter-latin-variable.woff2",
+  weight: "400 700",
+  style: "normal",
   fallback: ["Arial", "sans-serif"],
   display: "swap",
-  variable: "--font-atkinson",
+  variable: "--font-inter",
+});
+
+const jetbrainsMono = localFont({
+  src: "../fonts/jetbrains-mono-latin-variable.woff2",
+  weight: "500 700",
+  style: "normal",
+  fallback: ["Consolas", "monospace"],
+  display: "swap",
+  variable: "--font-jetbrains",
 });
 
 export const viewport: Viewport = {
-  themeColor: "#2f2119",
+  themeColor: "#14181f",
   width: "device-width",
   initialScale: 1,
   // Pinch zoom sengaja TIDAK dibatasi agar pengguna bisa memperbesar teks.
@@ -48,13 +56,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" className={atkinson.variable}>
+    <html lang="id" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
         <link rel="icon" type="image/png" href="/favicon.png" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body
-        className={`${atkinson.className} bg-[var(--primary-bg)] text-text-primary text-base2`}
+        className={`${inter.className} bg-[var(--primary-bg)] text-text-primary text-base2`}
       >
         <AuthProvider>
           <DataSyncProvider>

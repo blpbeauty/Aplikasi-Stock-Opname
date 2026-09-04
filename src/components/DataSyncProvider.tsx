@@ -162,7 +162,7 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
     <DataSyncContext.Provider value={{ isReady, syncProgress, forceSync, lastSyncTime }}>
       {/* Sync Loading Overlay — only shown during first-time sync when no local data */}
       {user && !isReady && syncProgress.status === "syncing" && (
-        <div className="fixed inset-0 z-[9999] bg-ivory flex items-center justify-center px-6">
+        <div className="fixed inset-0 z-[9999] bg-primary-bg flex items-center justify-center px-6">
           <div className="w-full max-w-sm text-center">
             <div className="location-band text-left mb-6" aria-hidden="true">
               <p className="location-band-code">STOCK OPNAME</p>
@@ -185,7 +185,7 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
               aria-label="Progres sinkronisasi"
             >
               <div
-                className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+                className="h-full bg-ochre rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${syncProgress.percent}%` }}
               />
             </div>
@@ -198,7 +198,7 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
 
       {/* Error overlay — only when no local data and sync failed */}
       {user && !isReady && syncProgress.status === "error" && (
-        <div className="fixed inset-0 z-[9999] bg-ivory flex items-center justify-center px-6">
+        <div className="fixed inset-0 z-[9999] bg-primary-bg flex items-center justify-center px-6">
           <div className="w-full max-w-sm text-center">
             <div className="rail rail-danger mb-5 py-3 text-left">
               <h2 className="text-lg font-bold text-danger">Gagal mengunduh data</h2>

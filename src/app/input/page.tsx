@@ -724,7 +724,7 @@ function InputPageContent() {
                       if (b) handleBarcodeScan(b);
                     }}
                     disabled={!String(newProductForm.barcode || "").trim() || scanningBarcode}
-                    className="w-11 h-11 rounded-label bg-paper border border-border flex items-center justify-center text-primary disabled:opacity-50 active:scale-95 transition"
+                    className="w-11 h-11 rounded-input bg-paper border border-border flex items-center justify-center text-primary disabled:opacity-50 active:scale-95 transition"
                     aria-label="Cari produk berdasarkan barcode"
                   >
                     <SearchIcon className="w-4 h-4" />
@@ -733,7 +733,7 @@ function InputPageContent() {
                     type="button"
                     onClick={() => setShowBarcodeScanner(true)}
                     disabled={scanningBarcode}
-                    className="w-11 h-11 rounded-label bg-primary text-ivory flex items-center justify-center disabled:opacity-50 active:scale-95 transition"
+                    className="w-11 h-11 rounded-input bg-primary text-ivory flex items-center justify-center disabled:opacity-50 active:scale-95 transition"
                     aria-label="Pindai barcode dengan kamera"
                   >
                     <CameraIcon className="w-4 h-4" />
@@ -1030,7 +1030,7 @@ function InputPageContent() {
                           <button
                             type="button"
                             onClick={() => handleBatchSave(product.sku, product.batch, isNew)}
-                            className="min-h-touch px-3 bg-primary text-ivory text-meta font-bold rounded-label"
+                            className="min-h-touch px-3 bg-primary text-ivory text-meta font-bold rounded-input"
                           >
                             Simpan
                           </button>
@@ -1049,7 +1049,7 @@ function InputPageContent() {
                           aria-label={`Edit batch ${product.batch} untuk ${product.productName}`}
                         >
                           <span className="text-meta text-text-secondary">Batch:</span>
-                          <span className="text-meta font-bold text-text-primary">{product.batch}</span>
+                          <span className="text-meta font-bold text-text-primary tnum">{product.batch}</span>
                           <PencilIcon className="w-3.5 h-3.5 text-text-secondary" />
                         </button>
                       )}

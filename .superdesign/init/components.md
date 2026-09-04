@@ -1,7 +1,15 @@
+# Components — shared UI primitives (full source)
+
+Design concept: **"Label Rak Operasional"** (operational shelf label). Mobile-first, warehouse-grade accessibility (44px touch targets, AA contrast, tabular numbers). All below components live in `src/components/`.
+
+## `src/components/ui.tsx` — primitive library
+Contains: `Dialog` (bottom sheet on mobile / centered dialog on desktop; focus trap, Escape, scroll lock, focus restore), `IconButton` (variants neutral/primary/danger, 44/48px), `PageHeader` (sticky: back chevron + title/subtitle + right slot), `EmptyState`, `Field` (label + hint + error), `LocationBand` (high-contrast location strip), `SyncStatusBadge` (honest sync status: syncing/offline/failed/ready/never; tap to retry).
+
+```tsx
 "use client";
 
 /**
- * Primitif UI bersama — konsep "Clean Industrial".
+ * Primitif UI bersama — konsep "Label Rak Operasional".
  * Hanya komponen yang benar-benar dipakai berulang di beberapa halaman.
  */
 
@@ -254,7 +262,7 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
   return (
     <div className="bg-paper rounded-card border border-border px-6 py-10 text-center">
       {icon && (
-        <div className="w-12 h-12 rounded-input bg-primary-pale text-primary mx-auto flex items-center justify-center mb-3">
+        <div className="w-12 h-12 rounded-label bg-primary-pale text-primary mx-auto flex items-center justify-center mb-3">
           {icon}
         </div>
       )}
@@ -417,3 +425,275 @@ export function SyncStatusBadge() {
     </button>
   );
 }
+```
+
+## `src/components/BottomNav.tsx` — main bottom navigation
+```tsx
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { ScanIcon, ClipboardIcon, UserIcon } from "@/components/icons";
+
+interface BottomNavProps {
+  activePage: "scan" | "history" | "profile";
+}
+
+export default function BottomNav({ activePage }: BottomNavProps) {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.prefetch("/scan");
+    router.prefetch("/history");
+    router.prefetch("/profile");
+  }, [router]);
+
+  const tabs = [
+    {
+      key: "scan" as const,
+      label: "Scan",
+      href: "/scan",
+      icon: <ScanIcon className="w-6 h-6" />,
+    },
+    {
+      key: "history" as const,
+      label: "Riwayat",
+      href: "/history",
+      icon: <ClipboardIcon className="w-6 h-6" />,
+    },
+    {
+      key: "profile" as const,
+      label: "Profil",
+      href: "/profile",
+      icon: <UserIcon className="w-6 h-6" />,
+    },
+  ];
+
+  return (
+    <nav
+      aria-label="Navigasi utama"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-paper border-t border-border shadow-bar"
+    >
+      <div className="flex justify-around items-stretch max-w-[720px] mx-auto px-2 pb-safe">
+        {tabs.map((tab) => {
+          const isActive = activePage === tab.key;
+          return (
+            <Link
+              key={tab.key}
+              href={tab.href}
+              aria-current={isActive ? "page" : undefined}
+              className={`flex-1 min-h-[4rem] flex flex-col items-center justify-center gap-0.5 py-1.5 transition rounded-input ${
+                isActive ? "text-primary font-bold" : "text-text-secondary"
+              }`}
+            >
+              <span
+                className={`flex items-center justify-center w-12 h-8 rounded-full transition ${
+                  isActive ? "bg-primary-pale text-primary" : ""
+                }`}
+              >
+                {tab.icon}
+              </span>
+              <span className="text-meta leading-none">{tab.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+```
+
+## `src/components/QtyInput.tsx` — quantity input with safe math expressions
+Distinctive component: text input accepting `+ - * x /` expressions (e.g. `12+3*4`), live preview pill `= 24` (amber), commit button `=`, operator buttons row (+ − × and 123/abc keypad toggle), no eval (safe tokenizer in `calcExpr`). Two sizes: `wide` (w-full h-12 + operator row) and compact (w-20 h-11). Full source: `src/components/QtyInput.tsx`.
+
+## `src/components/ConfirmModal.tsx` — confirmation dialog
+```tsx
+"use client";
+
+import { Dialog } from "@/components/ui";
+
+interface ConfirmModalProps {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  isDanger?: boolean;
+  /** Saat konfirmasi async, set true agar tombol menampilkan status. */
+  busy?: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}
+
+export default function ConfirmModal({
+  isOpen,
+  title,
+  message,
+  confirmText = "Ya, Lanjutkan",
+  cancelText = "Batal",
+  isDanger = false,
+  busy = false,
+  onConfirm,
+  onClose,
+}: ConfirmModalProps) {
+  return (
+    <Dialog
+      isOpen={isOpen}
+      onClose={busy ? () => {} : onClose}
+      title={title}
+      description={message}
+      size="sm"
+      footer={
+        <div className="flex gap-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="flex-1 min-h-touch px-4 bg-surface-warm text-text-primary text-meta font-bold rounded-input transition active:scale-[0.98] disabled:opacity-40"
+          >
+            {cancelText}
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className={`flex-1 min-h-touch px-4 text-ivory text-meta font-bold rounded-input transition active:scale-[0.98] disabled:opacity-60 ${
+              isDanger ? "bg-danger" : "bg-primary"
+            }`}
+          >
+            {busy ? "Memproses…" : confirmText}
+          </button>
+        </div>
+      }
+    />
+  );
+}
+```
+
+## `src/components/ProductCard.tsx` — quantity row card (legacy-ish)
+```tsx
+"use client";
+
+import { Product } from "@/lib/types";
+
+interface ProductCardProps {
+  product: Product;
+  quantity: number;
+  onChange: (sku: string, qty: number) => void;
+  onDelete?: (sku: string) => void;
+}
+
+export default function ProductCard({
+  product,
+  quantity,
+  onChange,
+  onDelete,
+}: ProductCardProps) {
+  const handleIncrement = () => {
+    onChange(product.sku, quantity + 1);
+  };
+
+  const handleDecrement = () => {
+    if (quantity > 0) {
+      onChange(product.sku, quantity - 1);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value) || 0;
+    if (value >= 0) {
+      onChange(product.sku, value);
+    }
+  };
+
+  return (
+    <div className="bg-white border border-border rounded-lg p-4 mb-3 shadow-sm relative">
+      {onDelete && (
+        <button
+          onClick={() => onDelete(product.sku)}
+          className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-red-100 text-red-600 hover:bg-red-500 hover:text-white transition text-sm font-bold"
+          title="Hapus produk"
+        >
+          ✕
+        </button>
+      )}
+      <h3 className="font-semibold text-text-primary mb-1 pr-8">
+        {product.productName}
+      </h3>
+      <p className="text-sm text-text-secondary mb-2">
+        SKU: {product.sku} | Batch: {product.batch}
+      </p>
+
+      <div className="flex items-center justify-between mt-3">
+        <button
+          onClick={handleDecrement}
+          className="w-10 h-10 bg-primary-pale text-primary rounded-lg font-bold text-xl hover:bg-primary-light hover:text-white transition"
+          disabled={quantity === 0}
+        >
+          −
+        </button>
+
+        <input
+          type="number"
+          value={quantity}
+          onChange={handleInputChange}
+          className="w-20 h-10 text-center border border-border rounded-lg font-semibold text-lg"
+          min="0"
+        />
+
+        <button
+          onClick={handleIncrement}
+          className="w-10 h-10 bg-primary-pale text-primary rounded-lg font-bold text-xl hover:bg-primary-light hover:text-white transition"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+## `src/components/BrandBLP.tsx` — wordmark
+```tsx
+type BrandBLPProps = {
+  className?: string;
+  compact?: boolean;
+};
+
+export default function BrandBLP({ className = "", compact = false }: BrandBLPProps) {
+  return (
+    <div className={`inline-flex items-baseline gap-1.5 ${className}`}>
+      <span className="font-black tracking-[0.16em] leading-none">BLP</span>
+      {!compact && (
+        <span className="text-[0.48em] font-semibold tracking-[0.22em] opacity-85 leading-none">
+          STOCK OPNAME
+        </span>
+      )}
+    </div>
+  );
+}
+```
+
+## `src/components/LoadingSpinner.tsx`
+```tsx
+export default function LoadingSpinner() {
+  return (
+    <div className="flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+    </div>
+  );
+}
+```
+
+## `src/components/icons.tsx` — icon set
+25 inline SVG stroke icons (24×24 viewBox, `stroke="currentColor"` width 2, round caps): MapPin, Camera, Search, Building, Plus, Scan (corner brackets + line), Logout, Check, Hourglass, Clock, X, Pencil, Trash, Refresh, User, Box, Clipboard, Calculator, Info, ChevronLeft/Down/Right, Swap, Zap, CheckSquare, Square. Full source: `src/components/icons.tsx`.
+
+## Larger composed components (source at paths; not duplicated here)
+- `src/components/Autocomplete.tsx` (245 lines) — generic debounced autocomplete: input + dropdown list, `resolve(query)`, `renderItem`, `getKey`, `onSelect`, `minChars`, `debounceMs`, `uppercase`, `emptyText`, `hint`, `error`; loading spinner + clear button.
+- `src/components/ScannerModal.tsx` (68 lines) — scan dialog wrapping `BarcodeScanner` inside `Dialog` + manual barcode entry with `SearchIcon` submit.
+- `src/components/BarcodeScanner.tsx` (393 lines) — html5-qrcode camera scanner, scan-success sound, torch/zap affordance.
+- `src/components/EditModal.tsx` (378 lines) — edit history entry in `Dialog`: location Autocomplete, barcode scan/search field, product name Autocomplete, SKU + Batch (chip suggestions), wide `QtyInput` + formula note; footer Batal / Simpan Perubahan.
+- `src/components/MoveSheet.tsx` (272 lines) — "Pindahkan Produk" sheet: destination Autocomplete (valid locations only), Semua/Pilih-produk segmented toggle, checkbox product list, footer Batal / Pindahkan.
+- `src/components/AddHistoryEntryModal.tsx` (460 lines) — add entry form in `Dialog` (location, scan, product autocomplete, qty).
+- `src/components/InstallPrompt.tsx` (167 lines) — PWA install banner with `BrandBLP`.

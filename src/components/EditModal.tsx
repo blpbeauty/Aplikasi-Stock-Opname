@@ -230,7 +230,7 @@ export default function EditModal({
                   type="button"
                   onClick={() => barcode && handleBarcodeScan(barcode)}
                   disabled={!barcode || scanningBarcode}
-                  className="w-11 h-11 rounded-label bg-paper border border-border flex items-center justify-center text-primary disabled:opacity-50 active:scale-95 transition"
+                  className="w-11 h-11 rounded-input bg-paper border border-border flex items-center justify-center text-primary disabled:opacity-50 active:scale-95 transition"
                   aria-label="Cari barcode"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -242,7 +242,7 @@ export default function EditModal({
                   type="button"
                   onClick={() => setShowBarcodeScanner(true)}
                   disabled={scanningBarcode}
-                  className="w-11 h-11 rounded-label bg-primary text-ivory flex items-center justify-center disabled:opacity-50 active:scale-95 transition"
+                  className="w-11 h-11 rounded-input bg-primary text-ivory flex items-center justify-center disabled:opacity-50 active:scale-95 transition"
                   aria-label="Pindai barcode dengan kamera"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
