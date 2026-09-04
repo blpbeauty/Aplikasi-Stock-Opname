@@ -270,7 +270,7 @@ export default function ScanDashboard() {
 
       <div className="px-4 sm:px-6 pt-4 space-y-6">
         {/* ── Tindakan utama: cari / pindai lokasi ── */}
-        <section aria-label="Buka lokasi">
+        <section aria-label="Buka lokasi" className="relative z-10">
           <div className="flex gap-2 items-end">
             <Autocomplete<LocationResult>
               id="scan-location-input"
