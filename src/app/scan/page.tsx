@@ -283,7 +283,9 @@ export default function ScanDashboard() {
                 <div className="flex items-center justify-between gap-2 w-full min-w-0">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <MapPinIcon className="w-4 h-4 text-text-secondary shrink-0" />
-                    <span className="font-bold text-text-primary uppercase truncate">{l.locationCode}</span>
+                    <span className="font-bold text-text-primary uppercase break-all">
+                      {l.locationCode}
+                    </span>
                   </div>
                   <span className="text-meta text-text-secondary shrink-0 pl-2">{l.productCount} produk</span>
                 </div>
@@ -397,26 +399,21 @@ export default function ScanDashboard() {
                   <button
                     type="button"
                     onClick={() => openLocation(item.location)}
-                    className="w-full min-h-touch px-4 py-3 flex items-center justify-between text-left hover:bg-primary-pale/40 transition"
+                    className="w-full min-h-touch px-4 py-3 flex items-center gap-3 text-left hover:bg-primary-pale/40 transition"
                     aria-label={`Buka lokasi ${item.location}`}
                   >
-                    <span className="flex items-center gap-3 min-w-0">
-                      <span className="w-9 h-9 rounded-input bg-surface-warm text-primary flex items-center justify-center shrink-0">
-                        <MapPinIcon className="w-4 h-4" />
+                    <span className="w-9 h-9 rounded-input bg-surface-warm text-primary flex items-center justify-center shrink-0">
+                      <MapPinIcon className="w-4 h-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-bold text-text-primary uppercase break-all leading-snug">
+                        {item.location}
                       </span>
-                      <span className="min-w-0">
-                        <span className="block text-meta font-bold text-text-primary uppercase break-all">
-                          {item.location}
-                        </span>
-                        <span className="block text-meta text-text-secondary tnum">
-                          {item.count} item dihitung
-                        </span>
+                      <span className="block text-meta text-text-secondary tnum mt-0.5">
+                        {item.count} item dihitung · {formatRelativeTime(item.time)}
                       </span>
                     </span>
-                    <span className="text-meta text-text-secondary shrink-0 ml-2 flex items-center gap-1">
-                      {formatRelativeTime(item.time)}
-                      <ChevronRightIcon className="w-4 h-4" aria-hidden="true" />
-                    </span>
+                    <ChevronRightIcon className="w-4 h-4 text-text-secondary shrink-0" aria-hidden="true" />
                   </button>
                 </li>
               ))}
