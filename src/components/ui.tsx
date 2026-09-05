@@ -254,7 +254,7 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
   return (
     <div className="bg-paper rounded-card border border-border px-6 py-10 text-center">
       {icon && (
-        <div className="w-12 h-12 rounded-label bg-primary-pale text-primary mx-auto flex items-center justify-center mb-3">
+        <div className="w-12 h-12 rounded-input bg-primary-pale text-primary mx-auto flex items-center justify-center mb-3">
           {icon}
         </div>
       )}

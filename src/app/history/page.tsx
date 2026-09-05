@@ -627,7 +627,7 @@ export default function HistoryPage() {
                         e.stopPropagation();
                         setAddModal({ isOpen: true, location: loc });
                       }}
-                      className="min-h-touch px-2.5 py-1.5 bg-primary text-ivory rounded-label text-meta font-bold flex items-center gap-1 shrink-0 active:scale-95 transition shadow-subtle hover:bg-primary/90"
+                      className="min-h-touch px-2.5 py-1.5 bg-primary text-ivory rounded-input text-meta font-bold flex items-center gap-1 shrink-0 active:scale-95 transition shadow-subtle hover:bg-primary/90"
                       aria-label={`Tambah produk di ${loc}`}
                       title={`Tambah produk di ${loc}`}
                     >
@@ -716,7 +716,7 @@ export default function HistoryPage() {
                               )}
                               <button
                                 onClick={() => saveInlineBatch(entry)}
-                                className="min-h-touch px-3 bg-primary text-ivory text-meta font-bold rounded-label"
+                                className="min-h-touch px-3 bg-primary text-ivory text-meta font-bold rounded-input"
                               >
                                 OK
                               </button>
@@ -755,14 +755,14 @@ export default function HistoryPage() {
                                 <button
                                   type="button"
                                   onClick={() => saveInlineQty(entry)}
-                                  className="min-h-touch px-4 bg-primary text-ivory text-meta font-bold rounded-label"
+                                  className="min-h-touch px-4 bg-primary text-ivory text-meta font-bold rounded-input"
                                 >
                                   Simpan
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setEditingQty(null)}
-                                  className="min-h-touch px-4 bg-surface-warm text-text-primary text-meta font-bold rounded-label"
+                                  className="min-h-touch px-4 bg-surface-warm text-text-primary text-meta font-bold rounded-input"
                                 >
                                   Batal
                                 </button>
