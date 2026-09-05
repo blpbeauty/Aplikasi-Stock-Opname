@@ -191,7 +191,7 @@ export const saveStockOpnameApi = async (
     barcode?: string;
     formula?: string;
   }>
-): Promise<{ success: boolean; message?: string }> => {
+): Promise<{ success: boolean; message?: string; sessionId?: string; rowIds?: string[] }> => {
   invalidateMemCache("getHistory");
   invalidateMemCache("getProducts");
   return apiCall("saveStockOpname", {
