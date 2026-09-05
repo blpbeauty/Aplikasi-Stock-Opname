@@ -219,7 +219,7 @@ export function PageHeader({
   right,
 }: PageHeaderProps) {
   return (
-    <header className="sticky top-0 z-30 bg-paper/95 backdrop-blur-sm px-4 pt-3 pb-2.5 border-b border-border">
+    <header className="sticky top-0 z-30 bg-paper px-4 pt-3 pb-2.5 border-b border-border">
       <div className="flex items-center gap-2">
         {onBack && (
           <button
