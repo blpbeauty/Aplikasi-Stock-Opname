@@ -110,7 +110,6 @@ export default function EditModal({
         setProductName(result.product.productName);
         setSku(result.product.sku);
         setBatch(result.product.batch || "");
-        toast.success(`Produk ditemukan: ${result.product.productName}`);
       } else {
         toast.error(result.message || "Barcode tidak ditemukan");
       }

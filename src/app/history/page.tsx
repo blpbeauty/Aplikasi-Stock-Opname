@@ -311,7 +311,6 @@ export default function HistoryPage() {
     const prev = [...history];
     const updated = history.filter((e) => e.rowId !== entry.rowId);
     setHistory(updated);
-    toast.success("Entri berhasil dihapus");
 
     const ck = `history:ALL:all`;
     setCache(ck, updated);
@@ -382,7 +381,10 @@ export default function HistoryPage() {
     setCache(`history:ALL:all`, updated);
     clearCache("products:");
     setInlineSaving(null);
-    toast.success(data.location ? `Berhasil update & pindah ke ${data.location}` : "Berhasil mengupdate entri");
+    // Baris bisa "hilang" dari grup ini karena pindah lokasi — beri tahu operator.
+    if (data.location) {
+      toast.success(`Berhasil pindah ke ${data.location}`);
+    }
   };
 
   const handleAddSuccess = (newEntry: HistoryEntry) => {
@@ -431,7 +433,6 @@ export default function HistoryPage() {
     setCache(`history:ALL:all`, updated);
     clearCache("products:");
     setInlineSaving(null);
-    toast.success("Batch berhasil diupdate");
   };
 
   const saveInlineQty = async (entry: HistoryEntry) => {
@@ -469,7 +470,6 @@ export default function HistoryPage() {
     setCache(`history:ALL:all`, updated);
     clearCache("products:");
     setInlineSaving(null);
-    toast.success("Qty berhasil diupdate");
   };
 
   return (
@@ -509,7 +509,7 @@ export default function HistoryPage() {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-surface-warm text-text-secondary flex items-center justify-center active:scale-95 transition"
+              className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-surface-warm text-text-secondary flex items-center justify-center active:scale-95 transition"
               aria-label="Bersihkan pencarian"
             >
               <XIcon className="w-4 h-4" />
@@ -854,7 +854,7 @@ export default function HistoryPage() {
       <ConfirmModal
         isOpen={deleteModal.isOpen}
         title="Hapus Riwayat Opname?"
-        message={`Apakah Anda yakin ingin menghapus catatan produk "${deleteModal.entry?.productName}" (Qty: ${deleteModal.entry?.qty})?`}
+        message={`Apakah Anda yakin ingin menghapus catatan produk “${deleteModal.entry?.productName}” (Qty: ${deleteModal.entry?.qty})?`}
         confirmText="Hapus Entri"
         cancelText="Batal"
         isDanger

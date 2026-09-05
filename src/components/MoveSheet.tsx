@@ -102,9 +102,6 @@ export default function MoveSheet({
         clearCache("products:");
         const cachedLoc = getCache<LocationResult[]>("allLocations");
         if (cachedLoc) setCache("allLocations", cachedLoc.data);
-        toast.success(
-          result.message || `${selectedItems.length} produk berhasil dipindah`
-        );
         onMoved?.(selectedItems.length);
         onClose();
       } else {
@@ -129,7 +126,7 @@ export default function MoveSheet({
             type="button"
             onClick={onClose}
             disabled={moving}
-            className="flex-1 min-h-touch bg-surface-warm rounded-input text-meta font-bold text-text-primary disabled:opacity-40"
+            className="flex-1 min-h-touch bg-surface-warm rounded-input text-meta font-bold text-text-primary disabled:opacity-50"
           >
             Batal
           </button>
@@ -137,7 +134,7 @@ export default function MoveSheet({
             type="button"
             onClick={handleMove}
             disabled={!canSubmit}
-            className="flex-1 min-h-touch bg-primary text-ivory rounded-input text-meta font-bold disabled:opacity-40 flex items-center justify-center gap-1.5"
+            className="flex-1 min-h-touch bg-primary text-ivory rounded-input text-meta font-bold disabled:opacity-50 flex items-center justify-center gap-1.5"
           >
             {moving ? (
               "Memindahkan…"

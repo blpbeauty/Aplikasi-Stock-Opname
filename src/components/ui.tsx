@@ -188,7 +188,7 @@ export function IconButton({
       disabled={disabled}
       title={title || label}
       aria-label={label}
-      className={`${sizeCls} ${variantCls} rounded-input flex items-center justify-center transition active:scale-95 disabled:opacity-40 disabled:active:scale-100 ${className}`}
+      className={`${sizeCls} ${variantCls} rounded-input flex items-center justify-center transition active:scale-95 disabled:opacity-50 disabled:active:scale-100 ${className}`}
     >
       {children}
     </button>
@@ -228,7 +228,7 @@ export function PageHeader({
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <h1 className="text-base font-bold text-text-primary leading-tight">{title}</h1>
+          <h1 className="text-lg font-bold text-text-primary leading-tight">{title}</h1>
           {subtitle && (
             <div className="text-meta text-text-secondary leading-snug">{subtitle}</div>
           )}

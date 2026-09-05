@@ -257,7 +257,7 @@ export default function ScanDashboard() {
       <header className="bg-paper px-4 sm:px-6 pt-5 pb-4 border-b border-border">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-text-primary leading-tight">
+            <h1 className="text-lg font-bold text-text-primary leading-tight">
               Stock Opname
             </h1>
             <p className="text-meta text-text-secondary mt-0.5">
@@ -309,7 +309,7 @@ export default function ScanDashboard() {
             type="button"
             onClick={() => openLocation(locationCode)}
             disabled={!locationCode.trim() || loading}
-            className="mt-2 w-full min-h-touch bg-primary text-ivory rounded-input font-bold text-meta disabled:opacity-40 active:scale-[0.98] transition"
+            className="mt-2 w-full min-h-touch bg-primary text-ivory rounded-input font-bold text-meta disabled:opacity-50 active:scale-[0.98] transition"
           >
             Buka Lokasi
           </button>
@@ -322,9 +322,12 @@ export default function ScanDashboard() {
         </section>
 
         {/* ── Progres opname (label jujur: rentang data riwayat) ── */}
-        <section aria-label="Progres opname" className="rail rail-espresso">
+        <section aria-label="Progres opname">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-lg font-bold text-text-primary">Progres Opname</h2>
+            <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
+              <span className="w-2 h-2 bg-ochre rounded-[2px]" aria-hidden="true" />
+              Progres Opname
+            </h2>
             <span className="text-2xl font-bold text-text-primary tnum">{stats.progress}%</span>
           </div>
           <p className="text-meta text-text-secondary mt-0.5">
@@ -340,7 +343,7 @@ export default function ScanDashboard() {
             aria-label={`Progres opname ${stats.progress} persen`}
           >
             <div
-              className="h-full bg-primary rounded-full transition-all duration-500"
+              className="h-full bg-primary rounded-full transition-[width] duration-500 ease-out"
               style={{ width: `${Math.max(stats.progress, stats.progress > 0 ? 4 : 0)}%` }}
             />
           </div>
@@ -359,13 +362,13 @@ export default function ScanDashboard() {
               type="button"
               onClick={() => setShowPendingModal(true)}
               disabled={stats.pending === 0}
-              className="bg-paper rounded-card border border-border p-3 text-center transition active:scale-95 disabled:active:scale-100 disabled:opacity-60"
+              className="bg-paper rounded-card border border-border p-3 text-center transition active:scale-95 disabled:active:scale-100 disabled:opacity-50"
               aria-label={`Lihat daftar ${stats.pending} lokasi yang belum dihitung`}
             >
               <HourglassIcon className="w-4 h-4 mx-auto text-danger" aria-hidden="true" />
               <p className="text-lg font-bold text-danger tnum mt-1">{stats.pending}</p>
               <p className="text-meta text-text-secondary">
-                {stats.pending > 0 ? "Belum dihitung" : "Belum dihitung"}
+                {stats.pending > 0 ? "Belum dihitung" : "Semua Terhitung"}
               </p>
             </button>
           </div>
@@ -426,8 +429,11 @@ export default function ScanDashboard() {
         </section>
 
         {/* ── Cari & pindah produk ── */}
-        <section aria-label="Cari posisi produk" className="rail rail-ochre">
-          <h2 className="text-lg font-bold text-text-primary">Cari Posisi Produk</h2>
+        <section aria-label="Cari posisi produk">
+          <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
+            <span className="w-2 h-2 bg-ochre rounded-[2px]" aria-hidden="true" />
+            Cari Posisi Produk
+          </h2>
           <p className="text-meta text-text-secondary mt-0.5 mb-2">
             Cari di seluruh gudang berdasarkan nama, SKU, atau barcode.
           </p>

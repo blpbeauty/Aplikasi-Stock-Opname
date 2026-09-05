@@ -39,7 +39,7 @@ export default function ConfirmModal({
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="flex-1 min-h-touch px-4 bg-surface-warm text-text-primary text-meta font-bold rounded-input transition active:scale-[0.98] disabled:opacity-40"
+            className="flex-1 min-h-touch px-4 bg-surface-warm text-text-primary text-meta font-bold rounded-input transition active:scale-[0.98] disabled:opacity-50"
           >
             {cancelText}
           </button>
@@ -47,7 +47,7 @@ export default function ConfirmModal({
             type="button"
             onClick={onConfirm}
             disabled={busy}
-            className={`flex-1 min-h-touch px-4 text-ivory text-meta font-bold rounded-input transition active:scale-[0.98] disabled:opacity-60 ${
+            className={`flex-1 min-h-touch px-4 text-ivory text-meta font-bold rounded-input transition active:scale-[0.98] disabled:opacity-50 ${
               isDanger ? "bg-danger" : "bg-primary"
             }`}
           >
