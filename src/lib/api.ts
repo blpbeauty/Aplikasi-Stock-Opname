@@ -274,6 +274,7 @@ export const deleteProductApi = async (
   batch: string
 ): Promise<{ success: boolean; message?: string }> => {
   invalidateMemCache("getProducts");
+  invalidateMemCache("getAllProducts");
   invalidateMemCache("getHistory");
   const result = await apiCall("deleteProduct", { locationCode, sku, batch });
   if (result.success) {

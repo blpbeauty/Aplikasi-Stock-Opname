@@ -250,8 +250,9 @@ function InputPageContent() {
 
   /**
    * Hapus produk secara optimistic dengan Undo (8 detik).
-   * Server baru dipanggil setelah jendela undo berlalu, sehingga
-   * "Urungkan" tidak perlu mengembalikan data ke server.
+   * Hapus ke server dilakukan LANGSUNG supaya Google Sheets selalu
+   * sinkron bahkan bila aplikasi ditutup sesudahnya; "Urungkan"
+   * membangun ulang baris server lewat addMasterProductApi.
    */
   const handleDeleteProduct = (product: Product, isNew: boolean) => {
     const key = productKey(product.sku, product.batch);
@@ -292,8 +293,27 @@ function InputPageContent() {
       setCache(ck, prevProducts);
     };
 
-    const undoState = { cancelled: false };
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    let deletedOnServer = false;
+    let rolledBack = false;
+    const serverDelete: Promise<void> = isNew
+      ? Promise.resolve()
+      : (async () => {
+          try {
+            const result = await deleteProductApi(location, product.sku, product.batch);
+            if (result.success) {
+              deletedOnServer = true;
+              return;
+            }
+            rolledBack = true;
+            restoreLocal();
+            toast.error(result.message || "Gagal menghapus, data dikembalikan");
+          } catch {
+            rolledBack = true;
+            restoreLocal();
+            toast.error("Gagal menghapus, data dikembalikan");
+          }
+        })();
+
     toast(
       (t) => (
         <span className="flex items-center gap-3 min-w-0">
@@ -301,10 +321,23 @@ function InputPageContent() {
           <button
             type="button"
             onClick={() => {
-              undoState.cancelled = true;
-              clearTimeout(timer);
-              restoreLocal();
               toast.dismiss(t.id);
+              if (rolledBack) return; // sudah dikembalikan oleh penanganan gagal
+              restoreLocal();
+              if (isNew) return;
+              // Bila hapus server masih berjalan, tunggu dulu; setelah
+              // berhasil, buat ulang barisnya di server.
+              serverDelete.then(() => {
+                if (deletedOnServer) {
+                  addMasterProductApi(
+                    location,
+                    product.productName,
+                    product.sku,
+                    product.batch,
+                    product.barcode
+                  ).catch(() => toast.error("Gagal mengembalikan produk ke server"));
+                }
+              });
             }}
             className="shrink-0 font-bold text-primary underline underline-offset-2"
           >
@@ -314,22 +347,6 @@ function InputPageContent() {
       ),
       { duration: 8000 }
     );
-
-    if (isNew) return;
-
-    timer = setTimeout(async () => {
-      if (undoState.cancelled) return;
-      try {
-        const result = await deleteProductApi(location, product.sku, product.batch);
-        if (!result.success) {
-          restoreLocal();
-          toast.error(result.message || "Gagal menghapus, data dikembalikan");
-        }
-      } catch {
-        restoreLocal();
-        toast.error("Gagal menghapus, data dikembalikan");
-      }
-    }, 8000);
   };
 
   const resolveProductNames = async (query: string): Promise<Product[]> => {
