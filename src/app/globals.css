@@ -3,51 +3,48 @@
 @tailwind utilities;
 
 :root {
-  /* ── Konsep "Clean Industrial" ──
-     Permukaan putih/netral, struktur graphite (ink), dan satu aksen
-     safety-amber ber-visibility tinggi. Amber hanya dekoratif —
-     bukan teks kecil. Warna semantik dipastikan kontras AA di latar terang. */
-  --ink: #14181f;
+  /* ── Konsep "Label Rak Operasional" ──
+     Espresso = teks/header/tombol primer. Cocoa = teks sekunder.
+     Ivory = latar aplikasi. Paper = permukaan input/daftar/modal.
+     Ochre = aksen dekoratif saja (bukan teks kecil).
+     Amber text = teks status/peringatan di latar terang (WCAG AA). */
+  --espresso: #2f2119;
+  --cocoa: #654c3e;
+  --ivory: #f7f3ea;
+  --paper: #fffdf8;
+  --ochre: #d49b4b;
+  --amber-text: #7a4b08;
 
-  /* Warna semantik */
-  --success: #12805c;
-  --success-bg: #e2f5ee;
-  --danger: #d92d20;
-  --danger-bg: #fdecea;
-  --info: #175cd3;
-  --info-bg: #eaf1fd;
-  --warning: #fdf1dc;
-  --warning-text: #93540a;
+  /* Warna semantik (kontras AA di atas latar terang) */
+  --success: #1e6b33;
+  --success-bg: #e6f1e8;
+  --danger: #b3261e;
+  --danger-bg: #fbeae8;
+  --info: #1f4e79;
+  --info-bg: #e7eef6;
+  --warning: #fdf3e0;
+  --warning-text: #7a4b08;
 
-  /* Alias yang dipakai luas di seluruh aplikasi
-     (espresso/cocoa/ivory/paper/ochre adalah nama legacy dari tema lama;
-     nilainya kini mengikuti palet Clean Industrial) */
-  --espresso: #14181f;
-  --cocoa: #5a6472;
-  --ivory: #ffffff;
-  --paper: #ffffff;
-  --ochre: #f5a623;
-  --amber-text: #93540a;
+  /* Alias yang dipakai luas di seluruh aplikasi */
+  --primary: #2f2119;
+  --primary-light: #4a382c;
+  --primary-dark: #1d140e;
+  --primary-pale: #efe6d4;
+  --primary-bg: #f7f3ea;
+  --surface: #fffdf8;
+  --surface-warm: #f2ecdf;
 
-  --primary: #14181f;
-  --primary-light: #262d38;
-  --primary-dark: #0b0e13;
-  --primary-pale: #fdf1dc;
-  --primary-bg: #f4f5f7;
-  --surface: #ffffff;
-  --surface-warm: #eef0f3;
+  --accent-yellow: #d49b4b;
+  --accent-red: #b3261e;
+  --accent-green: #1e6b33;
+  --error: #b3261e;
 
-  --accent-yellow: #f5a623;
-  --accent-red: #d92d20;
-  --accent-green: #12805c;
-  --error: #d92d20;
+  --text-primary: #2f2119;
+  --text-secondary: #5f4b3e;
+  --border: #e3dac8;
+  --border-subtle: #eee7d8;
 
-  --text-primary: #14181f;
-  --text-secondary: #5a6472;
-  --border: #e2e5ea;
-  --border-subtle: #eef0f3;
-
-  --focus-ring: 0 0 0 3px rgba(245, 166, 35, 0.65);
+  --focus-ring: 0 0 0 3px rgba(212, 155, 75, 0.65);
 }
 
 /* Base styles */
@@ -64,10 +61,8 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Angka kuantitas, SKU, batch & kode lokasi: JetBrains Mono dengan
-   digit selebar sama — gaya data industri, mudah dibandingkan */
+/* Angka kuantitas & kode lokasi: digit selebar sama agar mudah dibandingkan */
 .tnum {
-  font-family: var(--font-jetbrains), Consolas, monospace;
   font-variant-numeric: tabular-nums;
 }
 
@@ -96,18 +91,16 @@ html {
   background-color: var(--primary-bg);
 }
 
-/* ── Location band: pita lokasi gaya rambu industri ──
-   Ink background, kode mono putih, border kiri amber 4px.
+/* ── Location band: pita lokasi bergaya label rak ──
    Selalu menjawab "saya sedang bekerja di lokasi mana?". */
 .location-band {
-  background-color: var(--ink);
-  color: #ffffff;
-  border-left: 4px solid var(--ochre);
-  border-radius: 8px;
+  background-color: var(--espresso);
+  color: var(--ivory);
+  border-left: 6px solid var(--ochre);
+  border-radius: 4px;
   padding: 0.75rem 1rem;
 }
 .location-band .location-band-code {
-  font-family: var(--font-jetbrains), Consolas, monospace;
   font-size: 1.75rem; /* 28px — tetap terbaca di 320px */
   line-height: 1.15;
   font-weight: 700;
@@ -122,7 +115,7 @@ html {
   }
 }
 .location-band .location-band-sub {
-  color: #9aa3b0;
+  color: #d8cdbd;
   font-size: 0.875rem;
 }
 

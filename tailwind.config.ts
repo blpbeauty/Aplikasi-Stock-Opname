@@ -8,14 +8,8 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      fontFamily: {
-        /* Inter = UI sans; JetBrains Mono = kode lokasi/SKU/batch/angka */
-        sans: ["var(--font-inter)", "Arial", "sans-serif"],
-        mono: ["var(--font-jetbrains)", "Consolas", "monospace"],
-      },
       colors: {
-        /* Palet inti "Clean Industrial" (nama legacy tema lama dipertahankan
-           sebagai alias agar class existing tetap bekerja) */
+        /* Palet inti "Label Rak Operasional" */
         espresso: "var(--espresso)",
         cocoa: "var(--cocoa)",
         ivory: "var(--ivory)",
@@ -75,19 +69,18 @@ const config: Config = {
         base2: ["1rem", { lineHeight: "1.45" }],
       },
       boxShadow: {
-        /* Bayangan netral graphite, bukan hangat kecoklatan */
-        card: "0 1px 2px rgba(20, 24, 31, 0.06), 0 4px 16px rgba(20, 24, 31, 0.06)",
-        subtle: "0 1px 2px rgba(20, 24, 31, 0.05)",
-        bar: "0 -4px 20px rgba(20, 24, 31, 0.08)",
-        sheet: "0 12px 48px rgba(20, 24, 31, 0.22)",
+        card: "0 1px 3px rgba(45, 30, 20, 0.08), 0 4px 14px rgba(45, 30, 20, 0.06)",
+        subtle: "0 1px 2px rgba(45, 30, 20, 0.05)",
+        bar: "0 -4px 20px rgba(45, 30, 20, 0.08)",
+        sheet: "0 -8px 40px rgba(30, 20, 12, 0.25)",
       },
       borderRadius: {
-        /* Radius berdasar fungsi: kontrol 10px, kartu 14px,
-           sheet 20px, chip/badge/status pill penuh, band lokasi 8px. */
+        /* Radius berbeda berdasar fungsi: input 10px, kartu 14px,
+           lembar/sheet 20px, label/status 4px. */
         input: "0.625rem",
         card: "0.875rem",
         sheet: "1.25rem",
-        label: "9999px",
+        label: "0.25rem",
       },
       minHeight: {
         touch: "2.75rem", /* 44px */

@@ -156,7 +156,7 @@ export default function ProfilePage() {
                   <div key={group.name} className="bg-paper rounded-card border border-border p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-9 h-9 rounded-input bg-primary-pale text-primary flex items-center justify-center shrink-0">
+                        <span className="w-9 h-9 rounded-label bg-primary-pale text-primary flex items-center justify-center shrink-0">
                           <MapPinIcon className="w-4 h-4" />
                         </span>
                         <div className="min-w-0">
@@ -208,12 +208,12 @@ export default function ProfilePage() {
 
         {/* ── Info aplikasi ── */}
         <div className="bg-paper rounded-card border border-border p-4 flex items-center gap-3">
-          <span className="w-9 h-9 rounded-input bg-primary-pale text-primary flex items-center justify-center shrink-0">
+          <span className="w-9 h-9 rounded-label bg-primary-pale text-primary flex items-center justify-center shrink-0">
             <InfoIcon className="w-4 h-4" />
           </span>
           <div className="flex-1 min-w-0">
             <p className="text-meta font-bold text-text-primary">BLP Stock Opname</p>
-            <p className="text-meta text-text-secondary">Versi 2.2.0 · Clean Industrial</p>
+            <p className="text-meta text-text-secondary">Versi 2.1.0 · Label Rak Operasional</p>
           </div>
         </div>
 

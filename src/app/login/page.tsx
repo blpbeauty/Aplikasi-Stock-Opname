@@ -40,7 +40,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen min-h-dvh flex items-center justify-center p-4 bg-primary-bg">
+    <div className="min-h-screen min-h-dvh flex items-center justify-center p-4 bg-ivory">
       <div className="w-full max-w-sm">
         {/* Location-band sebagai identitas aplikasi */}
         <div className="location-band mb-6" aria-hidden="true">
