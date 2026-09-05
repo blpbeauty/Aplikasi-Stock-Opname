@@ -19,6 +19,7 @@ import {
 } from "@/lib/api";
 import { HistoryEntry, Product } from "@/lib/types";
 import { getCache, setCache, clearCache } from "@/lib/cache";
+import { deleteHistoryEntryLocal } from "@/lib/localDb";
 import { parseTimestamp, formatDisplayTime, toDateStr } from "@/lib/format";
 import {
   RefreshIcon,
@@ -311,9 +312,21 @@ export default function HistoryPage() {
     setCache(ck, updated);
     clearCache("products:");
 
+    // Entri yang baru dibuat sesi ini belum punya baris di server
+    // (rowId optimistic_*) — cukup hapus lokal, jangan panggil server.
+    if (entry.rowId.startsWith("optimistic_")) {
+      deleteHistoryEntryLocal(entry.rowId).catch(() => {});
+      return;
+    }
+
     try {
       const result = await deleteEntryApi(entry.rowId);
       if (!result.success) {
+        if (/tidak ditemukan/i.test(result.message || "")) {
+          // Server tidak mengenal baris ini — anggap sudah terhapus.
+          deleteHistoryEntryLocal(entry.rowId).catch(() => {});
+          return;
+        }
         setHistory(prev);
         setCache(ck, prev);
         toast.error(result.message || "Gagal menghapus, data dikembalikan");

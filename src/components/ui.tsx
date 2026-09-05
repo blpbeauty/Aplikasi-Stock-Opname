@@ -102,7 +102,9 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-[70] bg-black/60 flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn"
+      className={`fixed inset-0 z-[70] bg-black/60 flex ${
+        size === "sm" ? "items-center p-4" : "items-end sm:items-center sm:p-4"
+      } justify-center animate-fadeIn`}
       onClick={onClose}
     >
       <div
@@ -113,9 +115,11 @@ export function Dialog({
         aria-describedby={description ? descId : undefined}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className={`bg-paper w-full ${size === "sm" ? "sm:max-w-sm" : "sm:max-w-md"} ${
-          size === "sm" ? "rounded-t-sheet sm:rounded-card" : "rounded-t-sheet sm:rounded-sheet"
-        } border border-border border-b-0 sm:border-b shadow-sheet outline-none flex flex-col max-h-[88vh] animate-slideUp`}
+        className={`bg-paper w-full ${size === "sm" ? "max-w-sm" : "sm:max-w-md"} ${
+          size === "sm"
+            ? "rounded-card"
+            : "rounded-t-sheet sm:rounded-sheet border-b-0 sm:border-b"
+        } border shadow-sheet outline-none flex flex-col max-h-[88vh] animate-slideUp`}
       >
         <div className="px-5 pt-4 pb-3 border-b border-border-subtle flex items-start justify-between gap-3">
           <div className="min-w-0">
