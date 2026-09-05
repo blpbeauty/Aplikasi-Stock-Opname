@@ -274,11 +274,6 @@ export default function HistoryPage() {
     });
   };
 
-  const filteredTotalQty = useMemo(
-    () => filteredHistory.reduce((sum, e) => sum + e.qty, 0),
-    [filteredHistory]
-  );
-
   // While searching or filtering by date the user has narrowed things down on
   // purpose, so every group is forced open; otherwise the collapsed set rules.
   const isGroupExpanded = (loc: string) => {
@@ -477,19 +472,17 @@ export default function HistoryPage() {
       {/* ── Header + toolbar filter ── */}
       <div className="sticky top-0 z-30 bg-paper/95 backdrop-blur-sm px-4 sm:px-6 pt-4 pb-3 border-b border-border">
         <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold text-text-primary leading-tight">Riwayat Stock Opname</h1>
-            <p className="text-meta text-text-secondary tnum">
-              {filteredHistory.length.toLocaleString("id-ID")} entri ·{" "}
-              {filteredTotalQty.toLocaleString("id-ID")} item
-            </p>
-          </div>
+          <h1 className="text-lg font-bold text-text-primary leading-tight whitespace-nowrap">
+            Riwayat Stock Opname
+          </h1>
           <button
             onClick={() => fetchHistory()}
             disabled={loading}
-            className="tap px-4 bg-primary-pale rounded-label text-primary text-meta font-bold border border-primary/20 transition active:scale-95 flex items-center gap-1.5 disabled:opacity-50"
+            className="tap w-11 h-11 shrink-0 rounded-input bg-primary-pale text-primary border border-primary/20 transition active:scale-95 flex items-center justify-center disabled:opacity-50"
+            aria-label="Muat ulang riwayat"
+            title="Muat ulang"
           >
-            <RefreshIcon className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Muat ulang
+            <RefreshIcon className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
 
@@ -648,15 +641,11 @@ export default function HistoryPage() {
                 <div className="divide-y divide-border-subtle">
                   {entries.map((entry) => (
                     <div key={entry.rowId} className="p-3.5 sm:p-4 hover:bg-primary-pale/10 transition">
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-meta font-bold text-text-primary leading-snug break-words">
-                            {entry.productName}
-                          </h3>
-                          <p className="text-meta text-text-secondary mt-0.5 tnum">
-                            SKU: <span className="font-semibold text-text-primary">{entry.sku}</span>
-                          </p>
-                        </div>
+                      {/* Baris 1: nama produk + aksi */}
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="flex-1 min-w-0 text-meta font-bold text-text-primary leading-snug break-words">
+                          {entry.productName}
+                        </h3>
 
                         {/* Tindakan per entri */}
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -678,123 +667,114 @@ export default function HistoryPage() {
                         </div>
                       </div>
 
-                      {/* Baris: batch, qty, operator & waktu */}
-                      <div className="flex flex-wrap items-center justify-between gap-y-1.5 text-meta pt-1.5 border-t border-border-subtle mt-1.5">
-                        <div className="flex flex-wrap items-center gap-2 min-w-0">
-                          {editingBatch === entry.rowId ? (
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="text"
-                                value={editingBatchValue}
-                                onChange={(e) => setEditingBatchValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") saveInlineBatch(entry);
-                                  if (e.key === "Escape") setEditingBatch(null);
+                      {/* Baris 2: Batch + Qty — chip tebal sebaris */}
+                      <div className="flex items-center flex-wrap gap-2 mt-2 pt-2 border-t border-border-subtle">
+                        {editingBatch === entry.rowId ? (
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <input
+                              type="text"
+                              value={editingBatchValue}
+                              onChange={(e) => setEditingBatchValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveInlineBatch(entry);
+                                if (e.key === "Escape") setEditingBatch(null);
+                              }}
+                              aria-label="Batch baru"
+                              className="w-28 min-h-touch px-2 bg-surface-warm border border-primary rounded-input text-meta font-bold"
+                              autoFocus
+                            />
+                            {inlineBatchesForSku.length > 0 && (
+                              <select
+                                value=""
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    setEditingBatchValue(e.target.value);
+                                  }
                                 }}
-                                aria-label="Batch baru"
-                                className="w-28 min-h-touch px-2 bg-surface-warm border border-primary rounded-input text-meta font-bold"
-                                autoFocus
-                              />
-                              {inlineBatchesForSku.length > 0 && (
-                                <select
-                                  value=""
-                                  onChange={(e) => {
-                                    if (e.target.value) {
-                                      setEditingBatchValue(e.target.value);
-                                    }
-                                  }}
-                                  aria-label="Pilih batch yang ada"
-                                  className="min-h-touch px-1 bg-surface-warm border border-border rounded-input text-meta"
-                                >
-                                  <option value="">Pilih…</option>
-                                  {inlineBatchesForSku.map((b) => (
-                                    <option key={b} value={b}>
-                                      {b}
-                                    </option>
-                                  ))}
-                                </select>
-                              )}
-                              <button
-                                onClick={() => saveInlineBatch(entry)}
-                                className="min-h-touch px-3 bg-primary text-ivory text-meta font-bold rounded-input"
+                                aria-label="Pilih batch yang ada"
+                                className="min-h-touch px-1 bg-surface-warm border border-border rounded-input text-meta"
                               >
-                                OK
+                                <option value="">Pilih…</option>
+                                {inlineBatchesForSku.map((b) => (
+                                  <option key={b} value={b}>
+                                    {b}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                            <button
+                              onClick={() => saveInlineBatch(entry)}
+                              className="min-h-touch px-3 bg-primary text-ivory text-meta font-bold rounded-input"
+                            >
+                              OK
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setEditingBatch(entry.rowId);
+                              setEditingBatchValue(entry.batch);
+                            }}
+                            disabled={inlineSaving === entry.rowId}
+                            className="inline-flex items-center gap-1 min-h-touch px-2.5 bg-surface-warm hover:bg-primary-pale rounded-label border border-border font-bold text-text-primary text-meta"
+                            aria-label={`Edit batch ${entry.batch || "-"} untuk ${entry.productName}`}
+                          >
+                            Batch: {entry.batch || "-"}
+                            <PencilIcon className="w-3.5 h-3.5 text-text-secondary" />
+                          </button>
+                        )}
+
+                        {editingQty === entry.rowId ? (
+                          <div className="flex flex-col items-end gap-1 w-full">
+                            <QtyInput
+                              wide
+                              value={editingQtyValue}
+                              onChange={(v) => setEditingQtyValue(v)}
+                              onExprCommit={(expr) => setEditingQtyFormula(expr)}
+                              ariaLabel={`Kuantitas baru untuk ${entry.productName}`}
+                            />
+                            <div className="flex gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => saveInlineQty(entry)}
+                                className="min-h-touch px-4 bg-primary text-ivory text-meta font-bold rounded-input"
+                              >
+                                Simpan
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingQty(null)}
+                                className="min-h-touch px-4 bg-surface-warm text-text-primary text-meta font-bold rounded-input"
+                              >
+                                Batal
                               </button>
                             </div>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setEditingBatch(entry.rowId);
-                                setEditingBatchValue(entry.batch);
-                              }}
-                              disabled={inlineSaving === entry.rowId}
-                              className="inline-flex items-center gap-1 min-h-touch px-2.5 bg-surface-warm hover:bg-primary-pale rounded-label font-semibold text-text-primary text-meta"
-                              aria-label={`Edit batch ${entry.batch || "-"} untuk ${entry.productName}`}
-                            >
-                              Batch: {entry.batch || "-"}
-                              <PencilIcon className="w-3.5 h-3.5 text-text-secondary" />
-                            </button>
-                          )}
-                          <span className="inline-flex items-center gap-1 text-meta text-text-secondary">
-                            <UserIcon className="w-3.5 h-3.5" aria-hidden="true" /> {entry.operator?.split("@")[0]}
-                          </span>
-                        </div>
-
-                        {/* Qty dengan rumus */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {editingQty === entry.rowId ? (
-                            <div className="flex flex-col items-end gap-1">
-                              <QtyInput
-                                wide
-                                value={editingQtyValue}
-                                onChange={(v) => setEditingQtyValue(v)}
-                                onExprCommit={(expr) => setEditingQtyFormula(expr)}
-                                ariaLabel={`Kuantitas baru untuk ${entry.productName}`}
-                              />
-                              <div className="flex gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => saveInlineQty(entry)}
-                                  className="min-h-touch px-4 bg-primary text-ivory text-meta font-bold rounded-input"
-                                >
-                                  Simpan
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingQty(null)}
-                                  className="min-h-touch px-4 bg-surface-warm text-text-primary text-meta font-bold rounded-input"
-                                >
-                                  Batal
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setEditingQty(entry.rowId);
-                                setEditingQtyValue(entry.qty);
-                                setEditingQtyFormula(entry.formula || "");
-                              }}
-                              disabled={inlineSaving === entry.rowId}
-                              className="flex items-center gap-1 min-h-touch px-3 font-bold text-base2 text-primary bg-primary-pale rounded-label border border-primary/20 hover:bg-primary/20 transition active:scale-95 tnum"
-                              aria-label={`Edit kuantitas ${entry.qty} untuk ${entry.productName}`}
-                            >
-                              <span>{entry.qty.toLocaleString("id-ID")} pcs</span>
-                              <PencilIcon className="w-3.5 h-3.5 opacity-70" />
-                            </button>
-                          )}
-                        </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setEditingQty(entry.rowId);
+                              setEditingQtyValue(entry.qty);
+                              setEditingQtyFormula(entry.formula || "");
+                            }}
+                            disabled={inlineSaving === entry.rowId}
+                            className="flex items-center gap-1 min-h-touch px-3 font-bold text-base2 text-text-primary bg-primary-pale rounded-label border border-primary/30 hover:bg-primary/20 transition active:scale-95 tnum"
+                            aria-label={`Edit kuantitas ${entry.qty} untuk ${entry.productName}`}
+                          >
+                            {entry.qty.toLocaleString("id-ID")} pcs
+                            <PencilIcon className="w-3.5 h-3.5 opacity-70" />
+                          </button>
+                        )}
                       </div>
 
-                      {/* Rumus eksplisit */}
-                      {entry.formula && (
-                        <div className="mt-2 flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-warm border border-border-subtle rounded-label text-amber-text">
-                          <CalculatorIcon className="w-4 h-4 shrink-0" aria-hidden="true" />
-                          <span className="text-meta font-bold tnum">Rumus: {entry.formula}</span>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between text-meta text-text-secondary mt-1.5">
+                      {/* Baris meta: SKU · operator · waktu */}
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-meta text-text-secondary mt-2">
+                        <span className="tnum">SKU {entry.sku}</span>
+                        <span aria-hidden="true">·</span>
+                        <span className="inline-flex items-center gap-1">
+                          <UserIcon className="w-3.5 h-3.5" aria-hidden="true" /> {entry.operator?.split("@")[0]}
+                        </span>
+                        <span aria-hidden="true">·</span>
                         <span>{formatDisplayTime(entry.timestamp)}</span>
                         {inlineSaving === entry.rowId ? (
                           <span className="text-info font-bold" role="status">
@@ -804,6 +784,14 @@ export default function HistoryPage() {
                           <span className="text-amber-text font-bold">Telah diedit</span>
                         ) : null}
                       </div>
+
+                      {/* Rumus eksplisit — baris sendiri, wrap bila panjang */}
+                      {entry.formula && (
+                        <div className="mt-2 flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-warm border border-border-subtle rounded-label text-amber-text">
+                          <CalculatorIcon className="w-4 h-4 shrink-0" aria-hidden="true" />
+                          <span className="text-meta font-bold tnum break-all">Rumus: {entry.formula}</span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
