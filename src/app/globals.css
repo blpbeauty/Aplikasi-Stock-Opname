@@ -104,18 +104,14 @@ html {
 }
 .location-band .location-band-code {
   font-family: var(--font-jetbrains), Consolas, monospace;
-  font-size: 1.75rem; /* 28px — tetap terbaca di 320px */
+  /* Skala mengikuti lebar layar agar kode lokasi panjang tetap satu baris */
+  font-size: clamp(1.1rem, 5.5vw, 1.75rem);
   line-height: 1.15;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   word-break: break-all;
   font-variant-numeric: tabular-nums;
-}
-@media (min-width: 640px) {
-  .location-band .location-band-code {
-    font-size: 2.25rem; /* 36px */
-  }
 }
 .location-band .location-band-sub {
   color: #d8cdbd;
