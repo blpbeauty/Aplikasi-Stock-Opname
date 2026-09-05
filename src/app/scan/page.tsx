@@ -402,7 +402,7 @@ export default function ScanDashboard() {
                     aria-label={`Buka lokasi ${item.location}`}
                   >
                     <span className="flex items-center gap-3 min-w-0">
-                      <span className="w-9 h-9 rounded-label bg-surface-warm text-primary flex items-center justify-center shrink-0">
+                      <span className="w-9 h-9 rounded-input bg-surface-warm text-primary flex items-center justify-center shrink-0">
                         <MapPinIcon className="w-4 h-4" />
                       </span>
                       <span className="min-w-0">
@@ -487,7 +487,7 @@ export default function ScanDashboard() {
                     <button
                       type="button"
                       onClick={() => openLocation(item.location)}
-                      className="min-h-touch px-3 bg-surface-warm hover:bg-primary-pale text-text-primary rounded-label text-meta font-bold border border-border"
+                      className="min-h-touch px-3 bg-surface-warm hover:bg-primary-pale text-text-primary rounded-input text-meta font-bold border border-border"
                       aria-label={`Buka lokasi ${item.location}`}
                     >
                       Buka
@@ -495,7 +495,7 @@ export default function ScanDashboard() {
                     <button
                       type="button"
                       onClick={() => openQuickMove(item)}
-                      className="min-h-touch px-3 bg-primary text-ivory rounded-label text-meta font-bold"
+                      className="min-h-touch px-3 bg-primary text-ivory rounded-input text-meta font-bold"
                       aria-label={`Pindah ${item.productName} ke lokasi lain`}
                     >
                       Pindah
@@ -576,7 +576,7 @@ export default function ScanDashboard() {
             {pendingLocations.map((loc) => (
               <li key={loc.locationCode} className="flex items-center justify-between gap-2 py-2.5">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="w-9 h-9 rounded-label bg-danger-bg text-danger flex items-center justify-center shrink-0">
+                  <span className="w-9 h-9 rounded-input bg-danger-bg text-danger flex items-center justify-center shrink-0">
                     <MapPinIcon className="w-4 h-4" />
                   </span>
                   <div className="min-w-0">
@@ -592,7 +592,7 @@ export default function ScanDashboard() {
                     setShowPendingModal(false);
                     openLocation(loc.locationCode);
                   }}
-                  className="shrink-0 min-h-touch px-4 bg-primary text-ivory rounded-label text-meta font-bold active:scale-95 transition"
+                  className="shrink-0 min-h-touch px-4 bg-primary text-ivory rounded-input text-meta font-bold active:scale-95 transition"
                 >
                   Buka
                 </button>

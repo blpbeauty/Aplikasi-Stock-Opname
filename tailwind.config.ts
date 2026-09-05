@@ -8,6 +8,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        /* Inter sebagai UI sans di atas palet cokelat-ivory */
+        sans: ["var(--font-inter)", "Arial", "sans-serif"],
+      },
       colors: {
         /* Palet inti "Label Rak Operasional" */
         espresso: "var(--espresso)",
@@ -76,11 +80,11 @@ const config: Config = {
       },
       borderRadius: {
         /* Radius berbeda berdasar fungsi: input 10px, kartu 14px,
-           lembar/sheet 20px, label/status 4px. */
+           lembar/sheet 20px, chip/badge/status pill penuh. */
         input: "0.625rem",
         card: "0.875rem",
         sheet: "1.25rem",
-        label: "0.25rem",
+        label: "9999px",
       },
       minHeight: {
         touch: "2.75rem", /* 44px */
