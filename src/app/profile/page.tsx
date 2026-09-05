@@ -184,7 +184,7 @@ export default function ProfilePage() {
                       aria-label={`Progress area ${group.name}: ${pct} persen`}
                     >
                       <div
-                        className={`h-full rounded-full transition-all duration-500 ${
+                        className={`h-full rounded-full transition-[width] duration-500 ease-out ${
                           pct === 100 ? "bg-success" : "bg-primary"
                         }`}
                         style={{ width: `${Math.max(pct, pct > 0 ? 4 : 0)}%` }}
@@ -213,7 +213,7 @@ export default function ProfilePage() {
           </span>
           <div className="flex-1 min-w-0">
             <p className="text-meta font-bold text-text-primary">BLP Stock Opname</p>
-            <p className="text-meta text-text-secondary">Versi 2.2.0 · Cokelat Ivory</p>
+            <p className="text-meta text-text-secondary">Versi 2.3.0 · Cokelat Ivory</p>
           </div>
         </div>
 

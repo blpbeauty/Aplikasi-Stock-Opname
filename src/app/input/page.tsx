@@ -61,21 +61,6 @@ function InputPageContent() {
   // Semua-kuantitas-nol: simpan hanya lewat konfirmasi eksplisit
   const [showZeroConfirm, setShowZeroConfirm] = useState(false);
 
-  // Delete confirm modal state
-  const [deleteModal, setDeleteModal] = useState<{
-    isOpen: boolean;
-    sku: string;
-    batch: string;
-    productName: string;
-    isNew: boolean;
-  }>({
-    isOpen: false,
-    sku: "",
-    batch: "",
-    productName: "",
-    isNew: false,
-  });
-
   const [newProductForm, setNewProductForm] = useState({
     productName: "",
     sku: "",
@@ -263,62 +248,88 @@ function InputPageContent() {
     setFormulas((prev) => ({ ...prev, [key]: expr }));
   };
 
-  const promptDeleteProduct = (product: Product, isNew: boolean) => {
-    setDeleteModal({
-      isOpen: true,
-      sku: product.sku,
-      batch: product.batch,
-      productName: product.productName,
-      isNew,
-    });
-  };
-
-  const confirmDeleteProduct = async () => {
-    const { sku, batch, isNew } = deleteModal;
-    if (isNew) {
-      setNewProducts((prev) => prev.filter((p) => !(p.sku === sku && p.batch === batch)));
-      setQuantities((prev) => {
-        const copy = { ...prev };
-        delete copy[productKey(sku, batch)];
-        return copy;
-      });
-      toast.success("Produk baru dihapus dari daftar");
-      return;
-    }
-
-    // Optimistic delete
+  /**
+   * Hapus produk secara optimistic dengan Undo (8 detik).
+   * Server baru dipanggil setelah jendela undo berlalu, sehingga
+   * "Urungkan" tidak perlu mengembalikan data ke server.
+   */
+  const handleDeleteProduct = (product: Product, isNew: boolean) => {
+    const key = productKey(product.sku, product.batch);
     const prevProducts = [...products];
     const prevNewProducts = [...newProducts];
     const prevQuantities = { ...quantities };
+    const prevFormulas = { ...formulas };
 
-    setProducts((prev) => prev.filter((p) => !(p.sku === sku && p.batch === batch)));
+    setProducts((prev) =>
+      prev.filter((p) => !(p.sku === product.sku && p.batch === product.batch))
+    );
+    setNewProducts((prev) =>
+      prev.filter((p) => !(p.sku === product.sku && p.batch === product.batch))
+    );
     setQuantities((prev) => {
       const copy = { ...prev };
-      delete copy[productKey(sku, batch)];
+      delete copy[key];
       return copy;
     });
-    toast.success("Produk berhasil dihapus");
+    setFormulas((prev) => {
+      const copy = { ...prev };
+      delete copy[key];
+      return copy;
+    });
 
     const ck = `products:${location}`;
-    setCache(ck, products.filter((p) => !(p.sku === sku && p.batch === batch)));
+    const remaining = [...products, ...newProducts].filter(
+      (p) => !(p.sku === product.sku && p.batch === product.batch)
+    );
+    setCache(ck, remaining);
     clearCache("history:");
 
-    try {
-      const result = await deleteProductApi(location, sku, batch);
-      if (!result.success) {
-        setProducts(prevProducts);
-        setNewProducts(prevNewProducts);
-        setQuantities(prevQuantities);
-        setCache(ck, prevProducts);
-        toast.error(result.message || "Gagal menghapus, data dikembalikan");
-      }
-    } catch {
+    const restoreLocal = () => {
       setProducts(prevProducts);
       setNewProducts(prevNewProducts);
       setQuantities(prevQuantities);
+      setFormulas(prevFormulas);
       setCache(ck, prevProducts);
-      toast.error("Gagal menghapus, data dikembalikan");
-    }
+    };
+
+    const undoState = { cancelled: false };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    toast(
+      (t) => (
+        <span className="flex items-center gap-3 min-w-0">
+          <span className="min-w-0 truncate">Dihapus: {product.productName}</span>
+          <button
+            type="button"
+            onClick={() => {
+              undoState.cancelled = true;
+              clearTimeout(timer);
+              restoreLocal();
+              toast.dismiss(t.id);
+            }}
+            className="shrink-0 font-bold text-primary underline underline-offset-2"
+          >
+            Urungkan
+          </button>
+        </span>
+      ),
+      { duration: 8000 }
+    );
+
+    if (isNew) return;
+
+    timer = setTimeout(async () => {
+      if (undoState.cancelled) return;
+      try {
+        const result = await deleteProductApi(location, product.sku, product.batch);
+        if (!result.success) {
+          restoreLocal();
+          toast.error(result.message || "Gagal menghapus, data dikembalikan");
+        }
+      } catch {
+        restoreLocal();
+        toast.error("Gagal menghapus, data dikembalikan");
+      }
+    }, 8000);
   };
 
   const resolveProductNames = async (query: string): Promise<Product[]> => {
@@ -345,7 +356,6 @@ function InputPageContent() {
       batch: product.batch,
       barcode: product.barcode || prev.barcode,
     }));
-    toast.success(`Produk dipilih: ${product.productName}`);
     setTimeout(() => {
       addFormQtyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 150);
@@ -364,7 +374,6 @@ function InputPageContent() {
           batch: result.product!.batch || "",
           barcode: barcode,
         }));
-        toast.success(`Produk ditemukan: ${result.product.productName}`);
         setTimeout(() => {
           addFormQtyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
         }, 150);
@@ -413,7 +422,6 @@ function InputPageContent() {
     setNewProductForm({ productName: "", sku: "", batch: "", barcode: "", qty: 0 });
     setNewProductFormula("");
     setShowAddForm(false);
-    toast.success("Produk baru berhasil ditambahkan");
   };
 
   const handleBatchEdit = (key: string, currentBatch: string, sku: string) => {
@@ -472,7 +480,6 @@ function InputPageContent() {
         return copy;
       });
     }
-    toast.success("Batch diperbarui");
   };
 
   const handleMoveProducts = () => {
@@ -828,7 +835,7 @@ function InputPageContent() {
                         ))
                       ) : (
                         <div className="px-3 py-2 text-meta text-text-secondary">
-                          Batch baru: &quot;{newProductForm.batch.trim()}&quot;
+                          Batch baru: “{newProductForm.batch.trim()}”
                         </div>
                       )}
                     </div>
@@ -947,7 +954,7 @@ function InputPageContent() {
             <EmptyState
               icon={<SearchIcon className="w-6 h-6" />}
               title="Tidak ada produk yang cocok"
-              description={`Tidak ada produk yang cocok dengan "${filterQuery}".`}
+              description={`Tidak ada produk yang cocok dengan “${filterQuery}”.`}
               action={
                 <button
                   type="button"
@@ -993,7 +1000,7 @@ function InputPageContent() {
                         label={`Hapus ${product.productName}`}
                         variant="danger"
                         size="md"
-                        onClick={() => promptDeleteProduct(product, isNew)}
+                        onClick={() => handleDeleteProduct(product, isNew)}
                       >
                         <TrashIcon className="w-4 h-4" />
                       </IconButton>
@@ -1077,7 +1084,7 @@ function InputPageContent() {
                               ))
                             ) : (
                               <div className="px-3 py-2 text-meta text-text-secondary">
-                                Batch baru: &quot;{editingBatchValue.trim()}&quot;
+                                Batch baru: “{editingBatchValue.trim()}”
                               </div>
                             )}
                           </div>
@@ -1116,7 +1123,7 @@ function InputPageContent() {
               type="button"
               onClick={handleSaveClick}
               disabled={saving}
-              className="w-full min-h-touch bg-primary text-ivory px-5 rounded-card font-bold text-base2 shadow-card disabled:opacity-60 active:scale-[0.99] transition flex items-center justify-between gap-3"
+              className="w-full min-h-touch bg-primary text-ivory px-5 rounded-card font-bold text-base2 shadow-card disabled:opacity-50 active:scale-[0.99] transition flex items-center justify-between gap-3"
             >
               <span>{saving ? "Menyimpan…" : "Simpan Hasil Hitung"}</span>
               <span className="bg-ivory/20 px-3 py-1 rounded-full text-meta font-bold tnum">
@@ -1148,18 +1155,6 @@ function InputPageContent() {
         cancelText="Batal"
         onConfirm={() => doSave(true)}
         onClose={() => setShowZeroConfirm(false)}
-      />
-
-      {/* ── Konfirmasi hapus produk ── */}
-      <ConfirmModal
-        isOpen={deleteModal.isOpen}
-        title="Hapus Produk dari Lokasi?"
-        message={`Apakah Anda yakin ingin menghapus "${deleteModal.productName}" (SKU: ${deleteModal.sku}, Batch: ${deleteModal.batch})?`}
-        confirmText="Hapus Produk"
-        cancelText="Batal"
-        isDanger
-        onConfirm={confirmDeleteProduct}
-        onClose={() => setDeleteModal((prev) => ({ ...prev, isOpen: false }))}
       />
 
       {/* ── Sheet pindah lokasi (bersama) ── */}

@@ -9,8 +9,9 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        /* Inter sebagai UI sans di atas palet cokelat-ivory */
+        /* Inter = UI sans; JetBrains Mono = kode lokasi/SKU/batch/angka (.tnum) */
         sans: ["var(--font-inter)", "Arial", "sans-serif"],
+        mono: ["var(--font-jetbrains)", "Consolas", "monospace"],
       },
       colors: {
         /* Palet inti "Label Rak Operasional" */

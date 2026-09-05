@@ -86,7 +86,7 @@ export default function InstallPrompt() {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 animate-fadeIn"
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/40 animate-fadeIn"
       role="dialog"
       aria-label="Pasang aplikasi"
     >

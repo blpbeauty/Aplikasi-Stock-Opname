@@ -49,7 +49,7 @@ export default function LoginPage() {
         </div>
 
         <div className="bg-paper rounded-card border border-border shadow-card p-6">
-          <h1 className="text-xl font-bold text-text-primary tracking-tight">
+          <h1 className="text-lg font-bold text-text-primary tracking-tight">
             Masuk Operator
           </h1>
           <p className="text-meta text-text-secondary mt-1 mb-5">
@@ -98,7 +98,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full min-h-touch bg-primary text-ivory rounded-input font-bold text-base2 transition disabled:opacity-60 active:scale-[0.98] mt-1"
+              className="w-full min-h-touch bg-primary text-ivory rounded-input font-bold text-base2 transition disabled:opacity-50 active:scale-[0.98] mt-1"
             >
               {loading ? "Memproses…" : "Masuk"}
             </button>

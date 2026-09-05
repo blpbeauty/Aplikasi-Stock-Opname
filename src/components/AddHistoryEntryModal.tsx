@@ -120,7 +120,6 @@ export default function AddHistoryEntryModal({
         setProductName(result.product.productName);
         setSku(result.product.sku);
         setBatch(result.product.batch || "");
-        toast.success(`Produk ditemukan: ${result.product.productName}`);
       } else {
         toast.error(result.message || "Barcode tidak ditemukan");
       }
@@ -200,7 +199,6 @@ export default function AddHistoryEntryModal({
 
       addHistoryEntryLocal(newEntry).catch(() => {});
       onSuccess(newEntry);
-      toast.success(`Produk berhasil ditambahkan ke ${targetLoc}`);
       onClose();
     } catch (error) {
       console.error("Save new history entry error:", error);

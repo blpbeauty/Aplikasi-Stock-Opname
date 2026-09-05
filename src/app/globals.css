@@ -61,8 +61,10 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Angka kuantitas & kode lokasi: digit selebar sama agar mudah dibandingkan */
+/* Angka kuantitas, SKU, batch & kode lokasi: JetBrains Mono dengan
+   digit selebar sama — mudah dibandingkan, kontras dengan Inter */
 .tnum {
+  font-family: var(--font-jetbrains), Consolas, monospace;
   font-variant-numeric: tabular-nums;
 }
 
@@ -101,6 +103,7 @@ html {
   padding: 0.75rem 1rem;
 }
 .location-band .location-band-code {
+  font-family: var(--font-jetbrains), Consolas, monospace;
   font-size: 1.75rem; /* 28px — tetap terbaca di 320px */
   line-height: 1.15;
   font-weight: 700;
@@ -117,24 +120,6 @@ html {
 .location-band .location-band-sub {
   color: #d8cdbd;
   font-size: 0.875rem;
-}
-
-/* ── Bidang status / sektor gaya lembar kerja ── */
-.rail {
-  border-left: 4px solid var(--border);
-  padding-left: 0.75rem;
-}
-.rail-espresso {
-  border-left-color: var(--espresso);
-}
-.rail-ochre {
-  border-left-color: var(--ochre);
-}
-.rail-success {
-  border-left-color: var(--success);
-}
-.rail-danger {
-  border-left-color: var(--danger);
 }
 
 /* Target sentuh minimum 44px */
@@ -164,7 +149,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 [tabindex]:focus-visible {
-  outline: 2px solid var(--ochre);
+  outline: 2px solid var(--amber-text);
   outline-offset: 2px;
 }
 

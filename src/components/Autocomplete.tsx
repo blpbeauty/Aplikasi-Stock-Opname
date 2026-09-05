@@ -197,7 +197,7 @@ export default function Autocomplete<T>({
               setItems([]);
               setOpen(false);
             }}
-            className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-text-secondary hover:bg-primary-pale"
+            className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center text-text-secondary hover:bg-primary-pale"
             aria-label="Bersihkan isian"
           >
             <XIcon className="w-4 h-4" />

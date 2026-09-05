@@ -8,8 +8,8 @@ import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import InstallPrompt from "@/components/InstallPrompt";
 
 /* Font di-host lokal agar konsisten saat offline (kondisi gudang).
-   Inter: sans modern dengan angka jelas — dipakai di atas palet
-   cokelat-ivory "Label Rak Operasional". */
+   Inter: sans modern untuk UI; JetBrains Mono: kode lokasi, SKU, batch,
+   dan angka jumlah — pasangan font dengan digit tabular. */
 const inter = localFont({
   src: "../fonts/inter-latin-variable.woff2",
   weight: "400 700",
@@ -17,6 +17,15 @@ const inter = localFont({
   fallback: ["Arial", "sans-serif"],
   display: "swap",
   variable: "--font-inter",
+});
+
+const jetbrainsMono = localFont({
+  src: "../fonts/jetbrains-mono-latin-variable.woff2",
+  weight: "500 700",
+  style: "normal",
+  fallback: ["Consolas", "monospace"],
+  display: "swap",
+  variable: "--font-jetbrains",
 });
 
 export const viewport: Viewport = {
@@ -47,7 +56,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" className={inter.variable}>
+    <html lang="id" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
         <link rel="icon" type="image/png" href="/favicon.png" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
