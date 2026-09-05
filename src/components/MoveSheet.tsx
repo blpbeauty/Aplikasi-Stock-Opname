@@ -160,7 +160,7 @@ export default function MoveSheet({
           getKey={(l) => l.locationCode}
           renderItem={(l) => (
             <div className="flex items-center justify-between gap-2 w-full min-w-0">
-              <span className="font-bold text-text-primary uppercase truncate flex-1 min-w-0">{l.locationCode}</span>
+              <span className="font-bold text-text-primary uppercase break-all flex-1 min-w-0">{l.locationCode}</span>
               <span className="text-meta text-text-secondary shrink-0 pl-2">{l.productCount} produk</span>
             </div>
           )}
