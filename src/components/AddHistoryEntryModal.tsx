@@ -194,8 +194,8 @@ export default function AddHistoryEntryModal({
       }
 
       const newEntry: HistoryEntry = {
-        sessionId,
-        rowId: `optimistic_${Date.now()}`,
+        sessionId: result.sessionId || sessionId,
+        rowId: result.rowIds?.[0] || `optimistic_${Date.now()}`,
         timestamp,
         operator: user?.email || "",
       location: targetLoc,

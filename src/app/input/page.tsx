@@ -561,6 +561,7 @@ function InputPageContent() {
     // Tunggu server benar-benar menyimpan sebelum mengklaim sukses.
     // Jika gagal, tetap di halaman ini agar operator bisa mencoba lagi
     // tanpa mengetik ulang.
+    let saved: { sessionId?: string; rowIds?: string[] } | null = null;
     try {
       const result = await saveStockOpnameApi(
         sessionId,
@@ -574,6 +575,7 @@ function InputPageContent() {
         setSaving(false);
         return;
       }
+      saved = { sessionId: result.sessionId, rowIds: result.rowIds };
     } catch {
       toast.error("Gagal menyimpan ke server. Data masih ada, coba lagi.");
       setSaving(false);
@@ -581,12 +583,14 @@ function InputPageContent() {
     }
 
     // Optimistic history cache so new entries appear immediately
-    // (Google Sheets replication can lag a few seconds)
+    // (Google Sheets replication can lag a few seconds).
+    // Pakai sessionId + rowId ASLI dari server supaya hapus/edit entri
+    // baru langsung menemukan barisnya di sheet.
     const historyCacheKey = `history:${user?.email}:all`;
     const cachedHistory = getCache<HistoryEntry[]>(historyCacheKey);
     const optimisticEntries: HistoryEntry[] = items.map((item, idx) => ({
-      sessionId,
-      rowId: `optimistic_${Date.now()}_${idx}`,
+      sessionId: saved?.sessionId || sessionId,
+      rowId: saved?.rowIds?.[idx] || `optimistic_${Date.now()}_${idx}`,
       timestamp,
       operator: user?.email || "",
       location,

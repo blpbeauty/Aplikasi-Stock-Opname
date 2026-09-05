@@ -384,7 +384,10 @@ function saveStockOpname(data) {
     sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 12).setValues(rows);
     syncMasterDataInternal(loc, data.items);
     bumpCacheVersion();
-    return { success: true, message: "Stock opname berhasil disimpan" };
+    // Kembalikan sessionId + rowId asli agar aplikasi menyimpan ID server
+    // (hapus/edit entri baru langsung menemukan barisnya di sheet).
+    var rowIds = rows.map(function (r) { return r[1]; });
+    return { success: true, message: "Stock opname berhasil disimpan", sessionId: sessionId, rowIds: rowIds };
   });
 }
 
