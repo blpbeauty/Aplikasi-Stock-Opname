@@ -77,6 +77,7 @@ export default function ScanDashboard() {
   const [productResults, setProductResults] = useState<GlobalProductItem[]>([]);
   const [productSearchLoading, setProductSearchLoading] = useState(false);
   const [showProductScanner, setShowProductScanner] = useState(false);
+  const productSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Quick move product state
   const [moveItem, setMoveItem] = useState<GlobalProductItem | null>(null);
@@ -235,6 +236,12 @@ export default function ScanDashboard() {
       setProductSearchLoading(false);
     }
   }, []);
+
+  // Product Finder — di-debounce agar tidak memanggil jaringan tiap ketikan
+  const handleProductSearchDebounced = useCallback((query: string) => {
+    if (productSearchTimerRef.current) clearTimeout(productSearchTimerRef.current);
+    productSearchTimerRef.current = setTimeout(() => handleProductSearch(query), 300);
+  }, [handleProductSearch]);
 
   const handleProductBarcodeScan = (barcode: string) => {
     setShowProductScanner(false);
@@ -442,7 +449,7 @@ export default function ScanDashboard() {
                 value={productQuery}
                 onChange={(e) => {
                   setProductQuery(e.target.value);
-                  handleProductSearch(e.target.value);
+                  handleProductSearchDebounced(e.target.value);
                 }}
                 placeholder="Nama produk, SKU, atau barcode…"
                 className="w-full min-h-touch px-3 bg-surface-warm border border-border rounded-input text-base2 font-semibold text-text-primary focus:bg-paper"

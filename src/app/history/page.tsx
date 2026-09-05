@@ -35,6 +35,9 @@ import {
 } from "@/components/icons";
 import toast from "react-hot-toast";
 
+/** Entri maksimum yang dirender per grup sebelum tombol "Tampilkan semua". */
+const INITIAL_VISIBLE_ENTRIES = 20;
+
 export default function HistoryPage() {
   const { user } = useAuth();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -67,8 +70,12 @@ export default function HistoryPage() {
   const [activeTab, setActiveTab] = useState<"all" | "today" | "week" | "month">("all");
   const [selectedLocations, setSelectedLocations] = useState<Set<string>>(new Set());
 
-  // Collapsed location groups (expanded by default while searching/filtering dates)
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  // Grup lokasi dilipat secara default — merender ratusan kartu entri
+  // sekaligus membuat scroll tersendat di HP. Saat mencari/memfilter
+  // tanggal, semua grup terbuka otomatis.
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  // Grup yang entri-nya ditampilkan semua (lewat "Tampilkan semua")
+  const [fullGroups, setFullGroups] = useState<Set<string>>(new Set());
 
   // Inline edit state
   const [editingBatch, setEditingBatch] = useState<string | null>(null);
@@ -276,14 +283,14 @@ export default function HistoryPage() {
   };
 
   // While searching or filtering by date the user has narrowed things down on
-  // purpose, so every group is forced open; otherwise the collapsed set rules.
+  // purpose, so every group is forced open; otherwise groups start collapsed.
   const isGroupExpanded = (loc: string) => {
     if (searchQuery.trim() || filterDate) return true;
-    return !collapsedGroups.has(loc);
+    return expandedGroups.has(loc);
   };
 
   const toggleGroup = (loc: string) => {
-    setCollapsedGroups((prev) => {
+    setExpandedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(loc)) next.delete(loc);
       else next.add(loc);
@@ -303,6 +310,8 @@ export default function HistoryPage() {
   const confirmDelete = async () => {
     if (!deleteModal.entry) return;
     const entry = deleteModal.entry;
+    // Tutup popup segera — sisanya diproses di latar.
+    setDeleteModal({ isOpen: false, entry: null });
 
     const prev = [...history];
     const updated = history.filter((e) => e.rowId !== entry.rowId);
@@ -483,7 +492,7 @@ export default function HistoryPage() {
   return (
     <div className="mobile-container pb-32">
       {/* ── Header + toolbar filter ── */}
-      <div className="sticky top-0 z-30 bg-paper/95 backdrop-blur-sm px-4 sm:px-6 pt-4 pb-3 border-b border-border">
+      <div className="sticky top-0 z-30 bg-paper px-4 sm:px-6 pt-4 pb-3 border-b border-border">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-lg font-bold text-text-primary leading-tight whitespace-nowrap">
             Riwayat Stock Opname
@@ -600,6 +609,11 @@ export default function HistoryPage() {
           groupedHistory.map(([loc, entries]) => {
             const locTotalQty = entries.reduce((s, e) => s + e.qty, 0);
             const expanded = isGroupExpanded(loc);
+            const showAll = fullGroups.has(loc);
+            const visibleEntries =
+              showAll || entries.length <= INITIAL_VISIBLE_ENTRIES
+                ? entries
+                : entries.slice(0, INITIAL_VISIBLE_ENTRIES);
 
             return (
               <section
@@ -652,7 +666,7 @@ export default function HistoryPage() {
                 {expanded && (
                 <div>
                 <div className="divide-y divide-border-subtle">
-                  {entries.map((entry) => (
+                  {visibleEntries.map((entry) => (
                     <div key={entry.rowId} className="p-3.5 sm:p-4 hover:bg-primary-pale/10 transition">
                       {/* Baris 1: nama produk + aksi */}
                       <div className="flex items-start justify-between gap-2">
@@ -808,6 +822,17 @@ export default function HistoryPage() {
                     </div>
                   ))}
                 </div>
+                {expanded && entries.length > INITIAL_VISIBLE_ENTRIES && !showAll && (
+                  <div className="border-t border-border-subtle bg-surface-warm/40 p-2">
+                    <button
+                      type="button"
+                      onClick={() => setFullGroups((prev) => new Set(prev).add(loc))}
+                      className="w-full min-h-touch rounded-input text-meta font-bold text-primary hover:bg-primary-pale/40 transition"
+                    >
+                      Tampilkan semua {entries.length.toLocaleString("id-ID")} entri
+                    </button>
+                  </div>
+                )}
                 <div className="p-3 bg-surface-warm/40 border-t border-border-subtle flex justify-end">
                   <button
                     type="button"
