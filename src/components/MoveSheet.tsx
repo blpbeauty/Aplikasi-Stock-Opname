@@ -249,7 +249,7 @@ export default function MoveSheet({
                       {p.productName}
                     </span>
                     <span className="block text-meta text-text-secondary">
-                      SKU {p.sku} · Batch {p.batch || "-"}
+                      {p.batch ? `SKU ${p.sku} · Batch ${p.batch}` : `SKU ${p.sku} · tanpa batch`}
                     </span>
                   </span>
                 </button>

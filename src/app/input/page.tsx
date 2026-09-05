@@ -390,8 +390,8 @@ function InputPageContent() {
   };
 
   const handleAddNewProduct = () => {
-    if (!newProductForm.productName || !newProductForm.sku || !newProductForm.batch) {
-      toast.error("Nama Produk, SKU, dan Batch harus diisi");
+    if (!newProductForm.productName || !newProductForm.sku) {
+      toast.error("Nama Produk dan SKU harus diisi");
       return;
     }
     if (newProductForm.qty <= 0) {
@@ -399,8 +399,20 @@ function InputPageContent() {
       return;
     }
 
+    // Batch mengikuti master data: SKU tanpa batch di master boleh
+    // disimpan tanpa batch; satu batch di master terisi otomatis;
+    // beberapa batch — operator wajib memilih.
+    let batchValue = newProductForm.batch.trim();
+    if (!batchValue) {
+      if (batchesForSku.length === 1) batchValue = batchesForSku[0];
+      else if (batchesForSku.length > 1) {
+        toast.error("Produk ini punya beberapa batch di master — pilih salah satu");
+        return;
+      }
+    }
+
     const all = [...products, ...newProducts];
-    if (all.some((p) => p.sku === newProductForm.sku && p.batch === newProductForm.batch)) {
+    if (all.some((p) => p.sku === newProductForm.sku && p.batch === batchValue)) {
       toast.error("Produk dengan SKU dan Batch yang sama sudah ada");
       return;
     }
@@ -408,7 +420,7 @@ function InputPageContent() {
     const newProduct: Product = {
       productName: newProductForm.productName,
       sku: newProductForm.sku,
-      batch: newProductForm.batch,
+      batch: batchValue,
       barcode: newProductForm.barcode || undefined,
     };
 
@@ -787,7 +799,11 @@ function InputPageContent() {
                 />
               </Field>
 
-              <Field id="add-batch" label="Batch" required>
+              <Field
+                id="add-batch"
+                label="Batch"
+                hint="Opsional — kosongkan bila produk tanpa batch di master."
+              >
                 <div className="relative" ref={batchDropdownRef}>
                   <input
                     id="add-batch"
@@ -801,7 +817,7 @@ function InputPageContent() {
                       if (newProductForm.sku.trim()) setShowBatchDropdown(true);
                     }}
                     className="w-full min-h-touch pl-3 pr-10 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary"
-                    placeholder="Batch…"
+                    placeholder="Batch (opsional)…"
                   />
                   {batchesForSku.length > 0 && (
                     <button
@@ -868,8 +884,24 @@ function InputPageContent() {
               <button
                 type="button"
                 onClick={async () => {
-                  if (!newProductForm.productName || !newProductForm.sku || !newProductForm.batch) {
-                    toast.error("Nama Produk, SKU, dan Batch harus diisi");
+                  if (!newProductForm.productName || !newProductForm.sku) {
+                    toast.error("Nama Produk dan SKU harus diisi");
+                    return;
+                  }
+                  let batchValue = newProductForm.batch.trim();
+                  if (!batchValue) {
+                    if (batchesForSku.length === 1) batchValue = batchesForSku[0];
+                    else if (batchesForSku.length > 1) {
+                      toast.error("Produk ini punya beberapa batch di master — pilih salah satu");
+                      return;
+                    }
+                  }
+                  if (
+                    (allProductsRef.current || []).some(
+                      (p) => p.sku === newProductForm.sku && (p.batch || "") === batchValue
+                    )
+                  ) {
+                    toast.error("SKU dan Batch ini sudah ada di Master Data");
                     return;
                   }
                   setSavingMasterData(true);
@@ -878,14 +910,14 @@ function InputPageContent() {
                       location,
                       newProductForm.productName,
                       newProductForm.sku,
-                      newProductForm.batch,
+                      batchValue,
                       newProductForm.barcode
                     );
                     if (result.success) {
                       const newProd: Product = {
                         productName: newProductForm.productName,
                         sku: newProductForm.sku,
-                        batch: newProductForm.batch,
+                        batch: batchValue,
                         barcode: newProductForm.barcode || undefined,
                       };
                       setProducts((prev) => [...prev, newProd]);
@@ -1055,8 +1087,12 @@ function InputPageContent() {
                           className="flex items-center gap-1.5 min-h-touch px-2.5 bg-surface-warm hover:bg-primary-pale rounded-label border border-border-subtle transition active:scale-95"
                           aria-label={`Edit batch ${product.batch} untuk ${product.productName}`}
                         >
-                          <span className="text-meta text-text-secondary">Batch:</span>
-                          <span className="text-meta font-bold text-text-primary">{product.batch}</span>
+                          <span className="text-meta text-text-secondary">
+                            {product.batch ? "Batch:" : "Tanpa batch"}
+                          </span>
+                          {product.batch && (
+                            <span className="text-meta font-bold text-text-primary">{product.batch}</span>
+                          )}
                           <PencilIcon className="w-3.5 h-3.5 text-text-secondary" />
                         </button>
                       )}

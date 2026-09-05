@@ -141,11 +141,22 @@ export default function AddHistoryEntryModal({
     if (!targetLoc) nextErrors.location = "Lokasi wajib diisi";
     if (!targetName) nextErrors.name = "Nama produk wajib diisi";
     if (!targetSku) nextErrors.sku = "SKU wajib diisi";
-    if (!targetBatch) nextErrors.batch = "Batch wajib diisi (isi - bila tanpa batch)";
     if (quantity <= 0) nextErrors.qty = "Quantity harus lebih dari 0";
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
+
+    // Batch mengikuti master data: boleh kosong bila master tidak punya
+    // batch untuk SKU ini; satu batch terisi otomatis; beberapa batch
+    // wajib dipilih operator.
+    let finalBatch = targetBatch;
+    if (!finalBatch) {
+      if (batchesForSku.length === 1) finalBatch = batchesForSku[0];
+      else if (batchesForSku.length > 1) {
+        setErrors({ batch: "Pilih batch — produk ini punya beberapa batch di master" });
+        return;
+      }
+    }
 
     setSubmitting(true);
     const sessionId = `${user?.email || "user"}_${Date.now()}`;
@@ -154,7 +165,7 @@ export default function AddHistoryEntryModal({
     const item = {
       productName: targetName,
       sku: targetSku,
-      batch: targetBatch,
+      batch: finalBatch,
       qty: quantity,
       isNew: true,
       barcode: barcode.trim() || undefined,
@@ -187,11 +198,11 @@ export default function AddHistoryEntryModal({
         rowId: `optimistic_${Date.now()}`,
         timestamp,
         operator: user?.email || "",
-        location: targetLoc,
-        productName: targetName,
-        sku: targetSku,
-        batch: targetBatch,
-        qty: quantity,
+      location: targetLoc,
+      productName: targetName,
+      sku: targetSku,
+      batch: finalBatch,
+      qty: quantity,
         edited: "",
         editTimestamp: "",
         formula: formula || "",
@@ -325,7 +336,8 @@ export default function AddHistoryEntryModal({
               <>
                 <p className="font-bold text-text-primary text-meta">{p.productName}</p>
                 <p className="text-meta text-text-secondary">
-                  SKU: {p.sku} | Batch: {p.batch}
+                  SKU: {p.sku}
+                  {p.batch ? ` · Batch: ${p.batch}` : " · tanpa batch"}
                 </p>
               </>
             )}
@@ -353,7 +365,12 @@ export default function AddHistoryEntryModal({
               />
             </Field>
 
-            <Field id="add-entry-batch" label="Batch" required error={errors.batch}>
+            <Field
+              id="add-entry-batch"
+              label="Batch"
+              hint="Opsional — kosongkan bila produk tanpa batch di master."
+              error={errors.batch}
+            >
               <div className="relative">
                 <input
                   id="add-entry-batch"
@@ -364,7 +381,7 @@ export default function AddHistoryEntryModal({
                     setErrors((er) => ({ ...er, batch: undefined }));
                   }}
                   className="w-full min-h-touch pl-3 pr-10 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary"
-                  placeholder="Batch (atau -)"
+                  placeholder="Batch (opsional)"
                 />
                 {batchesForSku.length > 0 && (
                   <button
