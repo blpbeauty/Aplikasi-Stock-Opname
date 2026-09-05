@@ -744,9 +744,9 @@ export default function HistoryPage() {
                             }}
                             disabled={inlineSaving === entry.rowId}
                             className="inline-flex items-center gap-1 min-h-touch px-2.5 bg-surface-warm hover:bg-primary-pale rounded-label border border-border font-bold text-text-primary text-meta"
-                            aria-label={`Edit batch ${entry.batch || "-"} untuk ${entry.productName}`}
+                            aria-label={`Edit batch untuk ${entry.productName}`}
                           >
-                            Batch: {entry.batch || "-"}
+                            {entry.batch ? `Batch: ${entry.batch}` : "Tanpa batch"}
                             <PencilIcon className="w-3.5 h-3.5 text-text-secondary" />
                           </button>
                         )}

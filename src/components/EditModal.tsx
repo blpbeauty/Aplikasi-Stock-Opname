@@ -127,7 +127,7 @@ export default function EditModal({
     const nextErrors: typeof errors = {};
     if (!productName.trim()) nextErrors.name = "Nama produk wajib diisi";
     if (!sku.trim()) nextErrors.sku = "SKU wajib diisi";
-    if (!batch.trim()) nextErrors.batch = "Batch wajib diisi (isi - bila memang tanpa batch)";
+    // Batch boleh kosong — produk tanpa batch tersimpan dengan batch kosong.
     if (locChanged && !location.trim()) nextErrors.location = "Lokasi tidak boleh kosong";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
