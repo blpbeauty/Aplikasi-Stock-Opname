@@ -261,7 +261,7 @@ export default function ScanDashboard() {
               Stock Opname
             </h1>
             <p className="text-meta text-text-secondary mt-0.5">
-              Halo, {user?.name?.split(" ")[0] || "Operator"} — cari atau pindai lokasi untuk mulai menghitung.
+              Halo, {user?.name?.split(" ")[0] || "Operator"}
             </p>
           </div>
           <SyncStatusBadge />
@@ -330,10 +330,6 @@ export default function ScanDashboard() {
             </h2>
             <span className="text-2xl font-bold text-text-primary tnum">{stats.progress}%</span>
           </div>
-          <p className="text-meta text-text-secondary mt-0.5">
-            {stats.scannedCount} dari {stats.total} lokasi pernah dihitung
-            {stats.total > 0 && " — seluruh riwayat tersimpan, bukan hanya hari ini"}
-          </p>
           <div
             className="mt-2 w-full h-3 bg-surface-warm rounded-full overflow-hidden border border-border-subtle"
             role="progressbar"
