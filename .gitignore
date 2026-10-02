@@ -39,3 +39,5 @@ next-env.d.ts
 .zed
 .claude
 hist_head_tmp.tsx
+
+/public/offline-assets.js

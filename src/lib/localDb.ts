@@ -30,7 +30,8 @@ export type SyncProgress = {
 // ── Constants ──────────────────────────────────────────────────
 
 const DB_NAME = "StockOpnameCache";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
+const STORE_QUEUE = "writeQueue";
 const STORE_MASTER = "masterData";
 const STORE_HISTORY = "historyData";
 const STORE_META = "syncMeta";
@@ -47,6 +48,8 @@ function openDb(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
+
+      if (!db.objectStoreNames.contains(STORE_QUEUE)) db.createObjectStore(STORE_QUEUE, { keyPath: "id", autoIncrement: true });
 
       // Master Data store — keyed by location+sku+batch
       if (!db.objectStoreNames.contains(STORE_MASTER)) {
@@ -184,8 +187,12 @@ async function setLastSyncTime(ts: number): Promise<void> {
 
 export async function hasLocalData(): Promise<boolean> {
   try {
-    const master = await getAll<MasterProduct>(STORE_MASTER);
-    return master.length > 0;
+    const store = await txStore(STORE_META, "readonly");
+    return await new Promise<boolean>((resolve, reject) => {
+      const request = store.get("fullMasterVersion");
+      request.onsuccess = () => resolve(request.result?.value === 2);
+      request.onerror = () => reject(request.error);
+    });
   } catch {
     return false;
   }
@@ -195,17 +202,54 @@ export async function hasLocalData(): Promise<boolean> {
 
 const API_URL = (typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_APPS_SCRIPT_URL || "" : "").trim();
 
-async function fetchFromGAS(action: string, data: Record<string, unknown> = {}): Promise<any> {
-  const response = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain" },
-    body: JSON.stringify({ action, ...data }),
-  });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return response.json();
+const DOWNLOAD_TIMEOUT_MS = 60_000;
+
+async function fetchFromGAS(
+  action: string,
+  data: Record<string, unknown> = {},
+  onStatus?: (message: string) => void
+): Promise<any> {
+  const label = action === "getHistory" ? "Riwayat" : "Master Data";
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    if (isOffline()) throw new Error("Sedang offline. Sambungkan internet atau akhiri Uji offline untuk mengunduh data terbaru.");
+    if (!API_URL) throw new Error("Alamat Apps Script belum dikonfigurasi.");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
+    const slowNotice = setTimeout(() => onStatus?.(`Menunggu ${label} dari server… koneksi masih diproses (percobaan ${attempt}/2).`), 10_000);
+    let retry = false;
+    try {
+      const response = await fetch(API_URL, {
+        signal: controller.signal,
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action, ...data }),
+      });
+      if (!response.ok) {
+        retry = response.status === 429 || response.status >= 500;
+        throw new Error(`Server mengembalikan HTTP ${response.status} saat mengunduh ${label}.`);
+      }
+      return await response.json();
+    } catch (error: any) {
+      const timedOut = controller.signal.aborted || error?.name === "TimeoutError" || error?.name === "AbortError";
+      const networkError = error instanceof TypeError;
+      retry = retry || timedOut || networkError;
+      if (attempt < 2 && retry && !isOffline()) {
+        onStatus?.(`Unduhan ${label} belum selesai. Mencoba kembali (2/2)…`);
+      } else {
+        if (timedOut) throw new Error(`${label} belum selesai diunduh dalam 60 detik per percobaan. Server lambat; silakan coba lagi. Data perangkat tetap tersimpan.`);
+        if (networkError) throw new Error(`Tidak dapat terhubung ke Apps Script untuk mengunduh ${label}. Periksa koneksi lalu coba lagi.`);
+        if (error instanceof SyntaxError) throw new Error(`Respons ${label} bukan data JSON. Periksa akses deployment Apps Script.`);
+        throw error;
+      }
+    } finally {
+      clearTimeout(timeout);
+      clearTimeout(slowNotice);
+    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
 }
 
-export async function syncAllData(
+async function syncAllDataInternal(
   onProgress?: (progress: SyncProgress) => void
 ): Promise<{ masterCount: number; historyCount: number }> {
   const progress: SyncProgress = {
@@ -218,67 +262,22 @@ export async function syncAllData(
   const report = (step: string, percent: number) => {
     progress.step = step;
     progress.percent = percent;
-    onProgress?.(progress);
+    onProgress?.({ ...progress });
   };
 
   try {
-    // Step 1: Download all master data (products with locations)
-    report("Mengunduh Master Data...", 10);
-    const masterResult = await fetchFromGAS("getAllProducts");
-
-    let masterProducts: MasterProduct[] = [];
-    if (masterResult.success && masterResult.products) {
-      // getAllProducts returns unique products without location
-      // We need searchProductsGlobal or a bulk read — but let's use
-      // the existing getProducts per location approach via a new bulk endpoint
-      // For now, store what we get from getAllProducts
-      masterProducts = masterResult.products.map((p: any) => ({
-        id: `${String(p.sku || "").trim()}__${String(p.batch || "").trim()}`,
-        productName: String(p.productName ?? ""),
-        sku: String(p.sku ?? ""),
-        batch: String(p.batch ?? ""),
-        barcode: String(p.barcode ?? ""),
-        location: "", // getAllProducts doesn't include location
-      }));
+    report("Mengunduh Master Data lengkap...", 10);
+    const masterResult = await fetchFromGAS("getAllMasterData", {}, message => report(message, 10));
+    if (!masterResult.success || !Array.isArray(masterResult.products)) {
+      throw new Error(masterResult.message || "Perbarui deployment Apps Script: getAllMasterData belum tersedia.");
     }
-
-    report("Mengunduh data lokasi...", 30);
-    // Also get all locations with their products for location-based lookup
-    const locResult = await fetchFromGAS("getAllLocations");
-    let allLocations: Array<{ locationCode: string; productCount: number }> = [];
-    if (locResult.success && locResult.locations) {
-      allLocations = locResult.locations;
-    }
-
-    // For each location, fetch products to build location-specific master data
-    // But this would be too many requests. Instead, use searchProductsGlobal with a broad query
-    // OR we create a new GAS endpoint. 
-    // Best approach: use a single broad search to get all products with locations
-    report("Mengunduh produk per lokasi...", 40);
-    
-    // Use searchProductsGlobal with common prefixes to get location-mapped products
-    // Better: fetch all master data in one call via a new lightweight approach
-    // We'll use the existing Master Data sheet structure
-    const globalResult = await fetchFromGAS("searchProductsGlobal", { query: "" });
-    // searchProductsGlobal requires min 2 chars — we need to add a "getAllMasterData" action
-    // For now, let's work with what we have: store products without location from getAllProducts
-    // and also try to get location-mapped data
-
-    // Actually, let's create a smarter approach: 
-    // We already have getAllProducts (unique sku+batch) and getAllLocations
-    // For the barcode lookup, getAllProducts is sufficient (barcode→product mapping)
-    // For getProducts(location), we need location-specific data
-    // We'll fetch per-location in background as needed
-    
-    // Store master products (for barcode lookup + product search)
-    report("Menyimpan Master Data...", 50);
-    await clearStore(STORE_MASTER);
-    if (masterProducts.length > 0) {
-      await putAll(STORE_MASTER, masterProducts);
-    }
-
-    // Store location list in meta
-    await putOne(STORE_META, { key: "allLocations", value: allLocations });
+    const masterProducts = masterResult.products.map((p: any) => ({
+      ...p, location: String(p.location).trim().toUpperCase(),
+      id: `${String(p.location).trim().toUpperCase()}__${String(p.sku).trim()}__${String(p.batch).trim()}`,
+    }));
+    const counts = new Map<string, number>();
+    masterProducts.forEach((p: MasterProduct) => counts.set(p.location, (counts.get(p.location) || 0) + 1));
+    const allLocations = [...counts].map(([locationCode, productCount]) => ({ locationCode, productCount }));
 
     // Step 2: Download all history
     report("Mengunduh Riwayat...", 60);
@@ -286,8 +285,9 @@ export async function syncAllData(
       operator: "", 
       filter: undefined, 
       allOperators: true 
-    });
+    }, message => report(message, 60));
 
+    if (!historyResult.success || !Array.isArray(historyResult.history)) throw new Error(historyResult.message || "Gagal mengunduh riwayat");
     let historyEntries: HistoryEntry[] = [];
     if (historyResult.success && historyResult.history) {
       historyEntries = historyResult.history.map((e: any) => ({
@@ -306,27 +306,38 @@ export async function syncAllData(
       }));
     }
 
-    report("Menyimpan Riwayat...", 80);
-    await clearStore(STORE_HISTORY);
-    if (historyEntries.length > 0) {
-      await putAll(STORE_HISTORY, historyEntries);
-    }
-
-    // Step 3: Mark sync complete
+    report("Menyimpan data...", 80);
     const now = Date.now();
-    await setLastSyncTime(now);
+    // Replace the snapshot atomically; pending writes always win over downloaded data.
+    const db = await openDb();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction([STORE_MASTER, STORE_HISTORY, STORE_META, STORE_QUEUE], "readwrite");
+      const request = tx.objectStore(STORE_QUEUE).getAll();
+      request.onsuccess = () => {
+        tx.objectStore(STORE_MASTER).clear();
+        tx.objectStore(STORE_HISTORY).clear();
+        masterProducts.forEach((p: MasterProduct) => tx.objectStore(STORE_MASTER).put(p));
+        historyEntries.forEach(e => tx.objectStore(STORE_HISTORY).put(e));
+        tx.objectStore(STORE_META).put({ key: "allLocations", value: allLocations });
+        tx.objectStore(STORE_META).put({ key: "lastSync", value: now });
+        tx.objectStore(STORE_META).put({ key: "fullMasterVersion", value: 2 });
+        (request.result as PendingWrite[]).forEach(job => applyPending(tx, job));
+      };
+      tx.oncomplete = () => resolve();
+      tx.onabort = tx.onerror = () => reject(tx.error);
+    });
 
     report("Sinkronisasi selesai!", 100);
     progress.status = "synced";
     progress.lastSyncTime = now;
-    onProgress?.(progress);
+    onProgress?.({ ...progress });
 
     return { masterCount: masterProducts.length, historyCount: historyEntries.length };
   } catch (error: any) {
     progress.status = "error";
     progress.error = error?.message || "Gagal sinkronisasi";
     progress.step = "Gagal sinkronisasi data";
-    onProgress?.(progress);
+    onProgress?.({ ...progress });
     throw error;
   }
 }
@@ -364,9 +375,12 @@ export async function syncLocationProducts(locationCode: string): Promise<void> 
 /** Lookup barcode in local data — returns matching product or null */
 export async function lookupBarcodeLocal(barcode: string): Promise<Product | null> {
   try {
-    const all = await getAll<MasterProduct>(STORE_MASTER);
-    const target = barcode.trim();
-    const found = all.find((p) => (p.barcode || "").trim() === target);
+    const store = await txStore(STORE_MASTER, "readonly");
+    const found = await new Promise<MasterProduct | undefined>((resolve, reject) => {
+      const request = store.index("barcode").get(barcode.trim());
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
     if (found) {
       return {
         productName: found.productName,
@@ -384,10 +398,14 @@ export async function lookupBarcodeLocal(barcode: string): Promise<Product | nul
 /** Get products for a specific location from local data */
 export async function getProductsLocal(locationCode: string): Promise<Product[] | null> {
   try {
-    const all = await getAll<MasterProduct>(STORE_MASTER);
     const target = locationCode.trim().toUpperCase();
-    const products = all.filter((p) => p.location.trim().toUpperCase() === target);
-    if (products.length === 0) return null; // location not synced yet
+    const store = await txStore(STORE_MASTER, "readonly");
+    const products = await new Promise<MasterProduct[]>((resolve, reject) => {
+      const request = store.index("location").getAll(target);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    if (!products.length && !await hasLocalData()) return null;
     return products.map((p) => ({
       productName: p.productName,
       sku: p.sku,
@@ -504,7 +522,17 @@ export async function getAllLocationsLocal(): Promise<Array<{ locationCode: stri
         req.onerror = () => resolve([]);
       }).catch(() => resolve([]));
     });
-    return Array.isArray(stored) ? stored : [];
+    const locations: Array<{ locationCode: string; productCount: number }> = Array.isArray(stored) ? stored : [];
+    const counts = new Map<string, number>();
+    for (const product of await getAll<MasterProduct>(STORE_MASTER)) {
+      if (product.location) counts.set(product.location, (counts.get(product.location) || 0) + 1);
+    }
+    for (const [locationCode, productCount] of counts) {
+      const existing = locations.find(l => l.locationCode === locationCode);
+      if (existing) existing.productCount = productCount;
+      else locations.push({ locationCode, productCount });
+    }
+    return locations;
   } catch {
     return [];
   }
@@ -630,4 +658,87 @@ export async function clearLocalDb(): Promise<void> {
     await clearStore(STORE_META);
     locationSyncCache.clear();
   } catch { /* non-critical */ }
+}
+
+
+export function isOffline(): boolean {
+  return typeof navigator !== "undefined" && (!navigator.onLine || localStorage.getItem("testOffline") === "true");
+}
+
+export type PendingWrite = {
+  id?: number;
+  action: "saveStockOpname" | "updateEntry" | "addMasterProduct";
+  data: Record<string, any>;
+  entries: HistoryEntry[];
+  previous?: HistoryEntry;
+  previousMaster?: Product;
+  error?: string;
+};
+
+function applyPending(tx: IDBTransaction, job: PendingWrite) {
+  if (job.action === "addMasterProduct") {
+    const p = job.data;
+    tx.objectStore(STORE_MASTER).put({ ...p, location: p.locationCode, id: `${p.locationCode}__${p.sku.trim()}__${p.batch.trim()}` });
+  }
+  if (job.action === "updateEntry" && job.previous) {
+    const old = job.previous;
+    const entry = job.entries[0];
+    if (entry && (old.location !== entry.location || old.sku !== entry.sku || old.batch !== entry.batch || old.productName !== entry.productName)) {
+      const store = tx.objectStore(STORE_MASTER);
+      const oldKey = `${old.location}__${old.sku.trim()}__${old.batch.trim()}`;
+      if (job.previousMaster) {
+        store.delete(oldKey);
+        store.put({ ...job.previousMaster, location: entry.location, sku: entry.sku, batch: entry.batch,
+          productName: entry.productName, id: `${entry.location}__${entry.sku.trim()}__${entry.batch.trim()}` });
+      }
+    }
+  }
+  job.entries.forEach(entry => tx.objectStore(STORE_HISTORY).put(entry));
+  if (job.action === "saveStockOpname") {
+    job.data.items.forEach((item: Product) => {
+      const location = job.data.location;
+      tx.objectStore(STORE_MASTER).put({ ...item, location, id: `${location}__${item.sku.trim()}__${item.batch.trim()}` });
+    });
+  }
+}
+
+export async function enqueueWrite(job: PendingWrite): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction([STORE_QUEUE, STORE_HISTORY, STORE_MASTER], "readwrite");
+    tx.objectStore(STORE_QUEUE).add(job);
+    applyPending(tx, job);
+    tx.oncomplete = () => resolve();
+    tx.onabort = tx.onerror = () => reject(tx.error || new Error("Penyimpanan perangkat gagal"));
+  });
+  window.dispatchEvent(new Event("outbox-change"));
+}
+
+export async function getPendingWrites(): Promise<PendingWrite[]> { return getAll<PendingWrite>(STORE_QUEUE); }
+export async function finishPendingWrite(id: number): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_QUEUE, "readwrite");
+    tx.objectStore(STORE_QUEUE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onabort = tx.onerror = () => reject(tx.error);
+  });
+  window.dispatchEvent(new Event("outbox-change"));
+}
+export async function failPendingWrite(job: PendingWrite, error: string): Promise<void> {
+  await putAll(STORE_QUEUE, [{ ...job, error }]);
+  window.dispatchEvent(new Event("outbox-change"));
+}
+
+export async function syncAllData(onProgress?: (progress: SyncProgress) => void) {
+  const run = () => syncAllDataInternal(onProgress);
+  return withSyncLock(run);
+}
+
+let syncTail: Promise<unknown> = Promise.resolve();
+export async function withSyncLock<T>(run: () => Promise<T>): Promise<T> {
+  if (navigator.locks) return await navigator.locks.request("stock-opname-sync", run);
+  const next = syncTail.then(run, run);
+  syncTail = next.catch(() => {});
+  return next;
 }

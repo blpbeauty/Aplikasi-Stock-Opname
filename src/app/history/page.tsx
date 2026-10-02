@@ -85,6 +85,16 @@ export default function HistoryPage() {
   const [editingQtyFormula, setEditingQtyFormula] = useState("");
   const [inlineSaving, setInlineSaving] = useState<string | null>(null);
 
+  // Header collapse on scroll
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const lastScrollY = useRef(0);
+
+  // Sync delay feedback
+  const [waitingSync, setWaitingSync] = useState(false);
+
+  // Sort
+  const [sortBy, setSortBy] = useState<"time" | "name" | "qty">("time");
+
   const allProductsRef = useRef<Product[] | null>(null);
   const allLocationsRef = useRef<Array<{ locationCode: string; productCount: number }> | null>(null);
 
@@ -134,6 +144,21 @@ export default function HistoryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Scroll-based header collapse
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y > 120 && y > lastScrollY.current + 5) {
+        setHeaderCollapsed(true);
+      } else if (y < lastScrollY.current - 10) {
+        setHeaderCollapsed(false);
+      }
+      lastScrollY.current = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const normalizeEntry = (e: any): HistoryEntry => ({
     ...e,
     rowId: String(e.rowId ?? ""),
@@ -162,7 +187,9 @@ export default function HistoryPage() {
     const lastSave = Number(localStorage.getItem("lastSaveTs") || "0");
     const sinceSave = Date.now() - lastSave;
     if (sinceSave < 15_000) {
+      setWaitingSync(true);
       await new Promise((r) => setTimeout(r, Math.max(15_000 - sinceSave, 0)));
+      setWaitingSync(false);
     }
 
     try {
@@ -241,11 +268,13 @@ export default function HistoryPage() {
     }
 
     return [...result].sort((a, b) => {
+      if (sortBy === "name") return a.productName.localeCompare(b.productName);
+      if (sortBy === "qty") return a.qty - b.qty;
       const ta = parseTimestamp(a.timestamp)?.getTime() || 0;
       const tb = parseTimestamp(b.timestamp)?.getTime() || 0;
       return tb - ta;
     });
-  }, [history, searchQuery, filterDate, filterDateEnd, selectedLocations]);
+  }, [history, searchQuery, filterDate, filterDateEnd, selectedLocations, sortBy]);
 
   // Grouped by location
   const groupedHistory = useMemo(() => {
@@ -272,6 +301,16 @@ export default function HistoryPage() {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([loc, count]) => ({ location: loc, count }));
   }, [history]);
+
+  // Summary stats for filtered results
+  const summary = useMemo(() => {
+    const totalQty = filteredHistory.reduce((s, e) => s + e.qty, 0);
+    return {
+      count: filteredHistory.length,
+      locCount: groupedHistory.length,
+      totalQty,
+    };
+  }, [filteredHistory, groupedHistory]);
 
   const toggleLocation = (loc: string) => {
     setSelectedLocations((prev) => {
@@ -310,7 +349,6 @@ export default function HistoryPage() {
   const confirmDelete = async () => {
     if (!deleteModal.entry) return;
     const entry = deleteModal.entry;
-    // Tutup popup segera — sisanya diproses di latar.
     setDeleteModal({ isOpen: false, entry: null });
 
     const prev = [...history];
@@ -321,18 +359,42 @@ export default function HistoryPage() {
     setCache(ck, updated);
     clearCache("products:");
 
-    // Entri yang baru dibuat sesi ini belum punya baris di server
-    // (rowId optimistic_*) — cukup hapus lokal, jangan panggil server.
+    // Entri optimistic — hapus lokal langsung, tanpa undo.
     if (entry.rowId.startsWith("optimistic_")) {
       deleteHistoryEntryLocal(entry.rowId).catch(() => {});
+      toast.success("Entri dihapus");
       return;
     }
+
+    // Undo window: beri user 5 detik untuk membatalkan.
+    let undone = false;
+    toast(
+      (t) => (
+        <div className="flex items-center gap-3">
+          <span className="text-meta font-semibold">Entri dihapus</span>
+          <button
+            onClick={() => {
+              undone = true;
+              toast.dismiss(t.id);
+              setHistory(prev);
+              setCache(ck, prev);
+            }}
+            className="px-3 py-1.5 bg-primary text-ivory text-meta font-bold rounded-label whitespace-nowrap active:scale-95 transition"
+          >
+            Batalkan
+          </button>
+        </div>
+      ),
+      { duration: 5000, id: `undo-${entry.rowId}` }
+    );
+
+    await new Promise((r) => setTimeout(r, 5500));
+    if (undone) return;
 
     try {
       const result = await deleteEntryApi(entry.rowId);
       if (!result.success) {
         if (/tidak ditemukan/i.test(result.message || "")) {
-          // Server tidak mengenal baris ini — anggap sudah terhapus.
           deleteHistoryEntryLocal(entry.rowId).catch(() => {});
           return;
         }
@@ -400,7 +462,7 @@ export default function HistoryPage() {
     setInlineSaving(null);
     // Baris bisa "hilang" dari grup ini karena pindah lokasi — beri tahu operator.
     if (data.location) {
-      toast.success(`Berhasil pindah ke ${data.location}`);
+      toast.success(`Perubahan ke ${data.location} tersimpan di perangkat, menunggu sinkronisasi`);
     }
   };
 
@@ -492,7 +554,7 @@ export default function HistoryPage() {
   return (
     <div className="mobile-container pb-32">
       {/* ── Header + toolbar filter ── */}
-      <div className="sticky top-0 z-30 bg-paper px-4 sm:px-6 pt-4 pb-3 border-b border-border">
+      <div className={`sticky top-0 z-30 bg-paper px-4 sm:px-6 border-b border-border transition-all duration-200 ${headerCollapsed ? "pt-2 pb-2" : "pt-4 pb-3"}`}>
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-lg font-bold text-text-primary leading-tight whitespace-nowrap">
             Riwayat Stock Opname
@@ -533,7 +595,8 @@ export default function HistoryPage() {
         </div>
 
         {/* ── Filter cepat ── */}
-        <div className="flex gap-1.5 mt-2 overflow-x-auto hide-scrollbar" role="group" aria-label="Filter rentang waktu">
+        <div className={`overflow-hidden transition-all duration-200 ${headerCollapsed ? "max-h-0 opacity-0 mt-0" : "max-h-16 opacity-100 mt-2"}`}>
+        <div className="flex gap-1.5 overflow-x-auto hide-scrollbar" role="group" aria-label="Filter rentang waktu">
           {[
             { id: "all", label: "Semua" },
             { id: "today", label: "Hari Ini" },
@@ -554,14 +617,24 @@ export default function HistoryPage() {
             </button>
           ))}
         </div>
+        </div>
       </div>
+
+      {/* ── Banner sinkronisasi menunggu ── */}
+      {waitingSync && (
+        <div className="mx-4 sm:mx-6 mt-3 px-3.5 py-2.5 bg-info-bg border border-info/20 rounded-card flex items-center gap-2 text-info text-meta font-semibold animate-fadeIn">
+          <RefreshIcon className="w-4 h-4 animate-spin shrink-0" />
+          <span>Menunggu sinkronisasi server…</span>
+        </div>
+      )}
 
       <div className="px-4 sm:px-6 pt-3 space-y-4">
         {/* ── Filter area gudang ── */}
         {uniqueLocations.length > 1 && (
           <div>
             <p className="text-meta font-bold text-text-secondary px-1">Filter Area Gudang:</p>
-            <div className="flex gap-1.5 mt-1.5 overflow-x-auto hide-scrollbar pb-1">
+            <div className="relative">
+            <div className="flex gap-1.5 mt-1.5 overflow-x-auto hide-scrollbar pb-1 pr-8">
               {uniqueLocations.map((loc) => {
                 const isSelected = selectedLocations.has(loc.location);
                 return (
@@ -587,6 +660,25 @@ export default function HistoryPage() {
                 );
               })}
             </div>
+            <div className="absolute right-0 top-1.5 bottom-1 w-8 bg-gradient-to-l from-[var(--primary-bg)] to-transparent pointer-events-none" />
+            </div>
+          </div>
+        )}
+
+        {/* ── Summary bar + sort ── */}
+        {!loading && filteredHistory.length > 0 && (
+          <div className="flex items-center justify-between gap-2 px-1 text-meta text-text-secondary">
+            <span>{summary.count.toLocaleString("id-ID")} entri di {summary.locCount} lokasi — <span className="font-bold text-text-primary tnum">{summary.totalQty.toLocaleString("id-ID")} pcs</span></span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "time" | "name" | "qty")}
+              className="min-h-touch px-2 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary"
+              aria-label="Urutan"
+            >
+              <option value="time">Terbaru</option>
+              <option value="name">Nama A-Z</option>
+              <option value="qty">Qty terkecil</option>
+            </select>
           </div>
         )}
 
@@ -760,18 +852,18 @@ export default function HistoryPage() {
                               onExprCommit={(expr) => setEditingQtyFormula(expr)}
                               ariaLabel={`Kuantitas baru untuk ${entry.productName}`}
                             />
-                            <div className="flex gap-1.5">
+                            <div className="flex gap-3">
                               <button
                                 type="button"
                                 onClick={() => saveInlineQty(entry)}
-                                className="min-h-touch px-4 bg-primary text-ivory text-meta font-bold rounded-input"
+                                className="min-h-touch px-5 bg-primary text-ivory text-meta font-bold rounded-input active:scale-95 transition"
                               >
                                 Simpan
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setEditingQty(null)}
-                                className="min-h-touch px-4 bg-surface-warm text-text-primary text-meta font-bold rounded-input"
+                                className="min-h-touch px-5 bg-surface-warm text-text-primary text-meta font-bold rounded-input border border-border active:scale-95 transition"
                               >
                                 Batal
                               </button>

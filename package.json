@@ -4,9 +4,10 @@
   "description": "Aplikasi Stock Opname (Inventory Count)",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node scripts/build-offline-assets.cjs",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "tsx --test tests/*.test.ts"
   },
   "repository": {
     "type": "git",
@@ -32,5 +33,9 @@
     "react-hot-toast": "^2.6.0",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.5",
+    "tsx": "^4.23.15"
   }
 }

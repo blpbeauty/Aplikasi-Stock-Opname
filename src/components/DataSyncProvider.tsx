@@ -1,12 +1,13 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { flushPendingWrites } from "@/lib/api";
+import { getPendingWrites, isOffline } from "@/lib/localDb";
 import { useAuth } from "./AuthProvider";
 import {
   syncAllData,
   hasLocalData,
   getLastSyncTime,
-  clearLocalDb,
   SyncProgress,
 } from "@/lib/localDb";
 
@@ -44,6 +45,10 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
     percent: 0,
     lastSyncTime: null,
   });
+  const [pending, setPending] = useState(0);
+  const [queueError, setQueueError] = useState("");
+  const [offline, setOffline] = useState(false);
+  const [testingOffline, setTestingOffline] = useState(false);
   const syncingRef = useRef(false);
   const initializedRef = useRef(false);
 
@@ -61,6 +66,7 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
         });
       }
 
+      await flushPendingWrites();
       const result = await syncAllData((progress) => {
         if (!isBackground) {
           setSyncProgress(progress);
@@ -111,10 +117,34 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
   }, [lastSyncTime]);
 
   const forceSync = useCallback(async () => {
-    await clearLocalDb();
-    setIsReady(false);
     await doSync(false);
   }, [doSync]);
+
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    const refresh = async () => {
+      const jobs = await getPendingWrites();
+      if (!alive) return;
+      setPending(jobs.length);
+      setQueueError(jobs.find(job => job.error)?.error || "");
+      setOffline(isOffline());
+      setTestingOffline(localStorage.getItem("testOffline") === "true");
+    };
+    const reconnect = () => { void refresh(); void flushPendingWrites(); };
+    void refresh();
+    window.addEventListener("outbox-change", refresh);
+    window.addEventListener("online", reconnect);
+    window.addEventListener("offline", refresh);
+    const timer = setInterval(reconnect, 15000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+      window.removeEventListener("outbox-change", refresh);
+      window.removeEventListener("online", reconnect);
+      window.removeEventListener("offline", refresh);
+    };
+  }, [user]);
 
   // Initialize on user login
   useEffect(() => {
@@ -203,17 +233,39 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
             <div className="border border-danger/30 bg-danger-bg rounded-input px-4 py-3 text-left mb-5">
               <h2 className="text-lg font-bold text-danger">Gagal mengunduh data</h2>
               <p className="text-meta text-text-secondary mt-1">{syncProgress.step}</p>
+              {syncProgress.error && <p className="text-sm text-danger mt-2 break-words">{syncProgress.error}</p>}
             </div>
             <button
-              onClick={() => doSync(false)}
+              onClick={() => {
+                if (localStorage.getItem("testOffline") === "true") {
+                  localStorage.setItem("testOffline", "false");
+                  setTestingOffline(false);
+                  setOffline(isOffline());
+                }
+                void doSync(false);
+              }}
               className="w-full min-h-touch bg-primary text-ivory font-bold rounded-input transition active:scale-[0.98]"
             >
-              Coba Lagi
+              {testingOffline ? "Akhiri uji offline dan unduh" : "Coba Lagi"}
             </button>
           </div>
         </div>
       )}
 
+      {user && <div className="bg-surface-warm border-b border-border px-4 py-2 text-sm" role="status">
+        <div className="flex flex-wrap items-center gap-2">
+          <span>{offline ? "Offline" : "Online"} · {pending ? `${pending} perubahan menunggu dikirim` : "Tidak ada antrean kirim"}</span>
+          <button className="underline font-bold" disabled={!isReady} onClick={() => {
+            const next = !testingOffline;
+            localStorage.setItem("testOffline", String(next));
+            setTestingOffline(next); setOffline(isOffline());
+            if (!next) void flushPendingWrites();
+          }}>{testingOffline ? "Akhiri uji offline" : "Uji offline"}</button>
+          {!!pending && !offline && <button className="underline" onClick={() => void flushPendingWrites()}>Kirim ulang</button>}
+        </div>
+        {queueError && <p className="text-danger break-words">Belum terkirim: {queueError}. Data tetap tersimpan di perangkat.</p>}
+        {testingOffline && <p>Uji offline aktif: scan, input, dan edit menggunakan data perangkat.</p>}
+      </div>}
       {children}
     </DataSyncContext.Provider>
   );

@@ -116,6 +116,8 @@ function doPost(e) {
       case "searchLocations": result = searchLocations(data.query); break;
       case "warmupCache":     result = warmupCache(data); break;
       case "getAllLocations":  result = getAllLocations(); break;
+      case "getSyncCapabilities": result = { success: true, stableWriteIds: true }; break;
+      case "getAllMasterData": result = getAllMasterData(); break;
       case "getAllProducts":   result = getAllProducts(); break;
       case "moveProducts":    result = moveProducts(data); break;
       case "searchProductsGlobal": result = searchProductsGlobal(data.query); break;
@@ -330,7 +332,7 @@ function addMasterProduct(data) {
     // Check if already exists
     for (var i = 1; i < mdData.length; i++) {
       if (normalizeLocation(mdData[i][0]) === loc && normalizeText(mdData[i][2]) === sku && normalizeText(mdData[i][3]) === batch) {
-        return { success: false, message: "Produk dengan SKU dan Batch yang sama sudah ada di lokasi ini" };
+        return { success: true, message: "Produk sudah tersedia di lokasi ini" };
       }
     }
 
@@ -371,13 +373,19 @@ function saveStockOpname(data) {
       return { success: false, message: "Tidak ada item untuk disimpan" };
     }
 
-    var sessionId = generateShortId("SO-", 6);
+    var sessionId = data.sessionId || generateShortId("SO-", 6);
+    var previous = sheet.getDataRange().getValues().slice(1).filter(function(row) { return row[0] === sessionId; });
+    if (previous.length) {
+      // Retry after a lost response: finish master synchronization without appending again.
+      syncMasterDataInternal(data.location, data.items);
+      return { success: true, sessionId: sessionId, rowIds: previous.map(function(row) { return row[1]; }) };
+    }
     var timestamp = formatTimestamp(data.timestamp);
     var operatorName = getOperatorName(data.operator);
     var loc = normalizeLocation(data.location);
 
-    var rows = data.items.map(function(item) {
-      return [sessionId, generateShortId("R-", 6), timestamp, operatorName, loc,
+    var rows = data.items.map(function(item, index) {
+      return [sessionId, data.rowIds && data.rowIds[index] || generateShortId("R-", 6), timestamp, operatorName, loc,
               item.productName, item.sku ? "'" + item.sku : "", item.batch ? "'" + item.batch : "", item.qty, "No", "", item.formula || ""];
     });
 
@@ -429,9 +437,12 @@ function syncMasterDataInternal(locationCode, items) {
 function updateEntry(data) {
   return withScriptLock(function() {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Stock Opname Results");
-    var values = sheet.getDataRange().getValues();
-
-    for (var i = 1; i < values.length; i++) {
+    if (sheet.getLastRow() < 2) return { success: false, message: "Entry tidak ditemukan" };
+    var match = sheet.getRange(2, 2, sheet.getLastRow() - 1, 1).createTextFinder(String(data.rowId)).matchEntireCell(true).findNext();
+    if (!match) return { success: false, message: "Entry tidak ditemukan" };
+    var values = [];
+    values[match.getRow() - 1] = sheet.getRange(match.getRow(), 1, 1, 12).getValues()[0];
+    for (var i = match.getRow() - 1; i < values.length; i++) {
       if (values[i][1] === data.rowId) {
         // Capture OLD values before updating (for Master Data sync)
         var oldLocation = normalizeLocation(values[i][4]);
@@ -448,7 +459,6 @@ function updateEntry(data) {
         row[9] = "Yes";
         row[10] = formatTimestamp(data.editTimestamp);
         if (data.formula !== undefined) row[11] = data.formula || "";
-        sheet.getRange(i + 1, 1, 1, row.length).setValues([row]);
 
         // Sync changes to Master Data if location, productName, sku, or batch changed
         var newLocation = normalizeLocation(data.location !== undefined ? data.location : oldLocation);
@@ -464,15 +474,14 @@ function updateEntry(data) {
                 normalizeText(String(mdData[j][2])) === oldSku &&
                 normalizeText(String(mdData[j][3])) === oldBatch) {
               // Update the Master Data row with new values
-              if (newLocation !== oldLocation) mdSheet.getRange(j + 1, 1).setValue(newLocation); // col A = Location
-              mdSheet.getRange(j + 1, 2).setValue(newProductName); // col B = Product Name
-              mdSheet.getRange(j + 1, 3).setValue(newSku ? "'" + newSku : "");         // col C = SKU
-              mdSheet.getRange(j + 1, 4).setValue(newBatch ? "'" + newBatch : "");       // col D = Batch
+              mdSheet.getRange(j + 1, 1, 1, 4).setValues([[newLocation, newProductName, newSku ? "'" + newSku : "", newBatch ? "'" + newBatch : ""]]);
               break; // Only update exact match
             }
           }
         }
 
+        // Commit history last so a failed master update can be retried using the old values.
+        sheet.getRange(i + 1, 1, 1, row.length).setValues([row]);
         bumpCacheVersion();
         return { success: true, message: "Entry berhasil diupdate" };
       }
@@ -673,4 +682,15 @@ function moveProducts(data) {
     if (mergedCount > 0) msg += " (" + mergedCount + " digabung karena sudah ada di tujuan)";
     return { success: true, message: msg, moved: movedCount, merged: mergedCount };
   });
+}
+
+
+// Full location mapping for IndexedDB. Unlike getAllProducts, do not deduplicate across locations.
+function getAllMasterData() {
+  return { success: true, products: readMasterData().slice(1).filter(function(row) {
+    return normalizeLocation(row[0]) && normalizeText(row[2]);
+  }).map(function(row) {
+    return { location: normalizeLocation(row[0]), productName: normalizeText(row[1]),
+      sku: normalizeText(row[2]), batch: normalizeText(row[3]), barcode: normalizeText(row[4]) };
+  }) };
 }

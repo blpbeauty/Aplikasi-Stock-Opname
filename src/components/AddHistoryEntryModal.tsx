@@ -7,9 +7,7 @@ import {
   searchProductsApi,
   searchLocationsApi,
   saveStockOpnameApi,
-  addMasterProductApi,
 } from "@/lib/api";
-import { addHistoryEntryLocal } from "@/lib/localDb";
 import { useAuth } from "@/components/AuthProvider";
 import ScannerModal from "@/components/ScannerModal";
 import QtyInput from "@/components/QtyInput";
@@ -41,7 +39,6 @@ export default function AddHistoryEntryModal({
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [formula, setFormula] = useState("");
-  const [saveToMaster, setSaveToMaster] = useState(false);
 
   const [scanningBarcode, setScanningBarcode] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
@@ -63,7 +60,6 @@ export default function AddHistoryEntryModal({
       setBarcode("");
       setQuantity(1);
       setFormula("");
-      setSaveToMaster(false);
       setErrors({});
       setShowBarcodeScanner(false);
       setScanningBarcode(false);
@@ -187,12 +183,6 @@ export default function AddHistoryEntryModal({
         return;
       }
 
-      if (saveToMaster) {
-        addMasterProductApi(targetLoc, targetName, targetSku, targetBatch, barcode.trim()).catch(
-          () => {}
-        );
-      }
-
       const newEntry: HistoryEntry = {
         sessionId: result.sessionId || sessionId,
         rowId: result.rowIds?.[0] || `optimistic_${Date.now()}`,
@@ -208,7 +198,7 @@ export default function AddHistoryEntryModal({
         formula: formula || "",
       };
 
-      addHistoryEntryLocal(newEntry).catch(() => {});
+      toast.success("Entri tersimpan di perangkat, menunggu sinkronisasi");
       onSuccess(newEntry);
       onClose();
     } catch (error) {
@@ -449,18 +439,7 @@ export default function AddHistoryEntryModal({
             )}
           </div>
 
-          {/* Simpan ke Master Data */}
-          <label className="flex items-center gap-2.5 pt-1 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={saveToMaster}
-              onChange={(e) => setSaveToMaster(e.target.checked)}
-              className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
-            />
-            <span className="text-meta text-text-secondary font-medium">
-              Simpan produk ini ke Master Data lokasi
-            </span>
-          </label>
+          <p className="text-meta text-text-secondary">Produk baru akan ditambahkan ke Master Data lokasi saat tersinkron.</p>
         </div>
       </Dialog>
 

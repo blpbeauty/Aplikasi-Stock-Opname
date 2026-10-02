@@ -25,7 +25,6 @@ import {
 } from "@/lib/api";
 import { Product, HistoryEntry } from "@/lib/types";
 import { getCache, setCache, clearCache } from "@/lib/cache";
-import { addHistoryEntryLocal } from "@/lib/localDb";
 import {
   SearchIcon,
   CameraIcon,
@@ -558,9 +557,7 @@ function InputPageContent() {
     const sessionId = `${user?.email}_${Date.now()}`;
     const timestamp = new Date().toISOString();
 
-    // Tunggu server benar-benar menyimpan sebelum mengklaim sukses.
-    // Jika gagal, tetap di halaman ini agar operator bisa mencoba lagi
-    // tanpa mengetik ulang.
+    // Leave the form only after the outbox and local history commit together.
     let saved: { sessionId?: string; rowIds?: string[] } | null = null;
     try {
       const result = await saveStockOpnameApi(
@@ -584,8 +581,7 @@ function InputPageContent() {
 
     // Optimistic history cache so new entries appear immediately
     // (Google Sheets replication can lag a few seconds).
-    // Pakai sessionId + rowId ASLI dari server supaya hapus/edit entri
-    // baru langsung menemukan barisnya di sheet.
+    // Stable client IDs are preserved by the server on first save and retry.
     const historyCacheKey = `history:${user?.email}:all`;
     const cachedHistory = getCache<HistoryEntry[]>(historyCacheKey);
     const optimisticEntries: HistoryEntry[] = items.map((item, idx) => ({
@@ -604,7 +600,7 @@ function InputPageContent() {
     }));
     setCache(historyCacheKey, [...optimisticEntries, ...(cachedHistory?.data || [])]);
     // Mirror ke IndexedDB agar Riwayat (semua operator) langsung melihatnya
-    optimisticEntries.forEach((entry) => addHistoryEntryLocal(entry).catch(() => {}));
+
 
     if (typeof window !== "undefined") {
       window.localStorage.setItem("lastSaveTs", String(Date.now()));
@@ -613,7 +609,7 @@ function InputPageContent() {
     invalidateMemCache("getHistory");
     clearCache("products:");
     toast.success(
-      zeroMode ? "Disimpan: semua kuantitas 0 untuk lokasi ini" : "Stock opname berhasil disimpan!"
+      "Tersimpan di perangkat. Status pengiriman tersedia di indikator sinkronisasi."
     );
     router.push("/scan");
   };
@@ -948,7 +944,7 @@ function InputPageContent() {
                       }));
                       setNewProductForm({ productName: "", sku: "", batch: "", barcode: "", qty: 0 });
                       setShowAddForm(false);
-                      toast.success("Produk tersimpan di Master Data");
+                      toast.success("Produk tersimpan di perangkat, menunggu sinkronisasi Master Data");
                     } else {
                       toast.error(result.message || "Gagal menyimpan");
                     }

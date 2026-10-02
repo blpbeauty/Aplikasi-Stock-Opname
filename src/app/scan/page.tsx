@@ -16,7 +16,6 @@ import {
   getAllLocationsApi,
   searchLocationsApi,
   searchProductsGlobalApi,
-  warmupCacheApi,
 } from "@/lib/api";
 import { useDataSync } from "@/components/DataSyncProvider";
 import {
@@ -50,9 +49,10 @@ type GlobalProductItem = {
 export default function ScanDashboard() {
   const { user } = useAuth();
   const router = useRouter();
-  const { lastSyncTime } = useDataSync();
+  const { lastSyncTime, isReady } = useDataSync();
 
   const [locationCode, setLocationCode] = useState("");
+  const [newLocation, setNewLocation] = useState("");
   const [loading, setLoading] = useState(false);
   const [showLocationScanner, setShowLocationScanner] = useState(false);
 
@@ -157,7 +157,7 @@ export default function ScanDashboard() {
   }, [user, calculateStats]);
 
   useEffect(() => {
-    warmupCacheApi().catch(() => {});
+    if (!isReady) return;
     const cached = getCache<Product[]>("allProducts");
     if (cached) allProductsRef.current = cached.data;
     getAllProductsApi()
@@ -168,11 +168,11 @@ export default function ScanDashboard() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [isReady, lastSyncTime]);
 
   useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
+    if (isReady) loadDashboardData();
+  }, [loadDashboardData, lastSyncTime, isReady]);
 
   const resolveLocations = useCallback(async (query: string) => {
     const q = query.trim();
@@ -180,7 +180,7 @@ export default function ScanDashboard() {
       const filtered = allLocationsRef.current
         .filter((l) => l.locationCode.toLowerCase().includes(q.toLowerCase()))
         .slice(0, 10);
-      if (filtered.length > 0) return filtered;
+      return filtered;
     }
     try {
       const result = await searchLocationsApi(q);
@@ -191,7 +191,7 @@ export default function ScanDashboard() {
   }, []);
 
   const openLocation = async (locCode: string) => {
-    const code = locCode.trim();
+    const code = locCode.trim().toUpperCase();
     if (!code) {
       toast.error("Masukkan kode lokasi");
       return;
@@ -199,7 +199,10 @@ export default function ScanDashboard() {
     setLoading(true);
     try {
       const result = await getProductsApi(code);
-      if (result.success && result.products) {
+      if (result.success && result.products && result.products.length === 0) {
+        setNewLocation(code);
+        setLoading(false);
+      } else if (result.success && result.products) {
         setCache(`products:${code}`, result.products);
         router.push(`/input?location=${encodeURIComponent(code)}`);
       } else {
@@ -608,6 +611,14 @@ export default function ScanDashboard() {
         )}
       </Dialog>
 
+      <Dialog isOpen={!!newLocation} onClose={() => setNewLocation("")} title="Tambah lokasi baru"
+        description={`Lokasi ${newLocation} belum memiliki produk di data perangkat. Lanjutkan untuk menambahkan produk dan jumlah fisiknya.`}>
+        <p className="text-sm mb-4">Lokasi beserta produknya akan ditambahkan ke Master Data saat hasil opname tersinkron.</p>
+        <button className="w-full min-h-touch bg-primary text-ivory rounded-input" onClick={() => {
+          setCache(`products:${newLocation}`, []);
+          router.push(`/input?location=${encodeURIComponent(newLocation)}`);
+        }}>Gunakan lokasi {newLocation}</button>
+      </Dialog>
       <BottomNav activePage="scan" />
     </div>
   );

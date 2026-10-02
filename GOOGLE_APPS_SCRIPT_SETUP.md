@@ -1,3 +1,21 @@
+## Pembaruan scan cepat dan offline (2 Oktober 2026)
+
+1. Ganti isi project Apps Script dengan **google-apps-script.js** di repository ini. Gunakan **Deploy → Manage deployments → Edit → New version → Deploy** supaya URL `/exec` tetap sama.
+2. Build dan terbitkan frontend terbaru dengan `npm run build`. Build juga menghasilkan `public/offline-assets.js`; file ini dan `public/sw.js` harus ikut tersedia di hosting.
+3. Buka aplikasi secara online melalui HTTPS (atau localhost untuk pengujian), login, lalu tunggu unduhan data selesai. Untuk perangkat yang pernah memakai versi lama, gunakan sinkronisasi ulang di profil bila perlu.
+4. Pada Scan, masukkan/scan kode lokasi baru, pilih **Gunakan lokasi**, tambahkan produk, dan simpan hasil. Master Data mendapat lokasi bersama produk saat antrean terkirim. Lokasi kosong tanpa produk belum dibuat sebagai baris master.
+5. Tekan **Uji offline** pada indikator di atas halaman. Cari lokasi yang sudah diunduh, buat input baru, lalu edit dari Riwayat. Jumlah antrean harus bertambah. Muat ulang untuk mengecek persistensi.
+6. Tekan **Akhiri uji offline**. Antrean otomatis terkirim; kegagalan tetap terlihat dan bisa dicoba lagi lewat **Kirim ulang**.
+7. Untuk menguji offline sesungguhnya, gunakan build produksi (`npm run build`, `npm start`), tunggu service worker selesai aktif, matikan jaringan lalu buka ulang halaman Scan/Input/Riwayat. Tombol Uji offline mensimulasikan koneksi data, bukan mematikan jaringan browser.
+
+Simpan/edit mengonfirmasi **tersimpan di perangkat**, bukan langsung tersimpan di Google Sheets. Jangan menghapus data situs/browser sebelum antrean habis. Login pertama, unduhan awal, hapus, dan pemindahan produk massal masih memerlukan koneksi. Kamera harus diuji pada perangkat tujuan dengan izin kamera dan HTTPS.
+
+Backend lama ditolak sebelum antrean dikirim karena belum mendukung ID tetap. Data antrean tetap disimpan ketika deployment belum diperbarui. Refresh yang gagal mempertahankan cache terakhir; refresh berhasil juga mempertahankan input/edit yang belum terkirim.
+
+Pengujian lokal: `npm test` (IndexedDB tiruan, respons jaringan tiruan, serta stub layanan Apps Script), `npm run build`.
+
+---
+
 # Google Apps Script Backend Setup
 
 This document provides detailed instructions for setting up the Google Apps Script backend for the Stock Opname application.

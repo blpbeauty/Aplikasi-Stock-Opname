@@ -1,78 +1,57 @@
-const CACHE_NAME = 'stock-opname-v6';
+importScripts('/offline-assets.js');
+const CACHE_NAME = 'stock-opname-v7-' + self.__OFFLINE_VERSION;
+const ROUTES = ['/', '/login', '/scan', '/input', '/history', '/profile'];
+const rscKey = path => new URL(path + '?offline-rsc=1', self.location.origin).href;
 
-// Assets to cache on install
-const PRECACHE_ASSETS = [
-  '/',
-  '/login',
-  '/input',
-  '/scan',
-  '/history',
-  '/manifest.json',
-];
-
-// Install event - precache essential assets
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS);
-    })
-  );
-  self.skipWaiting();
+self.addEventListener('install', event => {
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.addAll(['/manifest.json', ...ROUTES]);
+    // Cache each route's scripts and CSS, including pages not opened yet.
+    const assets = new Set((self.__OFFLINE_ASSETS || []).map(path => new URL(path, self.location.origin).href));
+    for (const path of ROUTES) {
+      const html = await (await cache.match(path)).text();
+      for (const match of html.matchAll(/(?:src|href)=["']([^"']+)["']/g)) {
+        const url = new URL(match[1].replaceAll('&amp;', '&'), self.location.origin);
+        if (url.origin === self.location.origin && url.pathname.startsWith('/_next/static/')) assets.add(url.href);
+      }
+      const response = await fetch(path, { headers: { RSC: '1' } });
+      if (response.ok && (response.headers.get('Content-Type') || '').includes('text/x-component')) {
+        await cache.put(rscKey(path), response);
+      }
+    }
+    await cache.addAll([...assets]);
+    await self.skipWaiting();
+  })());
 });
 
-// Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
-      );
-    })
-  );
-  self.clients.claim();
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    for (const name of await caches.keys()) {
+      if (name.startsWith('stock-opname-') && name !== CACHE_NAME) await caches.delete(name);
+    }
+    await self.clients.claim();
+  })());
 });
 
-// Fetch event - network first, fallback to cache
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-
-  // Skip non-GET requests
-  if (request.method !== 'GET') return;
-
-  // Skip Google Apps Script API calls
-  if (request.url.includes('script.google.com') || request.url.includes('macros')) {
-    return;
-  }
-
-  // Skip chrome-extension and other non-http(s) requests
-  if (!request.url.startsWith('http')) return;
-
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        // Clone response and cache it
-        if (response.status === 200) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
-          });
-        }
-        return response;
-      })
-      .catch(() => {
-        // Fallback to cache when offline
-        return caches.match(request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          // If it's a navigation request, return the cached home page
-          if (request.mode === 'navigate') {
-            return caches.match('/');
-          }
-          return new Response('Offline', { status: 503, statusText: 'Offline' });
-        });
-      })
-  );
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  const isRsc = request.headers.get('RSC') === '1';
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(request);
+    if (url.pathname.startsWith('/_next/static/') && cached) return cached;
+    try {
+      const response = await fetch(request);
+      if (response.ok && !isRsc) await cache.put(request, response.clone());
+      return response;
+    } catch {
+      if (isRsc) return await cache.match(rscKey(url.pathname)) || new Response('Offline', { status: 503 });
+      if (cached) return cached;
+      if (request.mode === 'navigate') return await cache.match(url.pathname) || await cache.match('/scan');
+      return new Response('Offline', { status: 503 });
+    }
+  })());
 });
