@@ -3,48 +3,48 @@
 @tailwind utilities;
 
 :root {
-  /* ── British Forest Pine & Amber Ochre Theme ──
-     Forest Green = header, tombol primer, kartu aktif.
-     Amber Ochre = aksen emas vintage, indikator, border penegas.
-     Linen Ivory = latar aplikasi teduh dan ramah mata gudang.
+  /* ── BLP Signature Terracotta & Oat Theme ──
+     Burnt Terracotta = header, tombol primer, kartu aktif, aksen brand utama.
+     Warm Apricot = aksen hangat, indikator fokus, border penegas.
+     Oat Milk Linen = latar kanvas aplikasi teduh dan ramah mata gudang.
      Paper = permukaan putih bersih untuk kartu/input/modal. */
-  --espresso: #16231b;
-  --cocoa: #5f7065;
-  --ivory: #f7f6f2;
+  --espresso: #251714;
+  --cocoa: #78635b;
+  --ivory: #faf6f2;
   --paper: #ffffff;
-  --ochre: #d49b4b;
-  --amber-text: #8c5815;
+  --ochre: #d47a5a;
+  --amber-text: #883e2d;
 
   /* Warna semantik */
-  --success: #1e6b33;
-  --success-bg: #e6f1e8;
-  --danger: #b3261e;
-  --danger-bg: #fbeae8;
-  --info: #1f4e79;
-  --info-bg: #e7eef6;
-  --warning: #fdf3e0;
-  --warning-text: #8c5815;
+  --success: #246b3c;
+  --success-bg: #eaf4ee;
+  --danger: #b52d24;
+  --danger-bg: #fdeeee;
+  --info: #295c85;
+  --info-bg: #ebf3f8;
+  --warning: #fbf2e9;
+  --warning-text: #9e4d2b;
 
   /* Alias aplikasi */
-  --primary: #18281f;
-  --primary-light: #263d30;
-  --primary-dark: #101c15;
-  --primary-pale: #e8efea;
-  --primary-bg: #f7f6f2;
+  --primary: #883e2d;
+  --primary-light: #a24d38;
+  --primary-dark: #6f2f20;
+  --primary-pale: #f7eae3;
+  --primary-bg: #faf6f2;
   --surface: #ffffff;
-  --surface-warm: #eff5f1;
+  --surface-warm: #f5ebe4;
 
-  --accent-yellow: #d49b4b;
-  --accent-red: #b3261e;
-  --accent-green: #1e6b33;
-  --error: #b3261e;
+  --accent-yellow: #d47a5a;
+  --accent-red: #b52d24;
+  --accent-green: #246b3c;
+  --error: #b52d24;
 
-  --text-primary: #16231b;
-  --text-secondary: #5f7065;
-  --border: #dfe7e1;
-  --border-subtle: #eef3ef;
+  --text-primary: #251714;
+  --text-secondary: #78635b;
+  --border: #e8dcd1;
+  --border-subtle: #f3ebe4;
 
-  --focus-ring: 0 0 0 3px rgba(212, 155, 75, 0.65);
+  --focus-ring: 0 0 0 3px rgba(212, 122, 90, 0.45);
 }
 
 /* Base styles */
@@ -91,9 +91,9 @@ html {
 
 /* ── Location band ── */
 .location-band {
-  background-color: #18281f;
-  color: #f7f6f2;
-  border-left: 6px solid #d49b4b;
+  background-color: #883e2d;
+  color: #faf6f2;
+  border-left: 6px solid #d47a5a;
   border-radius: 4px;
   padding: 0.75rem 1rem;
 }
@@ -108,7 +108,7 @@ html {
   font-variant-numeric: tabular-nums;
 }
 .location-band .location-band-sub {
-  color: #d1ddd4;
+  color: #f7eae3;
   font-size: 0.875rem;
 }
 
@@ -136,16 +136,16 @@ input, select, textarea { min-width: 0; }
   input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px; }
 }
 @media (min-width: 481px) {
-  body { background: #e6ede8 !important; }
-  .mobile-container, .app-shell { box-shadow: 0 0 60px rgba(24, 40, 31, 0.08); }
+  body { background: #efe7e0 !important; }
+  .mobile-container, .app-shell { box-shadow: 0 0 60px rgba(136, 62, 45, 0.08); }
 }
 
-/* ── British Forest Pine & Amber Ochre Header ── */
+/* ── BLP Signature Terracotta & Oat Header ── */
 .history-hero {
   padding: 14px 16px 12px;
-  color: #f7f6f2;
-  background: linear-gradient(180deg, #132119 0%, #1c2e24 100%);
-  border-bottom: 2px solid #d49b4b;
+  color: #faf6f2;
+  background: linear-gradient(180deg, #743223 0%, #883e2d 100%);
+  border-bottom: 2px solid #d47a5a;
 }
 .history-hero-top {
   display: flex;
@@ -157,7 +157,7 @@ input, select, textarea { min-width: 0; }
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.16em;
-  color: #d49b4b;
+  color: #f6c8b6;
   text-transform: uppercase;
   display: block;
 }
@@ -170,17 +170,17 @@ input, select, textarea { min-width: 0; }
   line-height: 1.2;
 }
 .history-hero-top h1 > span {
-  color: #d49b4b;
+  color: #f6c8b6;
 }
 .history-refresh {
   width: 36px;
   height: 36px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
-  color: #edf3ee;
+  color: #fdfbf7;
   transition: all 0.15s ease;
 }
 .history-refresh:active {
@@ -190,7 +190,7 @@ input, select, textarea { min-width: 0; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #d1ddd4;
+  color: #f7eae3;
   font-size: 11px;
   font-weight: 500;
   margin-top: 3px;
@@ -199,7 +199,7 @@ input, select, textarea { min-width: 0; }
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #d49b4b;
+  background: #d47a5a;
 }
 .history-hero-stats {
   display: grid;
@@ -207,15 +207,15 @@ input, select, textarea { min-width: 0; }
   gap: 6px;
   margin-top: 10px;
   padding-top: 9px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
 }
 .history-hero-stats > div {
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
   padding: 5px 8px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 .history-hero-stats strong {
   font-size: 15px;
@@ -228,7 +228,7 @@ input, select, textarea { min-width: 0; }
 }
 .history-hero-stats span {
   font-size: 9px;
-  color: #b8c8bc;
+  color: #f3d4c7;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -240,7 +240,7 @@ input, select, textarea { min-width: 0; }
   top: 0;
   z-index: 30;
   padding: 10px 14px 10px;
-  background: #f7f6f2f5;
+  background: #faf6f2f5;
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
@@ -256,8 +256,8 @@ input, select, textarea { min-width: 0; }
   color: var(--text-secondary);
 }
 .history-search:focus-within {
-  border-color: #d49b4b;
-  box-shadow: 0 0 0 2px rgba(212, 155, 75, 0.25);
+  border-color: #883e2d;
+  box-shadow: 0 0 0 2px rgba(212, 122, 90, 0.25);
 }
 .history-search input {
   width: 100%;
@@ -302,12 +302,12 @@ input, select, textarea { min-width: 0; }
   border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(24, 40, 31, 0.04);
+  box-shadow: 0 2px 8px rgba(37, 23, 20, 0.05);
   margin-bottom: 12px;
 }
 .history-location-header {
   padding: 10px 12px;
-  background: #fbfdfb;
+  background: #fdfbf9;
 }
 .history-location-toggle {
   display: flex;
@@ -323,8 +323,8 @@ input, select, textarea { min-width: 0; }
   width: 32px;
   height: 34px;
   flex-shrink: 0;
-  color: #18281f;
-  background: #e8efea;
+  color: #883e2d;
+  background: #f7eae3;
   border-radius: 10px;
 }
 .history-location-title {
@@ -425,10 +425,10 @@ input, select, textarea { min-width: 0; }
 .formula-breakdown {
   margin-top: 8px;
   padding: 8px 10px;
-  border: 1px solid #dbe5de;
-  border-left: 3px solid #d49b4b;
+  border: 1px solid #ebd8cc;
+  border-left: 3px solid #883e2d;
   border-radius: 4px 10px 10px 4px;
-  background: #eff5f1;
+  background: #fbf3ee;
 }
 .formula-caption {
   display: flex;
@@ -436,7 +436,7 @@ input, select, textarea { min-width: 0; }
   align-items: center;
   font-size: 10px;
   font-weight: 700;
-  color: #8c5815;
+  color: #883e2d;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -446,7 +446,7 @@ input, select, textarea { min-width: 0; }
   align-items: baseline;
   gap: 3px 6px;
   margin-top: 4px;
-  color: #16231b;
+  color: #251714;
   font-variant-numeric: tabular-nums;
 }
 .formula-expression { font-size: 14px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
@@ -470,7 +470,7 @@ input, select, textarea { min-width: 0; }
   color: var(--text-secondary);
   overflow-wrap: anywhere;
 }
-.history-edited { color: #8c5815; font-weight: 600; }
+.history-edited { color: #883e2d; font-weight: 600; }
 .history-record-actions {
   display: flex;
   align-items: center;
@@ -515,14 +515,14 @@ input, select, textarea { min-width: 0; }
   font-size: 12px;
   font-weight: 700;
   color: var(--text-secondary);
-  background: #f8faf8;
+  background: #fdfbf9;
   border-top: 1px solid var(--border-subtle);
 }
 
 .history-count-editor {
   margin-top: 10px;
-  background: #eff5f1;
-  border: 1px solid #d4c5aa;
+  background: #fbf3ee;
+  border: 1px solid #ebd8cc;
   border-radius: 12px;
   padding: 10px;
 }

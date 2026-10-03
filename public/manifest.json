@@ -4,8 +4,8 @@
   "description": "Aplikasi Stock Opname Gudang",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f6f4ef",
-  "theme_color": "#292722",
+  "background_color": "#faf6f2",
+  "theme_color": "#883e2d",
   "orientation": "portrait",
   "scope": "/",
   "icons": [
