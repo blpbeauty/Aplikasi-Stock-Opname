@@ -3,19 +3,19 @@
 @tailwind utilities;
 
 :root {
-  /* ── Konsep "Label Rak Operasional" ──
-     Espresso = teks/header/tombol primer. Cocoa = teks sekunder.
-     Ivory = latar aplikasi. Paper = permukaan input/daftar/modal.
-     Ochre = aksen dekoratif saja (bukan teks kecil).
-     Amber text = teks status/peringatan di latar terang (WCAG AA). */
-  --espresso: #292722;
-  --cocoa: #686359;
-  --ivory: #f6f4ef;
-  --paper: #fffefa;
-  --ochre: #b79a6b;
-  --amber-text: #7a4b08;
+  /* ── British Forest Pine & Amber Ochre Theme ──
+     Forest Green = header, tombol primer, kartu aktif.
+     Amber Ochre = aksen emas vintage, indikator, border penegas.
+     Linen Ivory = latar aplikasi teduh dan ramah mata gudang.
+     Paper = permukaan putih bersih untuk kartu/input/modal. */
+  --espresso: #16231b;
+  --cocoa: #5f7065;
+  --ivory: #f7f6f2;
+  --paper: #ffffff;
+  --ochre: #d49b4b;
+  --amber-text: #8c5815;
 
-  /* Warna semantik (kontras AA di atas latar terang) */
+  /* Warna semantik */
   --success: #1e6b33;
   --success-bg: #e6f1e8;
   --danger: #b3261e;
@@ -23,26 +23,26 @@
   --info: #1f4e79;
   --info-bg: #e7eef6;
   --warning: #fdf3e0;
-  --warning-text: #7a4b08;
+  --warning-text: #8c5815;
 
-  /* Alias yang dipakai luas di seluruh aplikasi */
-  --primary: #292722;
-  --primary-light: #464238;
-  --primary-dark: #1d1c18;
-  --primary-pale: #ede8dd;
-  --primary-bg: #f6f4ef;
-  --surface: #fffefa;
-  --surface-warm: #f1eee7;
+  /* Alias aplikasi */
+  --primary: #18281f;
+  --primary-light: #263d30;
+  --primary-dark: #101c15;
+  --primary-pale: #e8efea;
+  --primary-bg: #f7f6f2;
+  --surface: #ffffff;
+  --surface-warm: #eff5f1;
 
-  --accent-yellow: #b79a6b;
+  --accent-yellow: #d49b4b;
   --accent-red: #b3261e;
   --accent-green: #1e6b33;
   --error: #b3261e;
 
-  --text-primary: #292722;
-  --text-secondary: #696459;
-  --border: #e4e0d7;
-  --border-subtle: #eeebe4;
+  --text-primary: #16231b;
+  --text-secondary: #5f7065;
+  --border: #dfe7e1;
+  --border-subtle: #eef3ef;
 
   --focus-ring: 0 0 0 3px rgba(212, 155, 75, 0.65);
 }
@@ -91,9 +91,9 @@ html {
 
 /* ── Location band ── */
 .location-band {
-  background-color: var(--espresso);
-  color: var(--ivory);
-  border-left: 6px solid var(--ochre);
+  background-color: #18281f;
+  color: #f7f6f2;
+  border-left: 6px solid #d49b4b;
   border-radius: 4px;
   padding: 0.75rem 1rem;
 }
@@ -108,7 +108,7 @@ html {
   font-variant-numeric: tabular-nums;
 }
 .location-band .location-band-sub {
-  color: #d8cdbd;
+  color: #d1ddd4;
   font-size: 0.875rem;
 }
 
@@ -136,16 +136,16 @@ input, select, textarea { min-width: 0; }
   input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px; }
 }
 @media (min-width: 481px) {
-  body { background: #e8e5df !important; }
-  .mobile-container, .app-shell { box-shadow: 0 0 60px #2927220a; }
+  body { background: #e6ede8 !important; }
+  .mobile-container, .app-shell { box-shadow: 0 0 60px rgba(24, 40, 31, 0.08); }
 }
 
-/* ── History Page Compact Luxury Theme ── */
+/* ── British Forest Pine & Amber Ochre Header ── */
 .history-hero {
   padding: 14px 16px 12px;
-  color: #f7f3ea;
-  background: linear-gradient(180deg, #24221e 0%, #2e2a24 100%);
-  border-bottom: 2px solid #b79a6b;
+  color: #f7f6f2;
+  background: linear-gradient(180deg, #132119 0%, #1c2e24 100%);
+  border-bottom: 2px solid #d49b4b;
 }
 .history-hero-top {
   display: flex;
@@ -157,7 +157,7 @@ input, select, textarea { min-width: 0; }
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.16em;
-  color: #b79a6b;
+  color: #d49b4b;
   text-transform: uppercase;
   display: block;
 }
@@ -170,7 +170,7 @@ input, select, textarea { min-width: 0; }
   line-height: 1.2;
 }
 .history-hero-top h1 > span {
-  color: #b79a6b;
+  color: #d49b4b;
 }
 .history-refresh {
   width: 36px;
@@ -178,9 +178,9 @@ input, select, textarea { min-width: 0; }
   display: grid;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  color: #ece5d8;
+  color: #edf3ee;
   transition: all 0.15s ease;
 }
 .history-refresh:active {
@@ -190,7 +190,7 @@ input, select, textarea { min-width: 0; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #d8d0c2;
+  color: #d1ddd4;
   font-size: 11px;
   font-weight: 500;
   margin-top: 3px;
@@ -199,7 +199,7 @@ input, select, textarea { min-width: 0; }
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #b79a6b;
+  background: #d49b4b;
 }
 .history-hero-stats {
   display: grid;
@@ -212,7 +212,7 @@ input, select, textarea { min-width: 0; }
 .history-hero-stats > div {
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   padding: 5px 8px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -228,7 +228,7 @@ input, select, textarea { min-width: 0; }
 }
 .history-hero-stats span {
   font-size: 9px;
-  color: #b3a998;
+  color: #b8c8bc;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -240,7 +240,7 @@ input, select, textarea { min-width: 0; }
   top: 0;
   z-index: 30;
   padding: 10px 14px 10px;
-  background: #f6f4eff5;
+  background: #f7f6f2f5;
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
@@ -256,8 +256,8 @@ input, select, textarea { min-width: 0; }
   color: var(--text-secondary);
 }
 .history-search:focus-within {
-  border-color: #9b835c;
-  box-shadow: 0 0 0 2px #b79a6b25;
+  border-color: #d49b4b;
+  box-shadow: 0 0 0 2px rgba(212, 155, 75, 0.25);
 }
 .history-search input {
   width: 100%;
@@ -302,12 +302,12 @@ input, select, textarea { min-width: 0; }
   border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 8px #29272204;
+  box-shadow: 0 2px 8px rgba(24, 40, 31, 0.04);
   margin-bottom: 12px;
 }
 .history-location-header {
   padding: 10px 12px;
-  background: #fdfcf8;
+  background: #fbfdfb;
 }
 .history-location-toggle {
   display: flex;
@@ -323,8 +323,8 @@ input, select, textarea { min-width: 0; }
   width: 32px;
   height: 34px;
   flex-shrink: 0;
-  color: #816c47;
-  background: #f0ebe0;
+  color: #18281f;
+  background: #e8efea;
   border-radius: 10px;
 }
 .history-location-title {
@@ -425,10 +425,10 @@ input, select, textarea { min-width: 0; }
 .formula-breakdown {
   margin-top: 8px;
   padding: 8px 10px;
-  border: 1px solid #e5decf;
-  border-left: 3px solid #b79a6b;
+  border: 1px solid #dbe5de;
+  border-left: 3px solid #d49b4b;
   border-radius: 4px 10px 10px 4px;
-  background: #f6f3eb;
+  background: #eff5f1;
 }
 .formula-caption {
   display: flex;
@@ -436,7 +436,7 @@ input, select, textarea { min-width: 0; }
   align-items: center;
   font-size: 10px;
   font-weight: 700;
-  color: #72634b;
+  color: #8c5815;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -446,7 +446,7 @@ input, select, textarea { min-width: 0; }
   align-items: baseline;
   gap: 3px 6px;
   margin-top: 4px;
-  color: #393328;
+  color: #16231b;
   font-variant-numeric: tabular-nums;
 }
 .formula-expression { font-size: 14px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
@@ -470,7 +470,7 @@ input, select, textarea { min-width: 0; }
   color: var(--text-secondary);
   overflow-wrap: anywhere;
 }
-.history-edited { color: #7a633b; font-weight: 600; }
+.history-edited { color: #8c5815; font-weight: 600; }
 .history-record-actions {
   display: flex;
   align-items: center;
@@ -515,13 +515,13 @@ input, select, textarea { min-width: 0; }
   font-size: 12px;
   font-weight: 700;
   color: var(--text-secondary);
-  background: #faf8f3;
+  background: #f8faf8;
   border-top: 1px solid var(--border-subtle);
 }
 
 .history-count-editor {
   margin-top: 10px;
-  background: #f5f3ed;
+  background: #eff5f1;
   border: 1px solid #d4c5aa;
   border-radius: 12px;
   padding: 10px;

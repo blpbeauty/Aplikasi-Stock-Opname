@@ -7,7 +7,7 @@ import ScannerModal from "@/components/ScannerModal";
 import QtyInput from "@/components/QtyInput";
 import { Dialog, Field } from "@/components/ui";
 import Autocomplete from "@/components/Autocomplete";
-import { CalculatorIcon } from "@/components/icons";
+import FormulaBreakdown from "@/components/FormulaBreakdown";
 import toast from "react-hot-toast";
 
 export interface EditData {
@@ -36,6 +36,7 @@ export default function EditModal({
 }: EditModalProps) {
   const [quantity, setQuantity] = useState(entry.qty);
   const [formula, setFormula] = useState(entry.formula || "");
+  const [invalidQuantity, setInvalidQuantity] = useState(false);
   const [productName, setProductName] = useState(entry.productName);
   const [sku, setSku] = useState(entry.sku);
   const [batch, setBatch] = useState(entry.batch);
@@ -69,6 +70,7 @@ export default function EditModal({
   useEffect(() => {
     if (isOpen) {
       setQuantity(entry.qty);
+      setInvalidQuantity(false);
       setFormula(entry.formula || "");
       setProductName(entry.productName);
       setSku(entry.sku);
@@ -124,6 +126,7 @@ export default function EditModal({
   const locChanged = location.trim().toUpperCase() !== entry.location.trim().toUpperCase();
 
   const handleSave = () => {
+    if (invalidQuantity) return;
     const nextErrors: typeof errors = {};
     if (!productName.trim()) nextErrors.name = "Nama produk wajib diisi";
     if (!sku.trim()) nextErrors.sku = "SKU wajib diisi";
@@ -161,7 +164,8 @@ export default function EditModal({
             <button
               type="button"
               onClick={handleSave}
-              className="flex-1 min-h-touch bg-primary text-ivory text-meta font-bold rounded-input transition active:scale-[0.98]"
+              disabled={invalidQuantity}
+              className="flex-1 min-h-touch bg-primary text-ivory text-meta font-bold rounded-input transition active:scale-[0.98] disabled:opacity-40"
             >
               Simpan Perubahan
             </button>
@@ -349,19 +353,17 @@ export default function EditModal({
 
           {/* Quantity */}
           <div>
-            <p className="text-meta font-bold text-text-primary mb-1">Quantity</p>
+            <p className="text-meta font-bold text-text-primary mb-1">Jumlah / rumus hitung</p>
             <QtyInput
               value={quantity}
               onChange={(v) => setQuantity(v)}
               onExprCommit={(expr) => setFormula(expr)}
+              onValidityChange={valid => setInvalidQuantity(!valid)}
               wide
               ariaLabel="Kuantitas entri"
             />
-            {formula && (
-              <p className="inline-flex items-center gap-1 text-meta text-amber-text mt-1.5 font-bold tnum">
-                <CalculatorIcon className="w-4 h-4" aria-hidden="true" /> Rumus: {formula}
-              </p>
-            )}
+            {invalidQuantity && <p className="text-meta text-danger mt-2">Lengkapi angka dan rumus sebelum menyimpan.</p>}
+            <FormulaBreakdown formula={formula} quantity={quantity} />
           </div>
         </div>
       </Dialog>

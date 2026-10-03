@@ -28,7 +28,7 @@ export function calcExpr(expr: string): number | null {
       if (/\d|\./.test(char)) {
         currentNum += char;
       } else if (/[+\-*/]/.test(char)) {
-        if (currentNum === "") return null;
+        if (!/^\d+(?:\.\d+)?$/.test(currentNum)) return null;
         tokens.push(parseFloat(currentNum));
         currentNum = "";
         tokens.push(char);
@@ -37,6 +37,7 @@ export function calcExpr(expr: string): number | null {
       }
     }
     if (currentNum !== "") {
+      if (!/^\d+(?:\.\d+)?$/.test(currentNum)) return null;
       tokens.push(parseFloat(currentNum));
     }
 
@@ -50,7 +51,8 @@ export function calcExpr(expr: string): number | null {
         const nextNum = tokens[idx + 1] as number;
         if (typeof prevNum !== "number" || typeof nextNum !== "number") return null;
 
-        const res = token === "*" ? prevNum * nextNum : nextNum !== 0 ? prevNum / nextNum : 0;
+        if (token === "/" && nextNum === 0) return null;
+        const res = token === "*" ? prevNum * nextNum : prevNum / nextNum;
         pass1.push(res);
         idx += 2;
       } else {
@@ -94,6 +96,8 @@ interface QtyInputProps {
   onCommit?: () => void;
   /** Nama aksesibel untuk input kuantitas. */
   ariaLabel?: string;
+  unfilled?: boolean;
+  onValidityChange?: (valid: boolean) => void;
 }
 
 export default function QtyInput({
@@ -105,21 +109,26 @@ export default function QtyInput({
   onFocus,
   onCommit,
   ariaLabel,
+  unfilled = false,
+  onValidityChange,
 }: QtyInputProps) {
-  const [display, setDisplay] = useState(String(value));
+  const [display, setDisplay] = useState(unfilled ? "" : String(value));
   const [preview, setPreview] = useState<number | null>(null);
   const [focused, setFocused] = useState(false);
   const [textMode, setTextMode] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const exprCommittedRef = useRef(false);
+  const dirtyRef = useRef(false);
   const isExpr = /[+\-*xX×/]/.test(display);
 
   useEffect(() => {
-    setDisplay(String(value));
+    setDisplay(unfilled ? "" : String(value));
     setPreview(null);
-  }, [value]);
+  }, [value, unfilled]);
 
   const handleChange = (raw: string) => {
+    dirtyRef.current = true;
+    onValidityChange?.(calcExpr(raw) !== null);
     exprCommittedRef.current = false;
     setDisplay(raw);
     if (/[+\-*xX×/]/.test(raw)) {
@@ -128,7 +137,10 @@ export default function QtyInput({
     } else {
       setPreview(null);
       const num = parseInt(raw, 10);
-      if (!isNaN(num) && num >= 0) onChange(num);
+      if (!isNaN(num) && num >= 0) {
+        onChange(num);
+        onExprCommit?.("");
+      }
     }
   };
 
@@ -145,6 +157,10 @@ export default function QtyInput({
   };
 
   const commit = () => {
+    if (!dirtyRef.current) {
+      setFocused(false);
+      return;
+    }
     if (exprCommittedRef.current) {
       setFocused(false);
       return;
@@ -154,6 +170,7 @@ export default function QtyInput({
       if (result !== null) {
         if (onExprCommit) onExprCommit(display + "=" + result);
         exprCommittedRef.current = true;
+        dirtyRef.current = false;
         onChange(result);
         setDisplay(String(result));
         setPreview(null);
@@ -161,6 +178,11 @@ export default function QtyInput({
         onCommit?.();
         return;
       }
+      setFocused(false);
+      return;
+    }
+    if (unfilled && (display === "" || isNaN(parseInt(display, 10)))) {
+      setDisplay(""); setPreview(null); setFocused(false); return;
     }
     if (display === "" || isNaN(parseInt(display, 10))) {
       setDisplay("0");
@@ -172,6 +194,7 @@ export default function QtyInput({
     }
     setPreview(null);
     setFocused(false);
+    dirtyRef.current = false;
   };
 
   const defaultCls = wide
@@ -190,6 +213,7 @@ export default function QtyInput({
           type="text"
           inputMode={textMode ? "text" : "numeric"}
           value={display}
+          placeholder={unfilled ? "—" : undefined}
           onChange={(e) => handleChange(e.target.value)}
           onFocus={(e) => {
             if (display === "0") setDisplay("");
@@ -197,9 +221,7 @@ export default function QtyInput({
             e.target.select();
             onFocus?.();
           }}
-          onBlur={() => {
-            setTimeout(commit, 150);
-          }}
+          onBlur={commit}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();

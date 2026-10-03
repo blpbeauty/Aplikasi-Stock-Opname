@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { flushPendingWrites } from "@/lib/api";
-import { getPendingWrites, isOffline } from "@/lib/localDb";
+import { getPendingWrites, isOffline, PendingWrite } from "@/lib/localDb";
 import { useAuth } from "./AuthProvider";
 import {
   syncAllData,
@@ -22,6 +22,11 @@ type DataSyncContextType = {
   forceSync: () => Promise<void>;
   /** Last successful sync time */
   lastSyncTime: number | null;
+  pendingWrites: PendingWrite[];
+  queueReady: boolean;
+  offline: boolean;
+  testingOffline: boolean;
+  toggleOfflineTest: () => void;
 };
 
 const DataSyncContext = createContext<DataSyncContextType>({
@@ -29,6 +34,7 @@ const DataSyncContext = createContext<DataSyncContextType>({
   syncProgress: { status: "idle", step: "", percent: 0, lastSyncTime: null },
   forceSync: async () => {},
   lastSyncTime: null,
+  pendingWrites: [], queueReady: false, offline: false, testingOffline: false, toggleOfflineTest: () => {},
 });
 
 export const useDataSync = () => useContext(DataSyncContext);
@@ -45,7 +51,9 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
     percent: 0,
     lastSyncTime: null,
   });
-  const [pending, setPending] = useState(0);
+  const [pendingWrites, setPendingWrites] = useState<PendingWrite[]>([]);
+  const [queueReady, setQueueReady] = useState(false);
+  const pending = pendingWrites.length;
   const [queueError, setQueueError] = useState("");
   const [offline, setOffline] = useState(false);
   const [testingOffline, setTestingOffline] = useState(false);
@@ -57,6 +65,7 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
     syncingRef.current = true;
 
     try {
+      if (isBackground && isOffline()) return;
       if (!isBackground) {
         setSyncProgress({
           status: "syncing",
@@ -68,16 +77,14 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
 
       await flushPendingWrites();
       const result = await syncAllData((progress) => {
-        if (!isBackground) {
-          setSyncProgress(progress);
-        }
+        setSyncProgress(progress);
       });
 
       const now = Date.now();
       setLastSyncTime(now);
       setIsReady(true);
 
-      if (!isBackground) {
+      {
         setSyncProgress({
           status: "synced",
           step: `${result.masterCount} produk, ${result.historyCount} riwayat`,
@@ -91,24 +98,20 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
       const hasData = await hasLocalData();
       if (hasData) {
         setIsReady(true);
-        if (!isBackground) {
-          setSyncProgress({
-            status: "error",
-            step: "Gagal sync, menggunakan data terakhir",
-            percent: 100,
-            lastSyncTime: lastSyncTime,
-            error: error?.message,
-          });
+        {
+          setSyncProgress(previous => ({
+            ...previous, status: "error", percent: 100,
+            step: previous.step.startsWith('Gagal pada tahap') ? previous.step : "Gagal mengunduh data terbaru; menggunakan data terakhir",
+            lastSyncTime, error: error?.message,
+          }));
         }
       } else {
         if (!isBackground) {
-          setSyncProgress({
-            status: "error",
-            step: "Gagal mengunduh data. Periksa koneksi internet.",
-            percent: 0,
-            lastSyncTime: null,
-            error: error?.message,
-          });
+          setSyncProgress(previous => ({
+            ...previous, status: "error", percent: 0,
+            step: previous.step.startsWith('Gagal pada tahap') ? previous.step : "Unduhan belum selesai. Periksa rincian kegagalan.",
+            lastSyncTime: null, error: error?.message,
+          }));
         }
       }
     } finally {
@@ -126,7 +129,8 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
     const refresh = async () => {
       const jobs = await getPendingWrites();
       if (!alive) return;
-      setPending(jobs.length);
+      setPendingWrites(jobs);
+      setQueueReady(true);
       setQueueError(jobs.find(job => job.error)?.error || "");
       setOffline(isOffline());
       setTestingOffline(localStorage.getItem("testOffline") === "true");
@@ -145,6 +149,15 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
       window.removeEventListener("offline", refresh);
     };
   }, [user]);
+
+  const toggleOfflineTest = useCallback(() => {
+    const next = localStorage.getItem("testOffline") !== "true";
+    localStorage.setItem("testOffline", String(next));
+    setTestingOffline(next);
+    setOffline(isOffline());
+    window.dispatchEvent(new Event("outbox-change"));
+    if (!next) void flushPendingWrites();
+  }, []);
 
   // Initialize on user login
   useEffect(() => {
@@ -189,7 +202,7 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
   }, [user]);
 
   return (
-    <DataSyncContext.Provider value={{ isReady, syncProgress, forceSync, lastSyncTime }}>
+    <DataSyncContext.Provider value={{ isReady, syncProgress, forceSync, lastSyncTime, pendingWrites, queueReady, offline, testingOffline, toggleOfflineTest }}>
       {/* Sync Loading Overlay — only shown during first-time sync when no local data */}
       {user && !isReady && syncProgress.status === "syncing" && (
         <div className="fixed inset-0 z-[80] bg-ivory flex items-center justify-center px-6">
@@ -206,22 +219,15 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
               {syncProgress.step}
             </p>
 
-            <div
-              className="w-full h-2.5 bg-surface-warm rounded-full overflow-hidden mb-2"
-              role="progressbar"
-              aria-valuenow={syncProgress.percent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Progres sinkronisasi"
-            >
-              <div
-                className="h-full bg-primary rounded-full transition-[width] duration-500 ease-out"
-                style={{ width: `${syncProgress.percent}%` }}
-              />
-            </div>
-            <p className="text-meta text-text-secondary tnum">
-              {syncProgress.percent}% — hanya sekali saat pertama buka
-            </p>
+            <ol className="space-y-2 text-left" aria-label="Tahap unduhan">
+              {([['products', 'Mengunduh produk'], ['history', 'Mengunduh riwayat'], ['storage', 'Menyimpan di perangkat']] as const).map(([stage, label], index) => {
+                const current = ['products', 'history', 'storage', 'complete'].indexOf(syncProgress.stage || 'products');
+                const done = current > index;
+                return <li key={stage} className={`flex justify-between gap-2 rounded-input px-3 py-2 border ${current === index ? 'border-primary bg-primary-pale font-bold' : 'border-border'}`}>
+                  <span>{label}</span><span>{done ? 'Selesai' : current === index ? 'Diproses' : 'Menunggu'}</span>
+                </li>;
+              })}
+            </ol>
           </div>
         </div>
       )}
@@ -252,19 +258,18 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
         </div>
       )}
 
-      {user && <div className="bg-surface-warm border-b border-border px-4 py-2 text-sm" role="status">
-        <div className="flex flex-wrap items-center gap-2">
-          <span>{offline ? "Offline" : "Online"} · {pending ? `${pending} perubahan menunggu dikirim` : "Tidak ada antrean kirim"}</span>
-          <button className="underline font-bold" disabled={!isReady} onClick={() => {
-            const next = !testingOffline;
-            localStorage.setItem("testOffline", String(next));
-            setTestingOffline(next); setOffline(isOffline());
-            if (!next) void flushPendingWrites();
-          }}>{testingOffline ? "Akhiri uji offline" : "Uji offline"}</button>
-          {!!pending && !offline && <button className="underline" onClick={() => void flushPendingWrites()}>Kirim ulang</button>}
+      {user && <div className={`mobile-sync-status border-b px-4 py-2 ${queueError || syncProgress.status === 'error' ? 'bg-amber-bg border-amber-text/30' : 'bg-surface-warm border-border'}`} role="status" aria-live="polite">
+        <div className="mx-auto max-w-[480px] flex flex-wrap items-center justify-between gap-2 text-sm">
+          <div>
+            <p className="font-bold">{!queueReady ? 'Memeriksa status' : queueError ? 'Gagal kirim' : pending ? (offline ? 'Tersimpan di perangkat' : 'Menunggu kirim') : syncProgress.status === 'syncing' ? 'Mengunduh data' : syncProgress.status === 'error' ? 'Gagal unduh data' : isReady ? (offline ? 'Tersimpan di perangkat' : 'Tersinkron') : 'Menyiapkan data'} <span className="font-normal">· {offline ? 'Offline' : 'Online'}{testingOffline ? ' (uji)' : ''}</span></p>
+            <p className="text-meta text-text-secondary">{pending ? `${pending} perubahan belum terkirim. ` : ''}{lastSyncTime ? `Data diperbarui ${new Date(lastSyncTime).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'Belum ada unduhan lengkap'}</p>
+          </div>
+          {pending > 0 && !offline && <button className="min-h-touch px-3 border border-border rounded-input font-bold" onClick={() => void flushPendingWrites()}>Kirim ulang</button>}
+          {syncProgress.status === 'error' && !offline && <button className="min-h-touch px-3 border border-border rounded-input font-bold" onClick={() => void forceSync()}>Coba unduh lagi</button>}
         </div>
-        {queueError && <p className="text-danger break-words">Belum terkirim: {queueError}. Data tetap tersimpan di perangkat.</p>}
-        {testingOffline && <p>Uji offline aktif: scan, input, dan edit menggunakan data perangkat.</p>}
+        {queueError && <p className="mx-auto max-w-[480px] text-sm text-danger break-words">{queueError}. Data tetap tersimpan di perangkat.</p>}
+        {isReady && syncProgress.status === 'error' && <p className="mx-auto max-w-[480px] text-sm text-danger break-words">{syncProgress.error}</p>}
+        {isReady && syncProgress.status === 'syncing' && <p className="mx-auto max-w-[480px] text-sm">{syncProgress.step}</p>}
       </div>}
       {children}
     </DataSyncContext.Provider>

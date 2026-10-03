@@ -52,12 +52,15 @@ test('offline snapshot, durable writes, ordered retries and refresh protection',
   ]);
   assert.equal((await db.getPendingWrites()).length, 1);
   assert.equal((await db.getHistoryLocal())[0].rowId, saved.rowIds![0]);
-  await api.updateEntryApi(saved.rowIds![0], saved.sessionId!, 7, new Date().toISOString(), {batch: 'P-03'});
+  await api.updateEntryApi(saved.rowIds![0], saved.sessionId!, 7, new Date().toISOString(), {batch: 'P-03', location: undefined, sku: undefined, formula: '1x7=7'});
   assert.equal((await db.getPendingWrites()).length, 2);
   assert.equal((await db.getHistoryLocal())[0].qty, 7);
+  assert.equal((await db.getHistoryLocal())[0].location, 'NEW-01', 'editing without moving must retain the location');
+  assert.equal((await db.getHistoryLocal())[0].sku, '0002', 'unspecified fields cannot erase cached product details');
   assert.equal((await db.getProductsLocal('NEW-01'))?.[0].batch, 'P-03');
   assert.equal((await api.deleteEntryApi(saved.rowIds![0])).success, false);
-  await api.updateEntryApi(saved.rowIds![0], saved.sessionId!, 7, new Date().toISOString(), {batch: 'P-04'});
+  await api.updateEntryApi(saved.rowIds![0], saved.sessionId!, 7, new Date().toISOString(), {batch: 'P-04', formula: undefined});
+  assert.equal((await db.getHistoryLocal())[0].formula, '1x7=7', 'a batch-only edit retains the count formula');
   assert.equal((await db.getProductsLocal('NEW-01'))?.[0].batch, 'P-04');
   storage.set('testOffline', 'false');
   // Downloading an older snapshot must not erase queued input or edits.

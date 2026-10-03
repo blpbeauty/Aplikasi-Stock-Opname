@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { useDataSync } from "@/components/DataSyncProvider";
 import BottomNav from "@/components/BottomNav";
 import ConfirmModal from "@/components/ConfirmModal";
 import { getHistoryApi, getAllLocationsApi } from "@/lib/api";
@@ -13,12 +14,13 @@ type LocationResult = { locationCode: string; productCount: number };
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
+  const { isReady, offline, testingOffline, toggleOfflineTest, forceSync, syncProgress } = useDataSync();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [allLocations, setAllLocations] = useState<LocationResult[]>([]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
-    if (!user?.email) return;
+    if (!user?.email || !isReady) return;
     const ck = `history:${user.email}:all`;
     const cached = getCache<HistoryEntry[]>(ck);
     if (cached) setHistory(cached.data);
@@ -41,7 +43,7 @@ export default function ProfilePage() {
         }
       })
       .catch(() => {});
-  }, [user]);
+  }, [user, isReady]);
 
   const stats = useMemo(() => {
     const locations = new Set(history.map((e) => e.location));
@@ -122,6 +124,14 @@ export default function ProfilePage() {
       </header>
 
       <div className="px-4 sm:px-6 pt-4 space-y-5">
+        <section className="bg-paper border border-border rounded-card p-4 space-y-3" aria-label="Pengaturan sinkronisasi">
+          <h2 className="text-base font-bold">Data dan mode offline</h2>
+          <p className="text-sm text-text-secondary">Uji offline menggunakan data perangkat dan menahan pengiriman sampai pengujian diakhiri.</p>
+          <div className="flex flex-wrap gap-2">
+            <button disabled={!isReady} onClick={toggleOfflineTest} className="min-h-touch px-4 rounded-input bg-primary text-ivory font-bold disabled:opacity-50">{testingOffline ? 'Akhiri uji offline' : 'Uji offline'}</button>
+            <button disabled={offline || syncProgress.status === 'syncing'} onClick={() => void forceSync()} className="min-h-touch px-4 rounded-input border border-border font-bold disabled:opacity-50">{syncProgress.status === 'syncing' ? 'Mengunduh…' : 'Unduh data terbaru'}</button>
+          </div>
+        </section>
         {/* ── Statistik operator ── */}
         <section aria-label="Statistik pekerjaan" className="bg-paper rounded-card border border-border grid grid-cols-3 divide-x divide-border-subtle overflow-hidden">
           <div className="py-4 px-2 text-center">

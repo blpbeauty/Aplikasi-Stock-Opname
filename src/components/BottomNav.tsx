@@ -42,9 +42,9 @@ export default function BottomNav({ activePage }: BottomNavProps) {
   return (
     <nav
       aria-label="Navigasi utama"
-      className="fixed bottom-0 left-0 right-0 z-40 bg-paper border-t border-border shadow-bar"
+      className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 bg-paper border-t border-border shadow-bar"
     >
-      <div className="flex justify-around items-stretch max-w-[720px] mx-auto px-2 pb-safe">
+      <div className="flex justify-around items-stretch max-w-[480px] mx-auto px-2 pb-safe">
         {tabs.map((tab) => {
           const isActive = activePage === tab.key;
           return (
@@ -58,7 +58,7 @@ export default function BottomNav({ activePage }: BottomNavProps) {
             >
               <span
                 className={`flex items-center justify-center w-12 h-8 rounded-full transition ${
-                  isActive ? "bg-primary-pale text-primary" : ""
+                  isActive ? "bg-primary text-ivory" : ""
                 }`}
               >
                 {tab.icon}

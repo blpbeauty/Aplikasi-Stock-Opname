@@ -251,8 +251,10 @@ export const updateEntryApi = async (
   const entry = (await getHistoryLocal()).find(e => e.rowId === rowId);
   if (!entry) return { success: false, message: "Riwayat belum tersedia di perangkat. Sinkronkan data dahulu." };
   const previousMaster = (await getProductsLocal(entry.location))?.find(p => p.sku === entry.sku && p.batch === entry.batch);
-  const updated = { ...entry, ...extra, qty: newQty, edited: "Yes", editTimestamp };
-  await enqueueWrite({ action: "updateEntry", data: { rowId, sessionId, newQty, editTimestamp, ...extra }, entries: [updated], previous: entry, previousMaster });
+  // Optional fields omitted by an edit must not erase existing cached values.
+  const changes = Object.fromEntries(Object.entries(extra || {}).filter(([, value]) => value !== undefined));
+  const updated = { ...entry, ...changes, qty: newQty, edited: "Yes", editTimestamp };
+  await enqueueWrite({ action: "updateEntry", data: { rowId, sessionId, newQty, editTimestamp, ...changes }, entries: [updated], previous: entry, previousMaster });
   void flushPendingWrites();
   return { success: true, message: "Edit tersimpan di perangkat; menunggu sinkronisasi" };
 };

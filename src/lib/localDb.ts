@@ -25,6 +25,7 @@ export type SyncProgress = {
   percent: number;    // 0-100
   lastSyncTime: number | null;
   error?: string;
+  stage?: "products" | "history" | "storage" | "complete";
 };
 
 // ── Constants ──────────────────────────────────────────────────
@@ -266,7 +267,8 @@ async function syncAllDataInternal(
   };
 
   try {
-    report("Mengunduh Master Data lengkap...", 10);
+    progress.stage = "products";
+    report("Mengunduh produk beserta lokasi...", 10);
     const masterResult = await fetchFromGAS("getAllMasterData", {}, message => report(message, 10));
     if (!masterResult.success || !Array.isArray(masterResult.products)) {
       throw new Error(masterResult.message || "Perbarui deployment Apps Script: getAllMasterData belum tersedia.");
@@ -280,7 +282,8 @@ async function syncAllDataInternal(
     const allLocations = [...counts].map(([locationCode, productCount]) => ({ locationCode, productCount }));
 
     // Step 2: Download all history
-    report("Mengunduh Riwayat...", 60);
+    progress.stage = "history";
+    report("Mengunduh riwayat...", 60);
     const historyResult = await fetchFromGAS("getHistory", { 
       operator: "", 
       filter: undefined, 
@@ -306,7 +309,8 @@ async function syncAllDataInternal(
       }));
     }
 
-    report("Menyimpan data...", 80);
+    progress.stage = "storage";
+    report("Menyimpan di perangkat...", 80);
     const now = Date.now();
     // Replace the snapshot atomically; pending writes always win over downloaded data.
     const db = await openDb();
@@ -327,7 +331,8 @@ async function syncAllDataInternal(
       tx.onabort = tx.onerror = () => reject(tx.error);
     });
 
-    report("Sinkronisasi selesai!", 100);
+    progress.stage = "complete";
+    report("Sinkronisasi selesai", 100);
     progress.status = "synced";
     progress.lastSyncTime = now;
     onProgress?.({ ...progress });
@@ -336,7 +341,8 @@ async function syncAllDataInternal(
   } catch (error: any) {
     progress.status = "error";
     progress.error = error?.message || "Gagal sinkronisasi";
-    progress.step = "Gagal sinkronisasi data";
+    const labels = { products: "mengunduh produk", history: "mengunduh riwayat", storage: "menyimpan di perangkat", complete: "menyelesaikan sinkronisasi" };
+    progress.step = `Gagal pada tahap ${labels[progress.stage || "products"]}`;
     onProgress?.({ ...progress });
     throw error;
   }

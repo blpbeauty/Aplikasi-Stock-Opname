@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useDataSync } from "@/components/DataSyncProvider";
+import { InputDraft, getDraft, saveDraft, removeDraft } from "@/lib/drafts";
 import { useAuth } from "@/components/AuthProvider";
 import BottomNav from "@/components/BottomNav";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -9,7 +11,7 @@ import ScannerModal from "@/components/ScannerModal";
 import MoveSheet from "@/components/MoveSheet";
 import QtyInput from "@/components/QtyInput";
 import ConfirmModal from "@/components/ConfirmModal";
-import { PageHeader, LocationBand, EmptyState, Field, IconButton } from "@/components/ui";
+import { PageHeader, LocationBand, EmptyState, Field } from "@/components/ui";
 import Autocomplete from "@/components/Autocomplete";
 import {
   getProductsApi,
@@ -18,7 +20,6 @@ import {
   addMasterProductApi,
   lookupBarcodeApi,
   searchProductsApi,
-  warmupCacheApi,
   preloadHistory,
   getAllProductsApi,
   invalidateMemCache,
@@ -40,13 +41,22 @@ import toast from "react-hot-toast";
 
 function InputPageContent() {
   const { user } = useAuth();
+  const { isReady } = useDataSync();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const location = searchParams.get("location") || "";
+  const location = (searchParams.get("location") || "").trim().toUpperCase();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [newProducts, setNewProducts] = useState<Product[]>([]);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [counted, setCounted] = useState<Record<string, boolean>>({});
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [draftError, setDraftError] = useState("");
+  const [draftDirty, setDraftDirty] = useState(false);
+  const [showActions, setShowActions] = useState(false);
+  const saveFinished = useRef(false);
+  const latestDraft = useRef<InputDraft | null>(null);
   const [formulas, setFormulas] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -171,7 +181,7 @@ function InputPageContent() {
   }, [showBatchDropdown, showInlineBatchDropdown]);
 
   useEffect(() => {
-    warmupCacheApi().catch(() => {});
+    if (!isReady) return;
     if (user?.email) preloadHistory(user.email, undefined, user?.name);
     const loadAllProducts = async () => {
       const cached = getCache<Product[]>("allProducts");
@@ -187,18 +197,32 @@ function InputPageContent() {
       } catch {}
     };
     loadAllProducts();
-  }, [user]);
+  }, [user, isReady]);
 
   useEffect(() => {
     if (!location) {
       router.push("/scan");
       return;
     }
-    fetchProducts();
+    if (isReady) fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location, router]);
+  }, [location, router, isReady, user?.email]);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (ignoreDraft = false) => {
+    setDraftReady(false);
+    saveFinished.current = false;
+    const draft = !ignoreDraft && user?.email ? getDraft(user.email, location) : null;
+    if (draft) {
+      setProducts(draft.products); setNewProducts(draft.newProducts);
+      setQuantities(draft.quantities); setFormulas(draft.formulas); setCounted(draft.counted);
+      setNewProductForm(draft.newProductForm); setNewProductFormula(draft.newProductFormula || "");
+      setShowAddForm(draft.showAddForm); setDraftRestored(true); setDraftDirty(true);
+      setLoading(false); setDraftReady(true);
+      return;
+    }
+    setNewProducts([]); setCounted({}); setQuantities({}); setFormulas({}); setDraftDirty(false); setDraftRestored(false);
+    setNewProductForm({ productName: "", sku: "", batch: "", barcode: "", qty: 0 }); setNewProductFormula("");
+    setShowAddForm(searchParams.get("new") === "1");
     const ck = `products:${location}`;
     const cached = getCache<Product[]>(ck);
     if (cached) {
@@ -236,11 +260,13 @@ function InputPageContent() {
       }
     } finally {
       setLoading(false);
+      setDraftReady(true);
     }
   };
 
   const handleQuantityChange = (key: string, qty: number) => {
     setQuantities((prev) => ({ ...prev, [key]: qty }));
+    setCounted(prev => ({ ...prev, [key]: true }));
   };
 
   const handleExprCommit = (key: string, expr: string) => {
@@ -259,6 +285,7 @@ function InputPageContent() {
     const prevNewProducts = [...newProducts];
     const prevQuantities = { ...quantities };
     const prevFormulas = { ...formulas };
+    const prevCounted = { ...counted };
 
     setProducts((prev) =>
       prev.filter((p) => !(p.sku === product.sku && p.batch === product.batch))
@@ -271,6 +298,7 @@ function InputPageContent() {
       delete copy[key];
       return copy;
     });
+    setCounted(prev => { const next = { ...prev }; delete next[key]; return next; });
     setFormulas((prev) => {
       const copy = { ...prev };
       delete copy[key];
@@ -289,6 +317,7 @@ function InputPageContent() {
       setNewProducts(prevNewProducts);
       setQuantities(prevQuantities);
       setFormulas(prevFormulas);
+      setCounted(prevCounted);
       setCache(ck, prevProducts);
     };
 
@@ -443,6 +472,7 @@ function InputPageContent() {
     setNewProducts((prev) => [...prev, newProduct]);
     const nk = productKey(newProduct.sku, newProduct.batch);
     setQuantities((prev) => ({ ...prev, [nk]: newProductForm.qty }));
+    setCounted(prev => ({ ...prev, [nk]: true }));
     if (newProductFormula) {
       setFormulas((prev) => ({ ...prev, [nk]: newProductFormula }));
     }
@@ -492,7 +522,9 @@ function InputPageContent() {
 
     const oldKey = productKey(sku, oldBatch);
     const newKey = productKey(sku, newBatch);
+    setDraftDirty(true);
     if (oldKey !== newKey) {
+      setCounted(prev => { const next = { ...prev }; if (next[oldKey]) next[newKey] = true; delete next[oldKey]; return next; });
       setQuantities((prev) => {
         const copy = { ...prev };
         copy[newKey] = copy[oldKey] || 0;
@@ -517,11 +549,12 @@ function InputPageContent() {
     invalidateMemCache("getProducts");
     invalidateMemCache("getAllProducts");
     invalidateMemCache("getAllLocations");
-    fetchProducts();
+    fetchProducts(true);
   };
 
   const doSave = async (zeroMode: boolean) => {
     if (saving) return;
+    if (formHasContent) { setShowAddForm(true); toast.error("Masukkan produk dari form ke hitungan sebelum menyimpan hasil."); return; }
 
     const buildItem = (product: Product, isNew: boolean) => {
       const k = productKey(product.sku, product.batch);
@@ -537,9 +570,9 @@ function InputPageContent() {
     };
 
     const items = zeroMode
-      ? products.map((p) => buildItem(p, false))
+      ? [...products, ...newProducts].map((p) => buildItem(p, newProducts.includes(p)))
       : [...products, ...newProducts]
-          .filter((product) => quantities[productKey(product.sku, product.batch)] > 0)
+          .filter((product) => counted[productKey(product.sku, product.batch)])
           .map((p) =>
             buildItem(
               p,
@@ -548,7 +581,7 @@ function InputPageContent() {
           );
 
     if (items.length === 0) {
-      toast.error("Tidak ada produk dengan quantity > 0");
+      toast.error("Belum ada produk yang ditandai sudah dihitung");
       return;
     }
 
@@ -604,8 +637,14 @@ function InputPageContent() {
 
     if (typeof window !== "undefined") {
       window.localStorage.setItem("lastSaveTs", String(Date.now()));
+      window.localStorage.setItem(`lastSaveLocation:${user?.email}`, location);
     }
 
+    saveFinished.current = true;
+    latestDraft.current = null;
+    if (user?.email) {
+      try { removeDraft(user.email, location); } catch { /* Queued save remains durable; draft can be removed later. */ }
+    }
     invalidateMemCache("getHistory");
     clearCache("products:");
     toast.success(
@@ -615,11 +654,7 @@ function InputPageContent() {
   };
 
   const handleSaveClick = () => {
-    if (totalItems === 0) {
-      // Lokasi boleh selesai dengan seluruh kuantitas nol, lewat konfirmasi eksplisit
-      setShowZeroConfirm(true);
-      return;
-    }
+    if (!Object.values(counted).some(Boolean)) { toast.error("Periksa produk atau tandai stok 0 terlebih dahulu"); return; }
     doSave(false);
   };
 
@@ -656,10 +691,34 @@ function InputPageContent() {
 
   const totalItems = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
   const countedCount = allProducts.filter(
-    (p) => (quantities[productKey(p.sku, p.batch)] || 0) > 0
+    (p) => counted[productKey(p.sku, p.batch)]
   ).length;
 
-  const hasUnsavedChanges = totalItems > 0 || newProducts.length > 0;
+  const formHasContent = !!(newProductForm.productName || newProductForm.sku || newProductForm.batch || newProductForm.barcode || newProductForm.qty || newProductFormula);
+  const hasUnsavedChanges = countedCount > 0 || newProducts.length > 0 || formHasContent || draftDirty;
+
+  useEffect(() => {
+    if (!draftReady || !user?.email || saveFinished.current) return;
+    if (!hasUnsavedChanges) {
+      latestDraft.current = null;
+      try { removeDraft(user.email, location); setDraftError(""); }
+      catch { setDraftError("Draft lama belum dapat dihapus dari perangkat."); }
+      return;
+    }
+    const draft: InputDraft = { version: 1, location, updatedAt: Date.now(), products, newProducts, quantities, formulas, counted, newProductForm, newProductFormula, showAddForm };
+    latestDraft.current = draft;
+    try { saveDraft(user.email, draft); setDraftError(""); }
+    catch { setDraftError("Draft gagal disimpan di perangkat. Jangan tutup halaman sebelum menyimpan hasil."); }
+  }, [draftReady, user?.email, location, products, newProducts, quantities, formulas, counted, newProductForm, newProductFormula, showAddForm, hasUnsavedChanges]);
+
+  useEffect(() => {
+    const flushDraft = () => {
+      if (!user?.email || !latestDraft.current || saveFinished.current) return;
+      try { saveDraft(user.email, latestDraft.current); } catch { /* The visible draft error explains a storage failure. */ }
+    };
+    window.addEventListener("pagehide", flushDraft);
+    return () => { flushDraft(); window.removeEventListener("pagehide", flushDraft); };
+  }, [user?.email]);
 
   const handleBackClick = () => {
     if (hasUnsavedChanges) {
@@ -669,15 +728,6 @@ function InputPageContent() {
     }
   };
 
-  useEffect(() => {
-    if (!hasUnsavedChanges) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [hasUnsavedChanges]);
 
   if (loading) {
     return (
@@ -703,6 +753,9 @@ function InputPageContent() {
           sub={`${countedCount}/${allProducts.length} produk sudah dihitung · total ${totalItems} item`}
         />
 
+        <div role="status" className={`text-sm rounded-input px-3 py-2 border ${draftError ? 'bg-danger-bg text-danger border-danger/30' : 'bg-primary-pale border-primary/20'}`}>
+          {draftError || (draftRestored ? 'Draft dipulihkan. Lanjutkan hitungan lalu simpan hasil.' : hasUnsavedChanges ? 'Draft tersimpan otomatis di perangkat. Belum dikirim.' : 'Produk yang belum diperiksa tidak ikut disimpan.')}
+        </div>
         {/* ── Aksi sekunder ── */}
         <div className="flex gap-2">
           <button
@@ -712,16 +765,14 @@ function InputPageContent() {
           >
             {showAddForm ? "Tutup Form" : (<><PlusIcon className="w-4 h-4" /> Tambah Produk</>)}
           </button>
-          {products.length > 0 && (
-            <button
-              onClick={() => setShowMoveModal(true)}
-              className="min-h-touch bg-surface-warm border border-border text-text-primary px-4 rounded-input font-bold text-meta flex items-center gap-1.5 active:scale-[0.98] transition"
-            >
-              <SwapIcon className="w-4 h-4" /> Pindah
-            </button>
-          )}
+          <button className="min-h-touch px-4 border border-border rounded-input font-bold text-sm" onClick={() => setShowActions(!showActions)} aria-expanded={showActions}>Tindakan</button>
         </div>
 
+        {showActions && <div className="rounded-card bg-paper border border-border p-3 space-y-2">
+          <button disabled={hasUnsavedChanges || !products.length} onClick={() => { setShowMoveModal(true); setShowActions(false); }} className="w-full min-h-touch text-left px-3 rounded-input border border-border disabled:opacity-50">Pindah produk ke lokasi lain</button>
+          {hasUnsavedChanges && <p className="text-sm text-text-secondary">Simpan hitungan sebelum memindahkan produk.</p>}
+          <button onClick={() => setShowZeroConfirm(true)} disabled={!allProducts.length} className="w-full min-h-touch text-left px-3 rounded-input border border-border disabled:opacity-50">Simpan semua stok 0</button>
+        </div>}
         {/* ── Form Tambah Produk Baru ── */}
         {showAddForm && (
           <div className="bg-paper border border-border rounded-card p-4 shadow-card space-y-3.5">
@@ -898,6 +949,8 @@ function InputPageContent() {
                 Masukkan ke Hitungan Opname
               </button>
 
+              <details className="border border-border rounded-input p-3">
+                <summary className="min-h-touch flex items-center cursor-pointer font-bold text-sm">Tindakan lainnya</summary>
               <button
                 type="button"
                 onClick={async () => {
@@ -944,6 +997,7 @@ function InputPageContent() {
                       }));
                       setNewProductForm({ productName: "", sku: "", batch: "", barcode: "", qty: 0 });
                       setShowAddForm(false);
+                      setNewProductFormula("");
                       toast.success("Produk tersimpan di perangkat, menunggu sinkronisasi Master Data");
                     } else {
                       toast.error(result.message || "Gagal menyimpan");
@@ -959,6 +1013,7 @@ function InputPageContent() {
               >
                 {savingMasterData ? "Menyimpan…" : "Simpan ke Master Data Saja"}
               </button>
+              </details>
             </div>
           </div>
         )}
@@ -1025,13 +1080,13 @@ function InputPageContent() {
                   key={`${product.sku}-${product.batch}-${idx}`}
                   data-product-idx={idx}
                   className={`bg-paper rounded-card border p-3.5 transition shadow-subtle ${
-                    qty > 0 ? "border-primary/50" : "border-border"
+                    counted[k] ? "border-primary/50" : "border-border"
                   }`}
                 >
                   {/* Baris 1: nama produk + tindakan sekunder */}
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-meta font-bold text-text-primary leading-snug break-words">
+                      <h3 className="text-base font-bold text-text-primary leading-snug break-words">
                         {product.productName}
                       </h3>
                       <p className="text-meta text-text-secondary mt-0.5 tnum">
@@ -1045,14 +1100,16 @@ function InputPageContent() {
                           Baru
                         </span>
                       )}
-                      <IconButton
-                        label={`Hapus ${product.productName}`}
-                        variant="danger"
-                        size="md"
-                        onClick={() => handleDeleteProduct(product, isNew)}
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </IconButton>
+                      <details className="relative">
+                        <summary className="min-h-touch px-3 flex items-center border border-border rounded-input cursor-pointer text-sm" aria-label={`Tindakan untuk ${product.productName}`}>Tindakan</summary>
+                        <div className="absolute right-0 z-20 w-56 bg-paper border border-border rounded-input shadow-card p-1">
+                          <button className="w-full min-h-touch text-left px-3 text-danger" onClick={() => handleDeleteProduct(product, isNew)}>Hapus produk</button>
+                          <button className="w-full min-h-touch text-left px-3" onClick={() => {
+                            setCounted(prev => { const next = { ...prev }; delete next[k]; return next; });
+                            setQuantities(prev => ({ ...prev, [k]: 0 })); setFormulas(prev => ({ ...prev, [k]: '' }));
+                          }}>Batalkan hitungan produk</button>
+                        </div>
+                      </details>
                     </div>
                   </div>
 
@@ -1145,11 +1202,18 @@ function InputPageContent() {
                     </div>
                   </div>
 
+                  <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
+                    <span data-count-status={counted[k] ? 'counted' : 'uncounted'} className={`text-sm font-bold ${counted[k] ? 'text-primary' : 'text-text-secondary'}`}>
+                      {counted[k] ? `Sudah dihitung: ${qty}` : 'Belum dihitung'}
+                    </span>
+                    {!counted[k] && <button className="min-h-touch px-3 border border-border rounded-input text-sm font-bold" onClick={() => handleQuantityChange(k, 0)}>Tandai stok 0</button>}
+                  </div>
                   {/* Baris 3: kuantitas — fokus utama kartu */}
                   <div className="pt-2 border-t border-border-subtle">
                     <QtyInput
                       wide
                       value={qty}
+                      unfilled={!counted[k]}
                       onChange={(v) => handleQuantityChange(k, v)}
                       onExprCommit={(expr) => handleExprCommit(k, expr)}
                       onCommit={() => scrollToNextProduct(idx)}
@@ -1171,18 +1235,19 @@ function InputPageContent() {
       {/* ── Sticky save bar — di atas bottom nav, aman dari keyboard ── */}
       {!showAddForm && allProducts.length > 0 && (
         <div className="fixed bottom-16 left-0 right-0 z-30 pointer-events-none">
-          <div className="max-w-[720px] mx-auto p-3 pointer-events-auto">
+          <div className="max-w-[480px] mx-auto p-3 pointer-events-auto">
+            <div className="bg-paper border border-border rounded-card p-2 shadow-card">
+            <p className="text-sm text-center text-text-secondary mb-2">{countedCount}/{allProducts.length} produk diperiksa · {totalItems} item</p>
             <button
               type="button"
               onClick={handleSaveClick}
-              disabled={saving}
-              className="w-full min-h-touch bg-primary text-ivory px-5 rounded-card font-bold text-base2 shadow-card disabled:opacity-50 active:scale-[0.99] transition flex items-center justify-between gap-3"
+              disabled={saving || countedCount === 0}
+              className="w-full min-h-touch bg-primary text-ivory px-5 rounded-input font-bold text-base disabled:opacity-50 active:scale-[0.99] transition"
             >
               <span>{saving ? "Menyimpan…" : "Simpan Hasil Hitung"}</span>
-              <span className="bg-ivory/20 px-3 py-1 rounded-full text-meta font-bold tnum">
-                {totalItems} item
-              </span>
+
             </button>
+            </div>
           </div>
         </div>
       )}
@@ -1191,8 +1256,8 @@ function InputPageContent() {
       <ConfirmModal
         isOpen={showExitConfirm}
         title="Keluar Tanpa Menyimpan?"
-        message={`Ada ${totalItems} item yang sudah dihitung di lokasi ${location} tetapi belum disimpan. Jika keluar sekarang, hitungan tersebut akan hilang.`}
-        confirmText="Buang & Keluar"
+        message={`Hitungan lokasi ${location} belum dikirim. Draft akan tetap tersedia saat Anda kembali.`}
+        confirmText="Simpan Draft & Kembali"
         cancelText="Tetap di Halaman"
         isDanger
         onConfirm={() => router.push("/scan")}
@@ -1203,7 +1268,7 @@ function InputPageContent() {
       <ConfirmModal
         isOpen={showZeroConfirm}
         title="Simpan dengan Semua Kuantitas Nol?"
-        message={`Semua ${products.length} produk di lokasi ${location} akan dicatat dengan kuantitas 0 (stok kosong). Lanjutkan?`}
+        message={`Semua ${allProducts.length} produk di lokasi ${location} akan dicatat dengan kuantitas 0, termasuk produk yang belum diperiksa. Lanjutkan hanya jika seluruh stok sudah dipastikan kosong.`}
         confirmText="Ya, Semua 0"
         cancelText="Batal"
         onConfirm={() => doSave(true)}
