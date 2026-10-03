@@ -78,9 +78,6 @@ export default function HistoryPage() {
   const [inlineSaving, setInlineSaving] = useState<string | null>(null);
   const initializedGroups = useRef(false);
 
-  // Sort
-  const [sortBy, setSortBy] = useState<"time" | "name" | "qty">("time");
-
   const allProductsRef = useRef<Product[] | null>(null);
   const allLocationsRef = useRef<Array<{ locationCode: string; productCount: number }> | null>(null);
 
@@ -265,14 +262,13 @@ export default function HistoryPage() {
       });
     }
 
+    // Default sorting: Terbaru menurun
     return [...result].sort((a, b) => {
-      if (sortBy === "name") return a.productName.localeCompare(b.productName);
-      if (sortBy === "qty") return a.qty - b.qty;
       const ta = parseTimestamp(a.timestamp)?.getTime() || 0;
       const tb = parseTimestamp(b.timestamp)?.getTime() || 0;
       return tb - ta;
     });
-  }, [history, timeFilter, searchQuery, selectedLocations, sortBy]);
+  }, [history, timeFilter, searchQuery, selectedLocations]);
 
   // Grouped by location
   const groupedHistory = useMemo(() => {
@@ -534,11 +530,11 @@ export default function HistoryPage() {
           )}
         </div>
 
-        {/* Dropdown Filter Periode */}
+        {/* Dropdown Filter Periode (Minggu & Bulan Saja) */}
         <div className="mt-2.5">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">
-              Filter Periode:
+              Periode Opname:
             </span>
             <select
               id="history-time-filter"
@@ -608,15 +604,6 @@ export default function HistoryPage() {
               {searchQuery || selectedLocations.size ? " · Hasil filter" : ""}
             </p>
           </div>
-          <select
-            value={sortBy}
-            onChange={(event) => setSortBy(event.target.value as "time" | "name" | "qty")}
-            aria-label="Urutan"
-          >
-            <option value="time">Terbaru</option>
-            <option value="name">Nama A–Z</option>
-            <option value="qty">Qty terkecil</option>
-          </select>
         </div>
 
         {loading && history.length === 0 ? (
