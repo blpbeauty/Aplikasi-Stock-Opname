@@ -2,33 +2,33 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import DeliveryBadge from "@/components/DeliveryBadge";
+import { useDataSync } from "@/components/DataSyncProvider";
 import BottomNav from "@/components/BottomNav";
 import EditModal, { EditData } from "@/components/EditModal";
 import AddHistoryEntryModal from "@/components/AddHistoryEntryModal";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import QtyInput from "@/components/QtyInput";
+import HistoryRecord from "@/components/HistoryRecord";
 import ConfirmModal from "@/components/ConfirmModal";
-import { EmptyState, IconButton } from "@/components/ui";
+import { EmptyState } from "@/components/ui";
 import {
   getHistoryApi,
   updateEntryApi,
   deleteEntryApi,
-  warmupCacheApi,
   getAllProductsApi,
   getAllLocationsApi,
 } from "@/lib/api";
 import { HistoryEntry, Product } from "@/lib/types";
 import { getCache, setCache, clearCache } from "@/lib/cache";
 import { deleteHistoryEntryLocal } from "@/lib/localDb";
-import { parseTimestamp, formatDisplayTime, toDateStr } from "@/lib/format";
+import { parseTimestamp } from "@/lib/format";
+import { getHistoryMonth, selectHistoryMonth, formatHistoryMonth } from "@/lib/historyPeriod";
 import {
   RefreshIcon,
-  PencilIcon,
-  TrashIcon,
   XIcon,
   ClipboardIcon,
-  CalculatorIcon,
-  UserIcon,
+  SearchIcon,
+  MapPinIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   PlusIcon,
@@ -40,6 +40,7 @@ const INITIAL_VISIBLE_ENTRIES = 20;
 
 export default function HistoryPage() {
   const { user } = useAuth();
+  const { isReady, lastSyncTime } = useDataSync();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null);
@@ -65,32 +66,17 @@ export default function HistoryPage() {
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterDate, setFilterDate] = useState("");
-  const [filterDateEnd, setFilterDateEnd] = useState("");
-  const [activeTab, setActiveTab] = useState<"all" | "today" | "week" | "month">("all");
+  const [timeFilter, setTimeFilter] = useState<"week" | "month">("week");
+  const [activeMonth, setActiveMonth] = useState("");
   const [selectedLocations, setSelectedLocations] = useState<Set<string>>(new Set());
 
-  // Grup lokasi dilipat secara default — merender ratusan kartu entri
-  // sekaligus membuat scroll tersendat di HP. Saat mencari/memfilter
-  // tanggal, semua grup terbuka otomatis.
+  // Grup lokasi dilipat secara default
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  // Grup yang entri-nya ditampilkan semua (lewat "Tampilkan semua")
+  // Grup yang entri-nya ditampilkan semua
   const [fullGroups, setFullGroups] = useState<Set<string>>(new Set());
 
-  // Inline edit state
-  const [editingBatch, setEditingBatch] = useState<string | null>(null);
-  const [editingBatchValue, setEditingBatchValue] = useState("");
-  const [editingQty, setEditingQty] = useState<string | null>(null);
-  const [editingQtyValue, setEditingQtyValue] = useState(0);
-  const [editingQtyFormula, setEditingQtyFormula] = useState("");
   const [inlineSaving, setInlineSaving] = useState<string | null>(null);
-
-  // Header collapse on scroll
-  const [headerCollapsed, setHeaderCollapsed] = useState(false);
-  const lastScrollY = useRef(0);
-
-  // Sync delay feedback
-  const [waitingSync, setWaitingSync] = useState(false);
+  const initializedGroups = useRef(false);
 
   // Sort
   const [sortBy, setSortBy] = useState<"time" | "name" | "qty">("time");
@@ -98,26 +84,8 @@ export default function HistoryPage() {
   const allProductsRef = useRef<Product[] | null>(null);
   const allLocationsRef = useRef<Array<{ locationCode: string; productCount: number }> | null>(null);
 
-  // Batches for inline edit
-  const inlineBatchesForSku = useMemo(() => {
-    if (!editingBatch) return [];
-    const entry = history.find((e) => e.rowId === editingBatch);
-    if (!entry) return [];
-    const skuVal = entry.sku.trim().toLowerCase();
-    if (!skuVal) return [];
-    const all = allProductsRef.current || [];
-    const batchSet = new Set<string>();
-    all.forEach((p) => {
-      if (p.sku.trim().toLowerCase() === skuVal && p.batch) {
-        batchSet.add(p.batch);
-      }
-    });
-    return Array.from(batchSet).sort();
-  }, [editingBatch, history]);
-
   useEffect(() => {
     fetchHistory();
-    warmupCacheApi().catch(() => {});
 
     const cachedProducts = getCache<Product[]>("allProducts");
     if (cachedProducts) allProductsRef.current = cachedProducts.data;
@@ -142,22 +110,7 @@ export default function HistoryPage() {
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  // Scroll-based header collapse
-  useEffect(() => {
-    const onScroll = () => {
-      const y = window.scrollY;
-      if (y > 120 && y > lastScrollY.current + 5) {
-        setHeaderCollapsed(true);
-      } else if (y < lastScrollY.current - 10) {
-        setHeaderCollapsed(false);
-      }
-      lastScrollY.current = y;
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [user, isReady]);
 
   const normalizeEntry = (e: any): HistoryEntry => ({
     ...e,
@@ -184,14 +137,6 @@ export default function HistoryPage() {
       setLoading(false);
     }
 
-    const lastSave = Number(localStorage.getItem("lastSaveTs") || "0");
-    const sinceSave = Date.now() - lastSave;
-    if (sinceSave < 15_000) {
-      setWaitingSync(true);
-      await new Promise((r) => setTimeout(r, Math.max(15_000 - sinceSave, 0)));
-      setWaitingSync(false);
-    }
-
     try {
       const result = await getHistoryApi(user.email, undefined, true);
       if (result.success && result.history) {
@@ -209,30 +154,68 @@ export default function HistoryPage() {
     }
   };
 
-  // Filter tab change helper
-  const handleTabChange = (tab: "all" | "today" | "week" | "month") => {
-    setActiveTab(tab);
-    const now = new Date();
+  useEffect(() => {
+    if (!isReady || !user) return;
+    const refresh = () => void fetchHistory();
+    refresh();
+    window.addEventListener("outbox-change", refresh);
+    return () => window.removeEventListener("outbox-change", refresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReady, lastSyncTime, user?.email]);
 
-    if (tab === "all") {
-      setFilterDate("");
-      setFilterDateEnd("");
-    } else if (tab === "today") {
-      setFilterDate(toDateStr(now));
-      setFilterDateEnd("");
-    } else if (tab === "week") {
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      setFilterDate(toDateStr(weekAgo));
-      setFilterDateEnd(toDateStr(now));
-    } else if (tab === "month") {
-      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      setFilterDate(toDateStr(monthAgo));
-      setFilterDateEnd(toDateStr(now));
-    }
-  };
+  useEffect(() => {
+    const refreshPeriod = () => setActiveMonth(getHistoryMonth());
+    refreshPeriod();
+    const timer = window.setInterval(refreshPeriod, 60_000);
+    window.addEventListener("focus", refreshPeriod);
+    document.addEventListener("visibilitychange", refreshPeriod);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshPeriod);
+      document.removeEventListener("visibilitychange", refreshPeriod);
+    };
+  }, []);
+
+  useEffect(() => {
+    setSelectedLocations(new Set());
+    setIsModalOpen(false);
+    setSelectedEntry(null);
+    setDeleteModal({ isOpen: false, entry: null });
+    initializedGroups.current = false;
+    setAddModal({ isOpen: false, location: "" });
+  }, [activeMonth]);
+
+  const currentHistory = useMemo(
+    () => selectHistoryMonth(history, activeMonth),
+    [history, activeMonth]
+  );
+
+  useEffect(() => {
+    if (initializedGroups.current || !currentHistory.length) return;
+    initializedGroups.current = true;
+    const savedLocation = localStorage.getItem(`lastSaveLocation:${user?.email}`);
+    const newest = currentHistory.reduce((latest, row) =>
+      (parseTimestamp(row.timestamp)?.getTime() || 0) > (parseTimestamp(latest.timestamp)?.getTime() || 0) ? row : latest
+    );
+    const location = currentHistory.some((row) => row.location === savedLocation) ? savedLocation! : newest.location;
+    setExpandedGroups(new Set([location]));
+  }, [currentHistory, user?.email]);
+
+  const periodLabel = activeMonth ? formatHistoryMonth(activeMonth) : "Memuat periode";
 
   const filteredHistory = useMemo(() => {
     let result = history;
+
+    // Filter Periode: Minggu Ini (7 hari) / Bulan Ini (30 hari)
+    const now = Date.now();
+    const thresholdDays = timeFilter === "week" ? 7 : 30;
+    const minTimestamp = now - thresholdDays * 24 * 60 * 60 * 1000;
+
+    result = result.filter((e) => {
+      const ts = parseTimestamp(e.timestamp)?.getTime();
+      if (!ts) return true;
+      return ts >= minTimestamp;
+    });
 
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
@@ -242,20 +225,9 @@ export default function HistoryPage() {
           String(e.sku || "").toLowerCase().includes(q) ||
           String(e.batch || "").toLowerCase().includes(q) ||
           String(e.location || "").toLowerCase().includes(q) ||
-          String(e.operator || "").toLowerCase().includes(q)
+          String(e.operator || "").toLowerCase().includes(q) ||
+          String(e.formula || "").toLowerCase().includes(q)
       );
-    }
-
-    if (filterDate) {
-      result = result.filter((e) => {
-        const d = parseTimestamp(e.timestamp);
-        if (!d) return false;
-        const iso = toDateStr(d);
-        if (filterDateEnd) {
-          return iso >= filterDate && iso <= filterDateEnd;
-        }
-        return iso === filterDate;
-      });
     }
 
     if (selectedLocations.size > 0) {
@@ -274,7 +246,7 @@ export default function HistoryPage() {
       const tb = parseTimestamp(b.timestamp)?.getTime() || 0;
       return tb - ta;
     });
-  }, [history, searchQuery, filterDate, filterDateEnd, selectedLocations, sortBy]);
+  }, [history, timeFilter, searchQuery, selectedLocations, sortBy]);
 
   // Grouped by location
   const groupedHistory = useMemo(() => {
@@ -293,9 +265,10 @@ export default function HistoryPage() {
   const uniqueLocations = useMemo(() => {
     const groupMap = new Map<string, number>();
     history.forEach((e) => {
-      const parts = String(e.location || "").split("/");
-      const groupKey = parts.length >= 2 ? parts.slice(0, 2).join("/") : parts[0];
-      groupMap.set(groupKey, (groupMap.get(groupKey) || 0) + 1);
+      const loc = String(e.location || "").trim();
+      if (loc) {
+        groupMap.set(loc, (groupMap.get(loc) || 0) + 1);
+      }
     });
     return Array.from(groupMap.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))
@@ -304,7 +277,7 @@ export default function HistoryPage() {
 
   // Summary stats for filtered results
   const summary = useMemo(() => {
-    const totalQty = filteredHistory.reduce((s, e) => s + e.qty, 0);
+    const totalQty = filteredHistory.reduce((s, e) => s + (Number(e.qty) || 0), 0);
     return {
       count: filteredHistory.length,
       locCount: groupedHistory.length,
@@ -312,19 +285,8 @@ export default function HistoryPage() {
     };
   }, [filteredHistory, groupedHistory]);
 
-  const toggleLocation = (loc: string) => {
-    setSelectedLocations((prev) => {
-      const next = new Set(prev);
-      if (next.has(loc)) next.delete(loc);
-      else next.add(loc);
-      return next;
-    });
-  };
-
-  // While searching or filtering by date the user has narrowed things down on
-  // purpose, so every group is forced open; otherwise groups start collapsed.
   const isGroupExpanded = (loc: string) => {
-    if (searchQuery.trim() || filterDate) return true;
+    if (searchQuery.trim()) return true;
     return expandedGroups.has(loc);
   };
 
@@ -359,14 +321,12 @@ export default function HistoryPage() {
     setCache(ck, updated);
     clearCache("products:");
 
-    // Entri optimistic — hapus lokal langsung, tanpa undo.
     if (entry.rowId.startsWith("optimistic_")) {
       deleteHistoryEntryLocal(entry.rowId).catch(() => {});
       toast.success("Entri dihapus");
       return;
     }
 
-    // Undo window: beri user 5 detik untuk membatalkan.
     let undone = false;
     toast(
       (t) => (
@@ -379,7 +339,7 @@ export default function HistoryPage() {
               setHistory(prev);
               setCache(ck, prev);
             }}
-            className="px-3 py-1.5 bg-primary text-ivory text-meta font-bold rounded-label whitespace-nowrap active:scale-95 transition"
+            className="px-3 py-1.5 bg-primary text-white text-meta font-bold rounded-label whitespace-nowrap active:scale-95 transition"
           >
             Batalkan
           </button>
@@ -415,7 +375,6 @@ export default function HistoryPage() {
     setIsModalOpen(false);
     setInlineSaving(selectedEntry.rowId);
 
-    // Tunggu server sebelum mengklaim sukses — rollback bila gagal.
     try {
       const result = await updateEntryApi(
         selectedEntry.rowId,
@@ -450,7 +409,7 @@ export default function HistoryPage() {
             batch: data.batch ?? e.batch,
             location: data.location ?? e.location,
             qty: data.newQty,
-            formula: data.formula || e.formula,
+            formula: data.formula ?? e.formula,
             edited: "Yes",
             editTimestamp,
           }
@@ -460,13 +419,15 @@ export default function HistoryPage() {
     setCache(`history:ALL:all`, updated);
     clearCache("products:");
     setInlineSaving(null);
-    // Baris bisa "hilang" dari grup ini karena pindah lokasi — beri tahu operator.
     if (data.location) {
-      toast.success(`Perubahan ke ${data.location} tersimpan di perangkat, menunggu sinkronisasi`);
+      setExpandedGroups((prev) => new Set(prev).add(data.location!));
+      toast.success(`Perubahan ke ${data.location} tersimpan di perangkat`);
     }
   };
 
   const handleAddSuccess = (newEntry: HistoryEntry) => {
+    setExpandedGroups((prev) => new Set(prev).add(newEntry.location));
+    localStorage.setItem(`lastSaveLocation:${user?.email}`, newEntry.location);
     const updated = [newEntry, ...history];
     setHistory(updated);
     setCache(`history:ALL:all`, updated);
@@ -476,52 +437,10 @@ export default function HistoryPage() {
     clearCache("products:");
   };
 
-  const saveInlineBatch = async (entry: HistoryEntry) => {
-    const newBatch = editingBatchValue.trim();
-    if (!newBatch) {
-      toast.error("Batch tidak boleh kosong");
-      return;
-    }
-    if (newBatch === entry.batch) {
-      setEditingBatch(null);
-      return;
-    }
-    setEditingBatch(null);
-    setInlineSaving(entry.rowId);
-    const editTimestamp = new Date().toISOString();
-
-    try {
-      const result = await updateEntryApi(entry.rowId, entry.sessionId, entry.qty, editTimestamp, {
-        batch: newBatch,
-      });
-      if (!result.success) {
-        setInlineSaving(null);
-        toast.error(result.message || "Gagal update batch, data tidak diubah");
-        return;
-      }
-    } catch {
-      setInlineSaving(null);
-      toast.error("Gagal update batch, data tidak diubah");
-      return;
-    }
-
-    const updated = history.map((e) =>
-      e.rowId === entry.rowId ? { ...e, batch: newBatch, edited: "Yes", editTimestamp } : e
-    );
-    setHistory(updated);
-    setCache(`history:ALL:all`, updated);
-    clearCache("products:");
-    setInlineSaving(null);
-  };
-
-  const saveInlineQty = async (entry: HistoryEntry) => {
-    const newQty = editingQtyValue;
-    const newFormula = editingQtyFormula;
+  const saveInlineQty = async (entry: HistoryEntry, newQty: number, newFormula: string): Promise<boolean> => {
     if (newQty === entry.qty && newFormula === (entry.formula || "")) {
-      setEditingQty(null);
-      return;
+      return true;
     }
-    setEditingQty(null);
     setInlineSaving(entry.rowId);
     const editTimestamp = new Date().toISOString();
 
@@ -532,12 +451,12 @@ export default function HistoryPage() {
       if (!result.success) {
         setInlineSaving(null);
         toast.error(result.message || "Gagal update qty, data tidak diubah");
-        return;
+        return false;
       }
     } catch {
       setInlineSaving(null);
       toast.error("Gagal update qty, data tidak diubah");
-      return;
+      return false;
     }
 
     const updated = history.map((e) =>
@@ -549,401 +468,197 @@ export default function HistoryPage() {
     setCache(`history:ALL:all`, updated);
     clearCache("products:");
     setInlineSaving(null);
+    return true;
   };
 
   return (
-    <div className="mobile-container pb-32">
-      {/* ── Header + toolbar filter ── */}
-      <div className={`sticky top-0 z-30 bg-paper px-4 sm:px-6 border-b border-border transition-all duration-200 ${headerCollapsed ? "pt-2 pb-2" : "pt-4 pb-3"}`}>
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="text-lg font-bold text-text-primary leading-tight whitespace-nowrap">
-            Riwayat Stock Opname
-          </h1>
+    <div className="mobile-container history-page pb-28">
+      <header className="history-hero">
+        <div className="history-hero-top">
+          <div>
+            <span className="history-eyebrow">BLP / STOCK OPNAME</span>
+            <h1>Hasil opname<span>.</span></h1>
+          </div>
           <button
+            type="button"
             onClick={() => fetchHistory()}
             disabled={loading}
-            className="tap w-11 h-11 shrink-0 rounded-input bg-primary-pale text-primary border border-primary/20 transition active:scale-95 flex items-center justify-center disabled:opacity-50"
+            className="history-refresh"
             aria-label="Muat ulang riwayat"
             title="Muat ulang"
           >
             <RefreshIcon className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
+        <div className="history-period" data-history-period={activeMonth}>
+          <span>{timeFilter === "week" ? "7 Hari Terakhir" : "30 Hari Terakhir"}</span>
+          <span className="history-period-dot" aria-hidden="true" />
+          {periodLabel}
+        </div>
+        <div className="history-hero-stats" aria-label="Ringkasan hasil yang ditampilkan">
+          <div><strong>{summary.totalQty.toLocaleString("id-ID")}</strong><span>Total pcs</span></div>
+          <div><strong>{summary.count.toLocaleString("id-ID")}</strong><span>Entri produk</span></div>
+          <div><strong>{summary.locCount.toLocaleString("id-ID")}</strong><span>Lokasi</span></div>
+        </div>
+      </header>
 
-        {/* ── Pencarian ── */}
-        <div className="mt-2.5 relative">
-          <label htmlFor="history-search" className="sr-only">
-            Cari riwayat
-          </label>
+      <div className="history-toolbar">
+        <div className="history-search">
+          <SearchIcon className="w-[18px] h-[18px] shrink-0" />
+          <label htmlFor="history-search" className="sr-only">Cari riwayat</label>
           <input
             id="history-search"
-            type="text"
+            type="search"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full min-h-touch pl-3 pr-10 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary"
-            placeholder="Cari produk, SKU, batch, lokasi, operator…"
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Cari produk, SKU, batch, lokasi, rumus…"
+            autoComplete="off"
           />
           {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-surface-warm text-text-secondary flex items-center justify-center active:scale-95 transition"
-              aria-label="Bersihkan pencarian"
-            >
+            <button type="button" onClick={() => setSearchQuery("")} aria-label="Bersihkan pencarian">
               <XIcon className="w-4 h-4" />
             </button>
           )}
         </div>
 
-        {/* ── Filter cepat ── */}
-        <div className={`overflow-hidden transition-all duration-200 ${headerCollapsed ? "max-h-0 opacity-0 mt-0" : "max-h-16 opacity-100 mt-2"}`}>
-        <div className="flex gap-1.5 overflow-x-auto hide-scrollbar" role="group" aria-label="Filter rentang waktu">
-          {[
-            { id: "all", label: "Semua" },
-            { id: "today", label: "Hari Ini" },
-            { id: "week", label: "7 Hari" },
-            { id: "month", label: "30 Hari" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id as any)}
-              aria-pressed={activeTab === tab.id}
-              className={`min-h-touch px-3.5 rounded-label text-meta font-bold whitespace-nowrap transition active:scale-95 ${
-                activeTab === tab.id
-                  ? "bg-primary text-ivory"
-                  : "bg-surface-warm text-text-secondary"
-              }`}
+        {/* Dropdown Filter Periode (Week & Month) & Lokasi */}
+        <div className="grid grid-cols-2 gap-2 mt-2.5">
+          <div>
+            <label htmlFor="history-time-filter" className="block text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1">
+              Periode
+            </label>
+            <select
+              id="history-time-filter"
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value as "week" | "month")}
+              className="w-full px-2.5 py-2 bg-surface-warm border border-border rounded-xl text-xs font-bold text-text-primary focus:outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer"
             >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+              <option value="week">Minggu Ini (7 Hari)</option>
+              <option value="month">Bulan Ini (30 Hari)</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="history-loc-filter" className="block text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1">
+              Lokasi
+            </label>
+            <select
+              id="history-loc-filter"
+              value={Array.from(selectedLocations)[0] || "all"}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedLocations(val === "all" ? new Set() : new Set([val]));
+              }}
+              className="w-full px-2.5 py-2 bg-surface-warm border border-border rounded-xl text-xs font-bold text-text-primary focus:outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer"
+            >
+              <option value="all">Semua Lokasi ({uniqueLocations.length})</option>
+              {uniqueLocations.map((loc) => (
+                <option key={loc.location} value={loc.location}>
+                  {loc.location} ({loc.count})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* ── Banner sinkronisasi menunggu ── */}
-      {waitingSync && (
-        <div className="mx-4 sm:mx-6 mt-3 px-3.5 py-2.5 bg-info-bg border border-info/20 rounded-card flex items-center gap-2 text-info text-meta font-semibold animate-fadeIn">
-          <RefreshIcon className="w-4 h-4 animate-spin shrink-0" />
-          <span>Menunggu sinkronisasi server…</span>
-        </div>
-      )}
-
-      <div className="px-4 sm:px-6 pt-3 space-y-4">
-        {/* ── Filter area gudang ── */}
-        {uniqueLocations.length > 1 && (
+      <main className="history-content">
+        <div className="history-list-heading">
           <div>
-            <p className="text-meta font-bold text-text-secondary px-1">Filter Area Gudang:</p>
-            <div className="relative">
-            <div className="flex gap-1.5 mt-1.5 overflow-x-auto hide-scrollbar pb-1 pr-8">
-              {uniqueLocations.map((loc) => {
-                const isSelected = selectedLocations.has(loc.location);
-                return (
-                  <button
-                    key={loc.location}
-                    onClick={() => toggleLocation(loc.location)}
-                    aria-pressed={isSelected}
-                    className={`min-h-touch px-3 rounded-label text-meta font-semibold border transition flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
-                      isSelected
-                        ? "bg-primary text-ivory border-primary"
-                        : "bg-paper text-text-primary border-border"
-                    }`}
-                  >
-                    <span>{loc.location}</span>
-                    <span
-                      className={`tnum px-1.5 py-0.5 rounded-full text-meta font-bold ${
-                        isSelected ? "bg-ivory/25 text-ivory" : "bg-primary-pale text-primary"
-                      }`}
-                    >
-                      {loc.count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="absolute right-0 top-1.5 bottom-1 w-8 bg-gradient-to-l from-[var(--primary-bg)] to-transparent pointer-events-none" />
-            </div>
+            <h2>Riwayat per lokasi</h2>
+            <p>
+              {summary.count.toLocaleString("id-ID")} entri di {summary.locCount} lokasi
+              {searchQuery || selectedLocations.size ? " · Hasil filter" : ""}
+            </p>
           </div>
-        )}
+          <select
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value as "time" | "name" | "qty")}
+            aria-label="Urutan"
+          >
+            <option value="time">Terbaru</option>
+            <option value="name">Nama A–Z</option>
+            <option value="qty">Qty terkecil</option>
+          </select>
+        </div>
 
-        {/* ── Summary bar + sort ── */}
-        {!loading && filteredHistory.length > 0 && (
-          <div className="flex items-center justify-between gap-2 px-1 text-meta text-text-secondary">
-            <span>{summary.count.toLocaleString("id-ID")} entri di {summary.locCount} lokasi — <span className="font-bold text-text-primary tnum">{summary.totalQty.toLocaleString("id-ID")} pcs</span></span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as "time" | "name" | "qty")}
-              className="min-h-touch px-2 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary"
-              aria-label="Urutan"
-            >
-              <option value="time">Terbaru</option>
-              <option value="name">Nama A-Z</option>
-              <option value="qty">Qty terkecil</option>
-            </select>
-          </div>
-        )}
-
-        {/* ── Daftar riwayat berkelompok lokasi ── */}
         {loading && history.length === 0 ? (
-          <div className="flex items-center justify-center py-12">
-            <LoadingSpinner />
-          </div>
+          <div className="flex justify-center py-12"><LoadingSpinner /></div>
         ) : groupedHistory.length === 0 ? (
           <EmptyState
             icon={<ClipboardIcon className="w-6 h-6" />}
-            title="Tidak ada riwayat opname"
+            title={`Tidak ada hasil opname`}
             description={
-              searchQuery || filterDate
-                ? "Coba ubah kata kunci atau filter tanggal."
-                : "Belum ada produk yang disimpan. Mulai hitung dari halaman Scan."
+              searchQuery || selectedLocations.size > 0
+                ? "Tidak ada hasil yang cocok dengan filter yang dipilih."
+                : "Belum ada produk yang dicatat pada periode ini."
             }
           />
         ) : (
           groupedHistory.map(([loc, entries]) => {
-            const locTotalQty = entries.reduce((s, e) => s + e.qty, 0);
+            const totalQty = entries.reduce((sum, entry) => sum + (Number(entry.qty) || 0), 0);
             const expanded = isGroupExpanded(loc);
             const showAll = fullGroups.has(loc);
-            const visibleEntries =
-              showAll || entries.length <= INITIAL_VISIBLE_ENTRIES
-                ? entries
-                : entries.slice(0, INITIAL_VISIBLE_ENTRIES);
-
+            const visibleEntries = showAll ? entries : entries.slice(0, INITIAL_VISIBLE_ENTRIES);
             return (
-              <section
-                key={loc}
-                className="bg-paper rounded-card border border-border shadow-subtle overflow-hidden"
-              >
-                {/* Kepala grup gaya label rak */}
-                <div className="w-full bg-surface-warm px-3.5 sm:px-4 py-2 border-b border-border">
-                  <div className="flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(loc)}
-                      className="flex-1 min-w-0 flex items-center gap-2 text-left active:opacity-80 transition py-1"
-                      aria-expanded={expanded}
-                      aria-label={`${expanded ? "Tutup" : "Buka"} grup ${loc}`}
-                    >
-                      <span className="w-1.5 h-6 bg-ochre rounded-full shrink-0" aria-hidden="true" />
-                      <span className="font-bold text-meta uppercase text-text-primary leading-snug tnum break-all min-w-0 flex-1">
-                        {loc}
-                      </span>
-                      {expanded ? (
-                        <ChevronDownIcon className="w-4 h-4 text-text-secondary shrink-0" />
-                      ) : (
-                        <ChevronRightIcon className="w-4 h-4 text-text-secondary shrink-0" />
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAddModal({ isOpen: true, location: loc });
-                      }}
-                      className="min-h-touch px-2.5 py-1.5 bg-primary text-ivory rounded-input text-meta font-bold flex items-center gap-1 shrink-0 active:scale-95 transition shadow-subtle hover:bg-primary/90"
-                      aria-label={`Tambah produk di ${loc}`}
-                      title={`Tambah produk di ${loc}`}
-                    >
-                      <PlusIcon className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2 text-meta tnum pl-4 mt-0.5">
-                    <span className="text-text-secondary">{entries.length} entri</span>
-                    <span className="font-bold text-primary bg-primary-pale px-2 py-0.5 rounded-full border border-primary/20 whitespace-nowrap">
-                      {locTotalQty.toLocaleString("id-ID")} item
-                    </span>
-                  </div>
-                </div>
-
-                {/* Entri */}
-                {expanded && (
-                <div>
-                <div className="divide-y divide-border-subtle">
-                  {visibleEntries.map((entry) => (
-                    <div key={entry.rowId} className="p-3.5 sm:p-4 hover:bg-primary-pale/10 transition">
-                      {/* Baris 1: nama produk + aksi */}
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="flex-1 min-w-0 text-meta font-bold text-text-primary leading-snug break-words">
-                          {entry.productName}
-                        </h3>
-
-                        {/* Tindakan per entri */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <IconButton
-                            label={`Edit ${entry.productName}`}
-                            onClick={() => handleEdit(entry)}
-                            disabled={inlineSaving === entry.rowId}
-                          >
-                            <PencilIcon className="w-4 h-4" />
-                          </IconButton>
-                          <IconButton
-                            label={`Hapus ${entry.productName}`}
-                            variant="danger"
-                            onClick={() => promptDelete(entry)}
-                            disabled={inlineSaving === entry.rowId}
-                          >
-                            <TrashIcon className="w-4 h-4" />
-                          </IconButton>
-                        </div>
-                      </div>
-
-                      {/* Baris 2: Batch + Qty — chip tebal sebaris */}
-                      <div className="flex items-center flex-wrap gap-2 mt-2 pt-2 border-t border-border-subtle">
-                        {editingBatch === entry.rowId ? (
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <input
-                              type="text"
-                              value={editingBatchValue}
-                              onChange={(e) => setEditingBatchValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") saveInlineBatch(entry);
-                                if (e.key === "Escape") setEditingBatch(null);
-                              }}
-                              aria-label="Batch baru"
-                              className="w-28 min-h-touch px-2 bg-surface-warm border border-primary rounded-input text-meta font-bold"
-                              autoFocus
-                            />
-                            {inlineBatchesForSku.length > 0 && (
-                              <select
-                                value=""
-                                onChange={(e) => {
-                                  if (e.target.value) {
-                                    setEditingBatchValue(e.target.value);
-                                  }
-                                }}
-                                aria-label="Pilih batch yang ada"
-                                className="min-h-touch px-1 bg-surface-warm border border-border rounded-input text-meta"
-                              >
-                                <option value="">Pilih…</option>
-                                {inlineBatchesForSku.map((b) => (
-                                  <option key={b} value={b}>
-                                    {b}
-                                  </option>
-                                ))}
-                              </select>
-                            )}
-                            <button
-                              onClick={() => saveInlineBatch(entry)}
-                              className="min-h-touch px-3 bg-primary text-ivory text-meta font-bold rounded-input"
-                            >
-                              OK
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              setEditingBatch(entry.rowId);
-                              setEditingBatchValue(entry.batch);
-                            }}
-                            disabled={inlineSaving === entry.rowId}
-                            className="inline-flex items-center gap-1 min-h-touch px-2.5 bg-surface-warm hover:bg-primary-pale rounded-label border border-border font-bold text-text-primary text-meta"
-                            aria-label={`Edit batch untuk ${entry.productName}`}
-                          >
-                            {entry.batch ? `Batch: ${entry.batch}` : "Tanpa batch"}
-                            <PencilIcon className="w-3.5 h-3.5 text-text-secondary" />
-                          </button>
-                        )}
-
-                        {editingQty === entry.rowId ? (
-                          <div className="flex flex-col items-end gap-1 w-full">
-                            <QtyInput
-                              wide
-                              value={editingQtyValue}
-                              onChange={(v) => setEditingQtyValue(v)}
-                              onExprCommit={(expr) => setEditingQtyFormula(expr)}
-                              ariaLabel={`Kuantitas baru untuk ${entry.productName}`}
-                            />
-                            <div className="flex gap-3">
-                              <button
-                                type="button"
-                                onClick={() => saveInlineQty(entry)}
-                                className="min-h-touch px-5 bg-primary text-ivory text-meta font-bold rounded-input active:scale-95 transition"
-                              >
-                                Simpan
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setEditingQty(null)}
-                                className="min-h-touch px-5 bg-surface-warm text-text-primary text-meta font-bold rounded-input border border-border active:scale-95 transition"
-                              >
-                                Batal
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              setEditingQty(entry.rowId);
-                              setEditingQtyValue(entry.qty);
-                              setEditingQtyFormula(entry.formula || "");
-                            }}
-                            disabled={inlineSaving === entry.rowId}
-                            className="flex items-center gap-1 min-h-touch px-3 font-bold text-base2 text-text-primary bg-primary-pale rounded-label border border-primary/30 hover:bg-primary/20 transition active:scale-95 tnum"
-                            aria-label={`Edit kuantitas ${entry.qty} untuk ${entry.productName}`}
-                          >
-                            {entry.qty.toLocaleString("id-ID")} pcs
-                            <PencilIcon className="w-3.5 h-3.5 opacity-70" />
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Baris meta: SKU · operator · waktu */}
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-meta text-text-secondary mt-2">
-                        <span className="tnum">SKU {entry.sku}</span>
-                        <span aria-hidden="true">·</span>
-                        <span className="inline-flex items-center gap-1">
-                          <UserIcon className="w-3.5 h-3.5" aria-hidden="true" /> {entry.operator?.split("@")[0]}
-                        </span>
-                        <span aria-hidden="true">·</span>
-                        <span>{formatDisplayTime(entry.timestamp)}</span>
-                        {inlineSaving === entry.rowId ? (
-                          <span className="text-info font-bold" role="status">
-                            Menyimpan…
-                          </span>
-                        ) : entry.edited === "Yes" ? (
-                          <span className="text-amber-text font-bold">Telah diedit</span>
-                        ) : null}
-                      </div>
-
-                      {/* Rumus eksplisit — baris sendiri, wrap bila panjang */}
-                      {entry.formula && (
-                        <div className="mt-2 flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-warm border border-border-subtle rounded-label text-amber-text">
-                          <CalculatorIcon className="w-4 h-4 shrink-0" aria-hidden="true" />
-                          <span className="text-meta font-bold tnum break-all">Rumus: {entry.formula}</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                {expanded && entries.length > INITIAL_VISIBLE_ENTRIES && !showAll && (
-                  <div className="border-t border-border-subtle bg-surface-warm/40 p-2">
-                    <button
-                      type="button"
-                      onClick={() => setFullGroups((prev) => new Set(prev).add(loc))}
-                      className="w-full min-h-touch rounded-input text-meta font-bold text-primary hover:bg-primary-pale/40 transition"
-                    >
-                      Tampilkan semua {entries.length.toLocaleString("id-ID")} entri
-                    </button>
-                  </div>
-                )}
-                <div className="p-3 bg-surface-warm/40 border-t border-border-subtle flex justify-end">
+              <section key={loc} className="history-location" data-location={loc}>
+                <div className="history-location-header">
                   <button
                     type="button"
-                    onClick={() => setAddModal({ isOpen: true, location: loc })}
-                    className="min-h-touch px-3 py-1.5 bg-primary-pale border border-primary/20 text-primary hover:bg-primary/20 rounded-label text-meta font-bold flex items-center gap-1.5 active:scale-95 transition"
+                    onClick={() => toggleGroup(loc)}
+                    className="history-location-toggle"
+                    aria-expanded={expanded}
+                    aria-label={`${expanded ? "Tutup" : "Buka"} grup ${loc}`}
                   >
-                    <PlusIcon className="w-4 h-4" />
-                    <span>Tambah produk di {loc}</span>
+                    <span className="history-location-icon"><MapPinIcon className="w-[18px] h-[18px]" /></span>
+                    <span className="history-location-title"><span>LOKASI</span><strong>{loc}</strong></span>
+                    {expanded ? <ChevronDownIcon className="w-4 h-4 shrink-0" /> : <ChevronRightIcon className="w-4 h-4 shrink-0" />}
                   </button>
+                  <div className="history-location-summary">
+                    <span>{entries.length} entri <span aria-hidden="true">·</span> <strong>{totalQty.toLocaleString("id-ID")} pcs</strong></span>
+                    <DeliveryBadge rowIds={entries.map((entry) => entry.rowId)} />
+                  </div>
                 </div>
-                </div>
+                {expanded && (
+                  <>
+                    <div className="history-record-list">
+                      {visibleEntries.map((entry) => (
+                        <HistoryRecord
+                          key={entry.rowId}
+                          entry={entry}
+                          saving={inlineSaving === entry.rowId}
+                          onEdit={() => handleEdit(entry)}
+                          onDelete={() => promptDelete(entry)}
+                          onSaveCount={(qty, formula) => saveInlineQty(entry, qty, formula)}
+                        />
+                      ))}
+                    </div>
+                    {entries.length > INITIAL_VISIBLE_ENTRIES && !showAll && (
+                      <button
+                        type="button"
+                        onClick={() => setFullGroups((prev) => new Set(prev).add(loc))}
+                        className="history-show-all"
+                      >
+                        Tampilkan semua {entries.length.toLocaleString("id-ID")} entri
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="history-add-product"
+                      onClick={() => setAddModal({ isOpen: true, location: loc })}
+                      aria-label={`Tambah produk di ${loc}`}
+                    >
+                      <PlusIcon className="w-4 h-4" /> Tambah produk di lokasi ini
+                    </button>
+                  </>
                 )}
               </section>
             );
           })
         )}
-      </div>
+      </main>
 
-      {/* ── Modal edit ── */}
+      {/* Modal edit */}
       {selectedEntry && (
         <EditModal
           entry={selectedEntry}
@@ -957,7 +672,7 @@ export default function HistoryPage() {
         />
       )}
 
-      {/* ── Modal tambah produk di lokasi ── */}
+      {/* Modal tambah produk di lokasi */}
       {addModal.isOpen && (
         <AddHistoryEntryModal
           isOpen={addModal.isOpen}
@@ -968,11 +683,11 @@ export default function HistoryPage() {
         />
       )}
 
-      {/* ── Konfirmasi hapus ── */}
+      {/* Konfirmasi hapus */}
       <ConfirmModal
         isOpen={deleteModal.isOpen}
         title="Hapus Riwayat Opname?"
-        message={`Apakah Anda yakin ingin menghapus catatan produk “${deleteModal.entry?.productName}” (Qty: ${deleteModal.entry?.qty})?`}
+        message={`Apakah Anda yakin ingin menghapus catatan produk "${deleteModal.entry?.productName}" (Qty: ${deleteModal.entry?.qty})?`}
         confirmText="Hapus Entri"
         cancelText="Batal"
         isDanger
