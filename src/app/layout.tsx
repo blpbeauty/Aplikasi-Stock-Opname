@@ -29,7 +29,7 @@ const jetbrainsMono = localFont({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#883e2d",
+  themeColor: "#351f26",
   width: "device-width",
   initialScale: 1,
   // Pinch zoom sengaja TIDAK dibatasi agar pengguna bisa memperbesar teks.

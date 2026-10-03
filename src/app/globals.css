@@ -3,48 +3,49 @@
 @tailwind utilities;
 
 :root {
-  /* ── BLP Signature Terracotta & Oat Theme ──
-     Burnt Terracotta = header, tombol primer, kartu aktif, aksen brand utama.
-     Warm Apricot = aksen hangat, indikator fokus, border penegas.
-     Oat Milk Linen = latar kanvas aplikasi teduh dan ramah mata gudang.
+  /* ── Dusty Rosewood & Mauve Tint Theme ──
+     Deep Plum Truffle = header, tombol primer, kartu aktif.
+     Dusty Rosewood = aksen tombol, border penegas, titik fokus.
+     Soft Mauve = badge status, indikator highlight.
+     Porcelain Rose = latar aplikasi teduh, elegan dan bersih.
      Paper = permukaan putih bersih untuk kartu/input/modal. */
-  --espresso: #251714;
-  --cocoa: #78635b;
-  --ivory: #faf6f2;
+  --espresso: #28161c;
+  --cocoa: #7a5e66;
+  --ivory: #faf5f6;
   --paper: #ffffff;
-  --ochre: #d47a5a;
-  --amber-text: #883e2d;
+  --ochre: #b56172;
+  --amber-text: #b56172;
 
   /* Warna semantik */
-  --success: #246b3c;
-  --success-bg: #eaf4ee;
-  --danger: #b52d24;
-  --danger-bg: #fdeeee;
-  --info: #295c85;
-  --info-bg: #ebf3f8;
-  --warning: #fbf2e9;
-  --warning-text: #9e4d2b;
+  --success: #2e6c45;
+  --success-bg: #ebf5ef;
+  --danger: #b52d3e;
+  --danger-bg: #fcecef;
+  --info: #3b5b7d;
+  --info-bg: #edf3f9;
+  --warning: #fdf2f4;
+  --warning-text: #9c3b53;
 
   /* Alias aplikasi */
-  --primary: #883e2d;
-  --primary-light: #a24d38;
-  --primary-dark: #6f2f20;
-  --primary-pale: #f7eae3;
-  --primary-bg: #faf6f2;
+  --primary: #351f26;
+  --primary-light: #4a2c35;
+  --primary-dark: #25141a;
+  --primary-pale: #f5e8eb;
+  --primary-bg: #faf5f6;
   --surface: #ffffff;
-  --surface-warm: #f5ebe4;
+  --surface-warm: #f6ecef;
 
-  --accent-yellow: #d47a5a;
-  --accent-red: #b52d24;
-  --accent-green: #246b3c;
-  --error: #b52d24;
+  --accent-yellow: #d994a1;
+  --accent-red: #b52d3e;
+  --accent-green: #2e6c45;
+  --error: #b52d3e;
 
-  --text-primary: #251714;
-  --text-secondary: #78635b;
-  --border: #e8dcd1;
-  --border-subtle: #f3ebe4;
+  --text-primary: #28161c;
+  --text-secondary: #7a5e66;
+  --border: #eadce0;
+  --border-subtle: #f5ebee;
 
-  --focus-ring: 0 0 0 3px rgba(212, 122, 90, 0.45);
+  --focus-ring: 0 0 0 3px rgba(181, 97, 114, 0.45);
 }
 
 /* Base styles */
@@ -91,9 +92,9 @@ html {
 
 /* ── Location band ── */
 .location-band {
-  background-color: #883e2d;
-  color: #faf6f2;
-  border-left: 6px solid #d47a5a;
+  background-color: #351f26;
+  color: #faf5f6;
+  border-left: 6px solid #b56172;
   border-radius: 4px;
   padding: 0.75rem 1rem;
 }
@@ -108,7 +109,7 @@ html {
   font-variant-numeric: tabular-nums;
 }
 .location-band .location-band-sub {
-  color: #f7eae3;
+  color: #f5e8eb;
   font-size: 0.875rem;
 }
 
@@ -136,16 +137,16 @@ input, select, textarea { min-width: 0; }
   input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px; }
 }
 @media (min-width: 481px) {
-  body { background: #efe7e0 !important; }
-  .mobile-container, .app-shell { box-shadow: 0 0 60px rgba(136, 62, 45, 0.08); }
+  body { background: #efe6e9 !important; }
+  .mobile-container, .app-shell { box-shadow: 0 0 60px rgba(53, 31, 38, 0.08); }
 }
 
-/* ── BLP Signature Terracotta & Oat Header ── */
+/* ── Dusty Rosewood & Mauve Tint Header ── */
 .history-hero {
   padding: 14px 16px 12px;
-  color: #faf6f2;
-  background: linear-gradient(180deg, #743223 0%, #883e2d 100%);
-  border-bottom: 2px solid #d47a5a;
+  color: #faf5f6;
+  background: linear-gradient(180deg, #28161c 0%, #351f26 100%);
+  border-bottom: 2px solid #b56172;
 }
 .history-hero-top {
   display: flex;
@@ -157,7 +158,7 @@ input, select, textarea { min-width: 0; }
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.16em;
-  color: #f6c8b6;
+  color: #d994a1;
   text-transform: uppercase;
   display: block;
 }
@@ -170,7 +171,7 @@ input, select, textarea { min-width: 0; }
   line-height: 1.2;
 }
 .history-hero-top h1 > span {
-  color: #f6c8b6;
+  color: #d994a1;
 }
 .history-refresh {
   width: 36px;
@@ -190,7 +191,7 @@ input, select, textarea { min-width: 0; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #f7eae3;
+  color: #f5e8eb;
   font-size: 11px;
   font-weight: 500;
   margin-top: 3px;
@@ -199,7 +200,7 @@ input, select, textarea { min-width: 0; }
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #d47a5a;
+  background: #b56172;
 }
 .history-hero-stats {
   display: grid;
@@ -228,7 +229,7 @@ input, select, textarea { min-width: 0; }
 }
 .history-hero-stats span {
   font-size: 9px;
-  color: #f3d4c7;
+  color: #e2cad0;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -240,7 +241,7 @@ input, select, textarea { min-width: 0; }
   top: 0;
   z-index: 30;
   padding: 10px 14px 10px;
-  background: #faf6f2f5;
+  background: #faf5f6f5;
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
@@ -256,8 +257,8 @@ input, select, textarea { min-width: 0; }
   color: var(--text-secondary);
 }
 .history-search:focus-within {
-  border-color: #883e2d;
-  box-shadow: 0 0 0 2px rgba(212, 122, 90, 0.25);
+  border-color: #b56172;
+  box-shadow: 0 0 0 2px rgba(181, 97, 114, 0.25);
 }
 .history-search input {
   width: 100%;
@@ -302,7 +303,7 @@ input, select, textarea { min-width: 0; }
   border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(37, 23, 20, 0.05);
+  box-shadow: 0 2px 8px rgba(53, 31, 38, 0.05);
   margin-bottom: 12px;
 }
 .history-location-header {
@@ -323,8 +324,8 @@ input, select, textarea { min-width: 0; }
   width: 32px;
   height: 34px;
   flex-shrink: 0;
-  color: #883e2d;
-  background: #f7eae3;
+  color: #351f26;
+  background: #f5e8eb;
   border-radius: 10px;
 }
 .history-location-title {
@@ -425,10 +426,10 @@ input, select, textarea { min-width: 0; }
 .formula-breakdown {
   margin-top: 8px;
   padding: 8px 10px;
-  border: 1px solid #ebd8cc;
-  border-left: 3px solid #883e2d;
+  border: 1px solid #eadce0;
+  border-left: 3px solid #b56172;
   border-radius: 4px 10px 10px 4px;
-  background: #fbf3ee;
+  background: #f8eef1;
 }
 .formula-caption {
   display: flex;
@@ -436,7 +437,7 @@ input, select, textarea { min-width: 0; }
   align-items: center;
   font-size: 10px;
   font-weight: 700;
-  color: #883e2d;
+  color: #b56172;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -446,7 +447,7 @@ input, select, textarea { min-width: 0; }
   align-items: baseline;
   gap: 3px 6px;
   margin-top: 4px;
-  color: #251714;
+  color: #28161c;
   font-variant-numeric: tabular-nums;
 }
 .formula-expression { font-size: 14px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
@@ -470,7 +471,7 @@ input, select, textarea { min-width: 0; }
   color: var(--text-secondary);
   overflow-wrap: anywhere;
 }
-.history-edited { color: #883e2d; font-weight: 600; }
+.history-edited { color: #b56172; font-weight: 600; }
 .history-record-actions {
   display: flex;
   align-items: center;
@@ -521,8 +522,8 @@ input, select, textarea { min-width: 0; }
 
 .history-count-editor {
   margin-top: 10px;
-  background: #fbf3ee;
-  border: 1px solid #ebd8cc;
+  background: #f8eef1;
+  border: 1px solid #eadce0;
   border-radius: 12px;
   padding: 10px;
 }

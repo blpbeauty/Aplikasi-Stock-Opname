@@ -52,3 +52,15 @@ export function saveDraft(email: string, draft: InputDraft): void {
 export function removeDraft(email: string, location: string): void {
   localStorage.removeItem(key(email, location));
 }
+
+export function clearAllDrafts(email: string): void {
+  try {
+    const p = prefix(email);
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const name = localStorage.key(i);
+      if (name?.startsWith(p)) toRemove.push(name);
+    }
+    toRemove.forEach((k) => localStorage.removeItem(k));
+  } catch { /* storage error handled */ }
+}

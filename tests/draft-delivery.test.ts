@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { getDraft, listDrafts, saveDraft, removeDraft, InputDraft } from "../src/lib/drafts";
+import { getDraft, listDrafts, saveDraft, removeDraft, clearAllDrafts, InputDraft } from "../src/lib/drafts";
 import { getDeliveryStatus } from "../src/lib/delivery";
 import type { PendingWrite } from "../src/lib/localDb";
 
@@ -25,6 +25,11 @@ test("draft restoration preserves counted zero and isolates account and location
   assert.equal(getDraft("one@test", "A-01"), null);
   saveDraft("one@test", draft);
   removeDraft("one@test", "A-01");
+  assert.equal(listDrafts("one@test").length, 0);
+  saveDraft("one@test", draft);
+  saveDraft("one@test", { ...draft, location: "B-02" });
+  assert.equal(listDrafts("one@test").length, 2);
+  clearAllDrafts("one@test");
   assert.equal(listDrafts("one@test").length, 0);
   Object.defineProperty(globalThis, "localStorage", { value: { setItem() { throw new Error("Storage full"); } } });
   assert.throws(() => saveDraft("one@test", draft), /Storage full/, "do not claim a draft is stored when storage fails");
