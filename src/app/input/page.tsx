@@ -1092,12 +1092,16 @@ function InputPageContent() {
                       return;
                     }
                   }
+                  const targetSku = newProductForm.sku.trim().toLowerCase();
+                  const targetBatch = batchValue.trim().toLowerCase();
                   if (
-                    (allProductsRef.current || []).some(
-                      (p) => p.sku === newProductForm.sku && (p.batch || "") === batchValue
+                    [...products, ...newProducts].some(
+                      (p) =>
+                        p.sku.trim().toLowerCase() === targetSku &&
+                        String(p.batch || "").trim().toLowerCase() === targetBatch
                     )
                   ) {
-                    toast.error("SKU dan Batch ini sudah ada di Master Data");
+                    toast.error(`SKU dan Batch ini sudah terdaftar di lokasi ${location}`);
                     return;
                   }
                   setSavingMasterData(true);
@@ -1117,6 +1121,16 @@ function InputPageContent() {
                         barcode: newProductForm.barcode || undefined,
                       };
                       setProducts((prev) => [...prev, newProd]);
+                      if (
+                        allProductsRef.current &&
+                        !allProductsRef.current.some(
+                          (p) =>
+                            p.sku.trim().toLowerCase() === targetSku &&
+                            String(p.batch || "").trim().toLowerCase() === targetBatch
+                        )
+                      ) {
+                        allProductsRef.current.push(newProd);
+                      }
                       setQuantities((prev) => ({
                         ...prev,
                         [productKey(newProd.sku, newProd.batch)]: 0,
