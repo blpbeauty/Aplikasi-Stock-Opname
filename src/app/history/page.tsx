@@ -544,25 +544,14 @@ export default function HistoryPage() {
           </div>
         </div>
 
-        {/* Chip Pilihan Area Gudang (CEN/PARAS, CEN/PAYU, dll) */}
+        {/* Chip Pilihan Area Gudang */}
         {areaGroups.length > 0 && (
           <div className="mt-2.5">
             <span className="text-meta font-bold uppercase tracking-wider text-text-secondary block mb-1.5">
               Area Gudang:
             </span>
             <div className="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1" role="group" aria-label="Filter area gudang">
-              <button
-                type="button"
-                onClick={() => setSelectedLocations(new Set())}
-                className={`min-h-touch px-3 rounded-xl text-meta font-bold border transition whitespace-nowrap active:scale-95 ${
-                  selectedLocations.size === 0
-                    ? "bg-primary text-ivory border-primary"
-                    : "bg-paper text-text-primary border-border hover:bg-surface-warm"
-                }`}
-              >
-                Semua Area
-              </button>
-              {areaGroups.map((group) => {
+              {areaGroups.filter((g) => g.name === "CEN/PARAS" || g.name === "CEN/PAYU").map((group) => {
                 const isSelected = selectedLocations.has(group.name);
                 return (
                   <button
