@@ -155,7 +155,7 @@ input, select, textarea { min-width: 0; }
   gap: 10px;
 }
 .history-eyebrow {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.16em;
   color: #d994a1;
@@ -192,7 +192,7 @@ input, select, textarea { min-width: 0; }
   align-items: center;
   gap: 6px;
   color: #f5e8eb;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   margin-top: 3px;
 }
@@ -228,12 +228,46 @@ input, select, textarea { min-width: 0; }
   overflow-wrap: anywhere;
 }
 .history-hero-stats span {
-  font-size: 9px;
+  font-size: 11px;
   color: #e2cad0;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-top: 1px;
+}
+
+/* ── Compact Header Variant ── */
+.history-hero-compact {
+  padding: 10px 16px 8px;
+  color: #faf5f6;
+  background: #351f26;
+  border-bottom: 2px solid #b56172;
+}
+.history-hero-compact h1 {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fdfbf7;
+  line-height: 1.2;
+}
+.history-hero-compact h1 > span {
+  color: #d994a1;
+}
+.history-hero-compact .compact-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #e2cad0;
+}
+.history-hero-compact .compact-stats strong {
+  color: #fff;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.history-hero-compact .compact-stats .stat-accent {
+  color: #d994a1;
 }
 
 .history-toolbar {
@@ -336,7 +370,7 @@ input, select, textarea { min-width: 0; }
   flex: 1;
 }
 .history-location-title > span {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
   color: var(--text-secondary);
@@ -354,7 +388,7 @@ input, select, textarea { min-width: 0; }
   justify-content: space-between;
   gap: 6px;
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 .history-location-summary strong {
@@ -435,7 +469,7 @@ input, select, textarea { min-width: 0; }
   display: flex;
   gap: 5px;
   align-items: center;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: #b56172;
   text-transform: uppercase;
@@ -466,7 +500,7 @@ input, select, textarea { min-width: 0; }
 }
 .history-record-meta {
   flex: 1 1 140px;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
   color: var(--text-secondary);
   overflow-wrap: anywhere;

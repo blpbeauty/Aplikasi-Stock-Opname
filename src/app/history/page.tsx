@@ -482,11 +482,17 @@ export default function HistoryPage() {
 
   return (
     <div className="mobile-container history-page pb-28">
-      <header className="history-hero">
-        <div className="history-hero-top">
+      <header className="history-hero-compact">
+        <div className="flex items-center justify-between gap-2">
           <div>
-            <span className="history-eyebrow">BLP / STOCK OPNAME</span>
             <h1>Hasil opname<span>.</span></h1>
+            <div className="compact-stats">
+              <span><strong>{summary.totalQty.toLocaleString("id-ID")}</strong> pcs</span>
+              <span>·</span>
+              <span><strong>{summary.count.toLocaleString("id-ID")}</strong> entri</span>
+              <span>·</span>
+              <span><strong>{summary.locCount.toLocaleString("id-ID")}</strong> lokasi</span>
+            </div>
           </div>
           <button
             type="button"
@@ -498,16 +504,6 @@ export default function HistoryPage() {
           >
             <RefreshIcon className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
-        </div>
-        <div className="history-period" data-history-period={activeMonth}>
-          <span>{timeFilter === "week" ? "7 Hari Terakhir" : "30 Hari Terakhir"}</span>
-          <span className="history-period-dot" aria-hidden="true" />
-          {periodLabel}
-        </div>
-        <div className="history-hero-stats" aria-label="Ringkasan hasil yang ditampilkan">
-          <div><strong>{summary.totalQty.toLocaleString("id-ID")}</strong><span>Total pcs</span></div>
-          <div><strong>{summary.count.toLocaleString("id-ID")}</strong><span>Entri produk</span></div>
-          <div><strong>{summary.locCount.toLocaleString("id-ID")}</strong><span>Lokasi</span></div>
         </div>
       </header>
 
@@ -533,7 +529,7 @@ export default function HistoryPage() {
         {/* Dropdown Filter Periode (Minggu & Bulan Saja) */}
         <div className="mt-2.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
               Periode Opname:
             </span>
             <select
@@ -551,7 +547,7 @@ export default function HistoryPage() {
         {/* Chip Pilihan Area Gudang (CEN/PARAS, CEN/PAYU, dll) */}
         {areaGroups.length > 0 && (
           <div className="mt-2.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-text-secondary block mb-1.5">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-text-secondary block mb-1.5">
               Area Gudang:
             </span>
             <div className="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1" role="group" aria-label="Filter area gudang">
@@ -581,7 +577,7 @@ export default function HistoryPage() {
                   >
                     <span>{group.name}</span>
                     <span
-                      className={`px-1.5 py-0.5 rounded-full text-[9px] font-black ${
+                      className={`px-1.5 py-0.5 rounded-full text-[11px] font-black ${
                         isSelected ? "bg-white/20 text-white" : "bg-primary-pale text-primary"
                       }`}
                     >

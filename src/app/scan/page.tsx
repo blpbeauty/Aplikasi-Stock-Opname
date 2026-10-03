@@ -293,33 +293,21 @@ export default function ScanDashboard() {
 
   return (
     <div className="mobile-container pb-32">
-      {/* ── Compact Luxury Header ── */}
-      <header className="history-hero">
-        <div className="history-hero-top">
-          <div>
-            <span className="history-eyebrow">BLP / STOCK OPNAME</span>
-            <h1>Scan Lokasi<span>.</span></h1>
-          </div>
+      {/* ── Compact Header ── */}
+      <header className="history-hero-compact">
+        <div className="flex items-center justify-between gap-2">
+          <h1>Scan Lokasi<span>.</span></h1>
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-bold text-ivory">
             <span className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
             <span>{user?.name?.split(" ")[0] || "Operator"}</span>
           </div>
         </div>
-
-        {/* Mini Stats Row */}
-        <div className="history-hero-stats" aria-label="Ringkasan cakupan lokasi">
-          <div>
-            <strong>{stats.total}</strong>
-            <span>Total Lokasi</span>
-          </div>
-          <div>
-            <strong>{stats.scannedCount}</strong>
-            <span>Selesai</span>
-          </div>
-          <div>
-            <strong className="text-accent-yellow">{stats.pending}</strong>
-            <span>Pending</span>
-          </div>
+        <div className="compact-stats" aria-label="Ringkasan cakupan lokasi">
+          <span><strong>{stats.total}</strong> lokasi</span>
+          <span>·</span>
+          <span><strong>{stats.scannedCount}</strong> selesai</span>
+          <span>·</span>
+          <span><strong className="stat-accent">{stats.pending}</strong> pending</span>
         </div>
       </header>
 
@@ -448,7 +436,7 @@ export default function ScanDashboard() {
           <div className="flex items-center justify-between mb-2">
             <div>
               <h2 className="text-xs font-bold text-text-primary">Cakupan Lokasi Opname</h2>
-              <p className="text-[10px] text-text-secondary">
+              <p className="text-[11px] text-text-secondary">
                 {stats.scannedCount} dari {stats.total} lokasi tercatat
               </p>
             </div>
@@ -513,7 +501,7 @@ export default function ScanDashboard() {
                         <span className="block text-xs font-bold text-text-primary uppercase">
                           {item.location}
                         </span>
-                        <span className="block text-[10px] text-text-secondary">
+                        <span className="block text-[11px] text-text-secondary">
                           {item.count} item · {formatRelativeTime(item.time)}
                         </span>
                       </div>
@@ -568,10 +556,10 @@ export default function ScanDashboard() {
                 <li key={`${item.sku}-${item.batch}-${idx}`} className="py-2.5 flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-bold text-text-primary truncate">{item.productName}</p>
-                    <p className="text-[10px] text-text-secondary mt-0.5">
+                    <p className="text-[11px] text-text-secondary mt-0.5">
                       SKU: <strong className="text-text-primary">{item.sku}</strong> | Batch: {item.batch || "—"}
                     </p>
-                    <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-primary-pale text-primary text-[10px] font-bold">
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-primary-pale text-primary text-[11px] font-bold">
                       📍 {item.location}
                     </span>
                   </div>
@@ -579,14 +567,14 @@ export default function ScanDashboard() {
                     <button
                       type="button"
                       onClick={() => openLocation(item.location)}
-                      className="px-2.5 py-1 bg-surface-warm border border-border rounded-lg text-[10px] font-bold text-text-primary hover:bg-primary-pale"
+                      className="px-2.5 py-1 bg-surface-warm border border-border rounded-lg text-[11px] font-bold text-text-primary hover:bg-primary-pale"
                     >
                       Buka
                     </button>
                     <button
                       type="button"
                       onClick={() => openQuickMove(item)}
-                      className="px-2.5 py-1 bg-primary text-ivory rounded-lg text-[10px] font-bold shadow-xs hover:bg-primary-light"
+                      className="px-2.5 py-1 bg-primary text-ivory rounded-lg text-[11px] font-bold shadow-xs hover:bg-primary-light"
                     >
                       Pindah
                     </button>
@@ -652,7 +640,7 @@ export default function ScanDashboard() {
             >
               <div>
                 <span className="block text-xs font-bold text-text-primary uppercase">{loc.locationCode}</span>
-                <span className="block text-[10px] text-text-secondary">{loc.productCount} produk terdaftar</span>
+                <span className="block text-[11px] text-text-secondary">{loc.productCount} produk terdaftar</span>
               </div>
               <span className="text-[11px] font-bold text-primary">Buka →</span>
             </button>
