@@ -6,7 +6,7 @@ import { useAuth } from "@/components/AuthProvider";
 import BottomNav from "@/components/BottomNav";
 import ScannerModal from "@/components/ScannerModal";
 import MoveSheet from "@/components/MoveSheet";
-import { Dialog, EmptyState, SyncStatusBadge } from "@/components/ui";
+import { Dialog, EmptyState } from "@/components/ui";
 import Autocomplete from "@/components/Autocomplete";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import {
@@ -28,6 +28,7 @@ import {
   ClockIcon,
   ChevronRightIcon,
 } from "@/components/icons";
+import { InputDraft, listDrafts } from "@/lib/drafts";
 import { Product, HistoryEntry } from "@/lib/types";
 import { getCache, setCache } from "@/lib/cache";
 import { formatRelativeTime } from "@/lib/format";
@@ -53,6 +54,8 @@ export default function ScanDashboard() {
 
   const [locationCode, setLocationCode] = useState("");
   const [newLocation, setNewLocation] = useState("");
+  const [showNewLocation, setShowNewLocation] = useState(false);
+  const [drafts, setDrafts] = useState<InputDraft[]>([]);
   const [loading, setLoading] = useState(false);
   const [showLocationScanner, setShowLocationScanner] = useState(false);
 
@@ -89,7 +92,7 @@ export default function ScanDashboard() {
     (locations: LocationResult[], history: HistoryEntry[]) => {
       const scannedLocations = new Set(history.map((h) => h.location));
       const total = locations.length;
-      const scannedCount = scannedLocations.size;
+      const scannedCount = locations.filter((location) => scannedLocations.has(location.locationCode)).length;
       const pending = Math.max(0, total - scannedCount);
       const progress = total > 0 ? Math.round((scannedCount / total) * 100) : 0;
 
@@ -201,6 +204,7 @@ export default function ScanDashboard() {
       const result = await getProductsApi(code);
       if (result.success && result.products && result.products.length === 0) {
         setNewLocation(code);
+        setShowNewLocation(true);
         setLoading(false);
       } else if (result.success && result.products) {
         setCache(`products:${code}`, result.products);
@@ -240,11 +244,13 @@ export default function ScanDashboard() {
     }
   }, []);
 
-  // Product Finder — di-debounce agar tidak memanggil jaringan tiap ketikan
-  const handleProductSearchDebounced = useCallback((query: string) => {
-    if (productSearchTimerRef.current) clearTimeout(productSearchTimerRef.current);
-    productSearchTimerRef.current = setTimeout(() => handleProductSearch(query), 300);
-  }, [handleProductSearch]);
+  const handleProductSearchDebounced = useCallback(
+    (query: string) => {
+      if (productSearchTimerRef.current) clearTimeout(productSearchTimerRef.current);
+      productSearchTimerRef.current = setTimeout(() => handleProductSearch(query), 300);
+    },
+    [handleProductSearch]
+  );
 
   const handleProductBarcodeScan = (barcode: string) => {
     setShowProductScanner(false);
@@ -256,32 +262,75 @@ export default function ScanDashboard() {
     setMoveItem(item);
   };
 
-  const lastSyncLabel = useMemo(() => {
-    if (!lastSyncTime) return null;
-    return `Sinkron ${formatRelativeTime(new Date(lastSyncTime).toISOString())}`;
-  }, [lastSyncTime]);
+  useEffect(() => {
+    const refresh = () => setDrafts(user?.email ? listDrafts(user.email) : []);
+    refresh();
+    window.addEventListener("storage", refresh);
+    return () => window.removeEventListener("storage", refresh);
+  }, [user?.email, isReady]);
 
   return (
     <div className="mobile-container pb-32">
-      {/* ── Header + status sinkronisasi ── */}
-      <header className="bg-paper px-4 sm:px-6 pt-5 pb-4 border-b border-border">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold text-text-primary leading-tight">
-              Stock Opname
-            </h1>
-            <p className="text-meta text-text-secondary mt-0.5">
-              Halo, {user?.name?.split(" ")[0] || "Operator"}
-            </p>
+      {/* ── Compact Luxury Header ── */}
+      <header className="history-hero">
+        <div className="history-hero-top">
+          <div>
+            <span className="history-eyebrow">BLP / STOCK OPNAME</span>
+            <h1>Scan Lokasi<span>.</span></h1>
           </div>
-          <SyncStatusBadge />
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-bold text-ivory">
+            <span className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
+            <span>{user?.name?.split(" ")[0] || "Operator"}</span>
+          </div>
+        </div>
+
+        {/* Mini Stats Row */}
+        <div className="history-hero-stats" aria-label="Ringkasan cakupan lokasi">
+          <div>
+            <strong>{stats.total}</strong>
+            <span>Total Lokasi</span>
+          </div>
+          <div>
+            <strong>{stats.scannedCount}</strong>
+            <span>Selesai</span>
+          </div>
+          <div>
+            <strong className="text-accent-yellow">{stats.pending}</strong>
+            <span>Pending</span>
+          </div>
         </div>
       </header>
 
-      <div className="px-4 sm:px-6 pt-4 space-y-6">
-        {/* ── Tindakan utama: cari / pindai lokasi ── */}
-        <section aria-label="Buka lokasi" className="relative z-30">
-          <div className="flex gap-2 items-end">
+      <div className="px-3.5 sm:px-4 pt-3.5 space-y-4">
+        {/* Drafts */}
+        {drafts.length > 0 && (
+          <section className="rounded-2xl border border-primary/25 bg-primary-pale p-3 space-y-2" aria-label="Draft hitungan">
+            <h2 className="text-xs font-bold text-text-primary">Hitungan belum disimpan:</h2>
+            {drafts.slice(0, 3).map((draft) => (
+              <button
+                key={draft.location}
+                className="w-full text-left rounded-xl border border-border bg-paper px-3 py-2 text-xs transition active:scale-[0.98]"
+                onClick={() => router.push(`/input?location=${encodeURIComponent(draft.location)}`)}
+              >
+                <span className="block font-bold text-text-primary">Lanjutkan draft {draft.location}</span>
+                <span className="text-[11px] text-text-secondary">
+                  {Object.values(draft.counted).filter(Boolean).length} produk · {formatRelativeTime(new Date(draft.updatedAt).toISOString())}
+                </span>
+              </button>
+            ))}
+          </section>
+        )}
+
+        {/* ── Buka Lokasi Card ── */}
+        <section aria-label="Buka lokasi" className="relative z-30 bg-paper border border-border rounded-2xl p-3.5 shadow-card space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+              <MapPinIcon className="w-3.5 h-3.5 text-primary" />
+              Pilih / Pindai Lokasi
+            </h2>
+          </div>
+
+          <div className="flex gap-2 items-center">
             <Autocomplete<LocationResult>
               id="scan-location-input"
               label="Cari atau pindai lokasi"
@@ -297,11 +346,11 @@ export default function ScanDashboard() {
                       {l.locationCode}
                     </span>
                   </div>
-                  <span className="text-meta text-text-secondary shrink-0 pl-2">{l.productCount} produk</span>
+                  <span className="text-[11px] text-text-secondary shrink-0 pl-2">{l.productCount} produk</span>
                 </div>
               )}
               onSelect={(l) => openLocation(l.locationCode)}
-              placeholder="Contoh: A-01-03"
+              placeholder="Contoh: A01-B02"
               uppercase
               minChars={1}
               emptyText="Lokasi tidak ditemukan di Master Data"
@@ -310,120 +359,118 @@ export default function ScanDashboard() {
             <button
               type="button"
               onClick={() => setShowLocationScanner(true)}
-              className="tap w-12 h-12 shrink-0 rounded-input bg-primary text-ivory flex items-center justify-center active:scale-95 transition"
-              aria-label="Pindai barcode lokasi dengan kamera"
+              className="w-11 h-11 shrink-0 rounded-xl bg-primary text-ivory flex items-center justify-center active:scale-95 transition shadow-xs"
+              aria-label="Pindai barcode lokasi"
               title="Pindai barcode lokasi"
             >
               <CameraIcon className="w-5 h-5" />
             </button>
           </div>
-          <button
-            type="button"
-            onClick={() => openLocation(locationCode)}
-            disabled={!locationCode.trim() || loading}
-            className="mt-2 w-full min-h-touch bg-primary text-ivory rounded-input font-bold text-meta disabled:opacity-50 active:scale-[0.98] transition"
-          >
-            Buka Lokasi
-          </button>
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => openLocation(locationCode)}
+              disabled={!locationCode.trim() || loading}
+              className="flex-1 py-2.5 bg-primary text-ivory rounded-xl font-bold text-xs disabled:opacity-50 active:scale-[0.98] transition shadow-xs"
+            >
+              Buka Lokasi
+            </button>
+            <button
+              type="button"
+              className="py-2.5 px-3 border border-border bg-surface-warm text-text-primary rounded-xl font-bold text-xs hover:bg-gray-200 transition"
+              onClick={() => {
+                setNewLocation(locationCode.trim().toUpperCase());
+                setShowNewLocation(true);
+              }}
+            >
+              + Baru
+            </button>
+          </div>
 
           {loading && (
-            <p className="mt-2 flex items-center justify-center gap-2 text-meta text-text-secondary" role="status">
+            <p className="flex items-center justify-center gap-2 text-xs text-text-secondary pt-1" role="status">
               <LoadingSpinner /> Membuka lokasi…
             </p>
           )}
         </section>
 
-        {/* ── Progres opname (label jujur: rentang data riwayat) ── */}
-        <section aria-label="Progres opname">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
-              <span className="w-2 h-2 bg-ochre rounded-[2px]" aria-hidden="true" />
-              Progres Opname
-            </h2>
-            <span className="text-2xl font-bold text-text-primary tnum">{stats.progress}%</span>
+        {/* ── Progress Opname Card ── */}
+        <section aria-label="Progres opname" className="bg-paper border border-border rounded-2xl p-3.5 shadow-card">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h2 className="text-xs font-bold text-text-primary">Cakupan Lokasi Opname</h2>
+              <p className="text-[10px] text-text-secondary">
+                {stats.scannedCount} dari {stats.total} lokasi tercatat
+              </p>
+            </div>
+            <div className="px-2.5 py-1 bg-primary-pale border border-primary/20 rounded-lg text-primary font-black text-xs">
+              {stats.progress}%
+            </div>
           </div>
-          <div
-            className="mt-2 w-full h-3 bg-surface-warm rounded-full overflow-hidden border border-border-subtle"
-            role="progressbar"
-            aria-valuenow={stats.progress}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={`Progres opname ${stats.progress} persen`}
-          >
+
+          <div className="w-full h-2.5 bg-surface-warm rounded-full overflow-hidden border border-border-subtle p-0.5">
             <div
-              className="h-full bg-primary rounded-full transition-[width] duration-500 ease-out"
+              className="h-full bg-gradient-to-r from-primary to-accent-yellow rounded-full transition-all duration-500"
               style={{ width: `${Math.max(stats.progress, stats.progress > 0 ? 4 : 0)}%` }}
             />
           </div>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <div className="bg-paper rounded-card border border-border p-3 text-center">
-              <BuildingIcon className="w-4 h-4 mx-auto text-text-secondary" aria-hidden="true" />
-              <p className="text-lg font-bold text-text-primary tnum mt-1">{stats.total}</p>
-              <p className="text-meta text-text-secondary">Total Lokasi</p>
-            </div>
-            <div className="bg-paper rounded-card border border-border p-3 text-center">
-              <CheckIcon className="w-4 h-4 mx-auto text-success" aria-hidden="true" />
-              <p className="text-lg font-bold text-text-primary tnum mt-1">{stats.scannedCount}</p>
-              <p className="text-meta text-text-secondary">Selesai</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowPendingModal(true)}
-              disabled={stats.pending === 0}
-              className="bg-paper rounded-card border border-border p-3 text-center transition active:scale-95 disabled:active:scale-100 disabled:opacity-50"
-              aria-label={`Lihat daftar ${stats.pending} lokasi yang belum dihitung`}
-            >
-              <HourglassIcon className="w-4 h-4 mx-auto text-danger" aria-hidden="true" />
-              <p className="text-lg font-bold text-danger tnum mt-1">{stats.pending}</p>
-              <p className="text-meta text-text-secondary">
-                {stats.pending > 0 ? "Belum dihitung" : "Semua Terhitung"}
-              </p>
-            </button>
+
+          <div className="mt-3 flex items-center justify-between text-[11px] pt-2 border-t border-border-subtle">
+            <span className="text-text-secondary">
+              Pending: <strong className="text-danger font-bold">{stats.pending} lokasi</strong>
+            </span>
+            {stats.pending > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowPendingModal(true)}
+                className="text-primary font-bold hover:underline"
+              >
+                Lihat daftar pending →
+              </button>
+            )}
           </div>
         </section>
 
-        {/* ── Terakhir dikerjakan ── */}
-        <section aria-label="Terakhir dikerjakan">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-bold text-text-primary flex items-center gap-1.5">
-              <ClockIcon className="w-5 h-5 text-text-secondary" aria-hidden="true" /> Terakhir Dikerjakan
+        {/* ── Terakhir Dikerjakan ── */}
+        <section aria-label="Terakhir dikerjakan" className="bg-paper border border-border rounded-2xl p-3.5 shadow-card">
+          <div className="flex items-center justify-between mb-2.5">
+            <h2 className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+              <ClockIcon className="w-4 h-4 text-text-secondary" /> Terakhir Dikerjakan
             </h2>
             <button
               onClick={() => router.push("/history")}
-              className="text-meta font-bold text-primary hover:underline min-h-touch"
+              className="text-[11px] font-bold text-primary hover:underline"
             >
-              Lihat semua
+              Lihat semua →
             </button>
           </div>
 
           {recentScans.length === 0 ? (
-            <EmptyState
-              icon={<ClockIcon className="w-6 h-6" />}
-              title="Belum ada aktivitas opname"
-              description="Mulai dengan mencari atau memindai lokasi di atas."
-            />
+            <p className="text-xs text-text-secondary text-center py-3">Belum ada aktivitas opname</p>
           ) : (
-            <ul className="bg-paper rounded-card border border-border divide-y divide-border-subtle overflow-hidden">
+            <ul className="divide-y divide-border-subtle">
               {recentScans.map((item, idx) => (
                 <li key={`${item.location}-${idx}`}>
                   <button
                     type="button"
                     onClick={() => openLocation(item.location)}
-                    className="w-full min-h-touch px-4 py-3 flex items-center gap-3 text-left hover:bg-primary-pale/40 transition"
-                    aria-label={`Buka lokasi ${item.location}`}
+                    className="w-full py-2.5 flex items-center justify-between text-left hover:bg-primary-pale/30 transition"
                   >
-                    <span className="w-9 h-9 rounded-input bg-surface-warm text-primary flex items-center justify-center shrink-0">
-                      <MapPinIcon className="w-4 h-4" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[13px] font-bold text-text-primary uppercase break-all leading-snug">
-                        {item.location}
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-7 h-7 rounded-lg bg-surface-warm text-primary flex items-center justify-center shrink-0 text-xs">
+                        📍
                       </span>
-                      <span className="block text-meta text-text-secondary tnum mt-0.5">
-                        {item.count} item dihitung · {formatRelativeTime(item.time)}
-                      </span>
-                    </span>
-                    <ChevronRightIcon className="w-4 h-4 text-text-secondary shrink-0" aria-hidden="true" />
+                      <div>
+                        <span className="block text-xs font-bold text-text-primary uppercase">
+                          {item.location}
+                        </span>
+                        <span className="block text-[10px] text-text-secondary">
+                          {item.count} item · {formatRelativeTime(item.time)}
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronRightIcon className="w-4 h-4 text-text-secondary shrink-0" />
                   </button>
                 </li>
               ))}
@@ -431,81 +478,67 @@ export default function ScanDashboard() {
           )}
         </section>
 
-        {/* ── Cari & pindah produk ── */}
-        <section aria-label="Cari posisi produk">
-          <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
-            <span className="w-2 h-2 bg-ochre rounded-[2px]" aria-hidden="true" />
-            Cari Posisi Produk
-          </h2>
-          <p className="text-meta text-text-secondary mt-0.5 mb-2">
-            Cari di seluruh gudang berdasarkan nama, SKU, atau barcode.
-          </p>
+        {/* ── Cari Posisi Produk ── */}
+        <section aria-label="Cari posisi produk" className="bg-paper border border-border rounded-2xl p-3.5 shadow-card">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+              <SearchIcon className="w-4 h-4 text-primary" /> Cari Posisi Produk
+            </h2>
+          </div>
 
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
-              <label htmlFor="scan-product-input" className="sr-only">
-                Cari produk
-              </label>
-              <input
-                id="scan-product-input"
-                type="text"
-                value={productQuery}
-                onChange={(e) => {
-                  setProductQuery(e.target.value);
-                  handleProductSearchDebounced(e.target.value);
-                }}
-                placeholder="Nama produk, SKU, atau barcode…"
-                className="w-full min-h-touch px-3 bg-surface-warm border border-border rounded-input text-base2 font-semibold text-text-primary focus:bg-paper"
-              />
-            </div>
+          <div className="flex gap-2 items-center">
+            <input
+              id="scan-product-input"
+              type="text"
+              value={productQuery}
+              onChange={(e) => {
+                setProductQuery(e.target.value);
+                handleProductSearchDebounced(e.target.value);
+              }}
+              placeholder="Ketik nama produk, SKU, barcode…"
+              className="flex-1 py-2 px-3 bg-surface-warm border border-border rounded-xl text-xs font-semibold text-text-primary focus:bg-paper focus:outline-none focus:ring-2 focus:ring-primary"
+            />
             <button
               type="button"
               onClick={() => setShowProductScanner(true)}
-              className="tap w-12 h-12 shrink-0 rounded-input bg-surface-warm border border-border text-primary flex items-center justify-center active:scale-95 transition"
-              aria-label="Pindai barcode produk dengan kamera"
+              className="w-9 h-9 shrink-0 rounded-xl bg-surface-warm border border-border text-primary flex items-center justify-center active:scale-95 transition"
               title="Pindai barcode produk"
             >
-              <CameraIcon className="w-5 h-5" />
+              <CameraIcon className="w-4 h-4" />
             </button>
           </div>
 
           {productSearchLoading && (
-            <p className="mt-2 flex items-center justify-center gap-2 text-meta text-text-secondary" role="status">
+            <p className="mt-2 flex items-center justify-center gap-2 text-xs text-text-secondary" role="status">
               <LoadingSpinner /> Mencari produk…
             </p>
           )}
 
           {productResults.length > 0 && (
-            <ul className="mt-3 divide-y divide-border-subtle max-h-72 overflow-y-auto">
+            <ul className="mt-2.5 divide-y divide-border-subtle max-h-56 overflow-y-auto">
               {productResults.map((item, idx) => (
-                <li key={`${item.sku}-${item.batch}-${idx}`} className="py-3 flex items-start justify-between gap-2">
+                <li key={`${item.sku}-${item.batch}-${idx}`} className="py-2.5 flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-meta font-bold text-text-primary leading-snug line-clamp-2">
-                      {item.productName}
+                    <p className="text-xs font-bold text-text-primary truncate">{item.productName}</p>
+                    <p className="text-[10px] text-text-secondary mt-0.5">
+                      SKU: <strong className="text-text-primary">{item.sku}</strong> | Batch: {item.batch || "—"}
                     </p>
-                    <p className="text-meta text-text-secondary mt-0.5 tnum">
-                      SKU <strong className="text-text-primary">{item.sku}</strong>
-                      {item.batch ? ` · Batch ${item.batch}` : ""}
-                    </p>
-                    <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-primary-pale text-primary rounded-label font-bold text-meta tnum">
-                      <MapPinIcon className="w-3.5 h-3.5" aria-hidden="true" /> {item.location}
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-primary-pale text-primary text-[10px] font-bold">
+                      📍 {item.location}
                     </span>
                   </div>
-
-                  <div className="flex flex-col gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1 flex-shrink-0 pt-0.5">
                     <button
                       type="button"
                       onClick={() => openLocation(item.location)}
-                      className="min-h-touch px-3 bg-surface-warm hover:bg-primary-pale text-text-primary rounded-input text-meta font-bold border border-border"
-                      aria-label={`Buka lokasi ${item.location}`}
+                      className="px-2.5 py-1 bg-surface-warm border border-border rounded-lg text-[10px] font-bold text-text-primary hover:bg-primary-pale"
                     >
                       Buka
                     </button>
                     <button
                       type="button"
                       onClick={() => openQuickMove(item)}
-                      className="min-h-touch px-3 bg-primary text-ivory rounded-input text-meta font-bold"
-                      aria-label={`Pindah ${item.productName} ke lokasi lain`}
+                      className="px-2.5 py-1 bg-primary text-ivory rounded-lg text-[10px] font-bold shadow-xs hover:bg-primary-light"
                     >
                       Pindah
                     </button>
@@ -514,36 +547,10 @@ export default function ScanDashboard() {
               ))}
             </ul>
           )}
-
-          {productQuery.trim().length >= 2 && !productSearchLoading && productResults.length === 0 && (
-            <EmptyState
-              icon={<SearchIcon className="w-6 h-6" />}
-              title="Produk tidak ditemukan"
-              description="Coba kata kunci lain, atau pindai barcode produknya."
-            />
-          )}
         </section>
-
-        {lastSyncLabel && (
-          <p className="text-meta text-text-secondary text-center pb-2">
-            Data tersimpan di perangkat · {lastSyncLabel}
-          </p>
-        )}
       </div>
 
-      {/* ── Quick move sheet (produk dari pencarian) ── */}
-      <MoveSheet
-        isOpen={!!moveItem}
-        onClose={() => setMoveItem(null)}
-        fromLocation={moveItem?.location || ""}
-        items={
-          moveItem
-            ? [{ sku: moveItem.sku, batch: moveItem.batch, productName: moveItem.productName }]
-            : []
-        }
-      />
-
-      {/* ── Scanner modal (lokasi) ── */}
+      {/* ── Modals & Sheets ── */}
       <ScannerModal
         isOpen={showLocationScanner}
         onClose={() => setShowLocationScanner(false)}
@@ -551,7 +558,6 @@ export default function ScanDashboard() {
         title="Pindai Barcode Lokasi"
       />
 
-      {/* ── Scanner modal (produk) ── */}
       <ScannerModal
         isOpen={showProductScanner}
         onClose={() => setShowProductScanner(false)}
@@ -559,66 +565,85 @@ export default function ScanDashboard() {
         title="Pindai Barcode Produk"
       />
 
-      {/* ── Lokasi belum dihitung ── */}
+      {moveItem && (
+        <MoveSheet
+          isOpen={!!moveItem}
+          onClose={() => setMoveItem(null)}
+          fromLocation={moveItem.location}
+          items={[
+            {
+              sku: moveItem.sku,
+              batch: moveItem.batch,
+              productName: moveItem.productName,
+            },
+          ]}
+          onMoved={() => {
+            if (productQuery.trim().length >= 2) {
+              handleProductSearch(productQuery);
+            }
+          }}
+        />
+      )}
+
+      {/* Modal Daftar Pending */}
       <Dialog
         isOpen={showPendingModal}
         onClose={() => setShowPendingModal(false)}
-        title="Lokasi Belum Dihitung"
-        description={`${pendingLocations.length} lokasi tersisa dari ${stats.total}`}
-        footer={
-          <button
-            type="button"
-            onClick={() => setShowPendingModal(false)}
-            className="w-full min-h-touch bg-surface-warm rounded-input text-meta font-bold text-text-primary"
-          >
-            Tutup
-          </button>
-        }
+        title={`Lokasi Belum Dicatat (${pendingLocations.length})`}
       >
-        {pendingLocations.length === 0 ? (
-          <EmptyState
-            icon={<CheckIcon className="w-6 h-6" />}
-            title="Semua lokasi sudah dihitung"
-          />
-        ) : (
-          <ul className="divide-y divide-border-subtle">
-            {pendingLocations.map((loc) => (
-              <li key={loc.locationCode} className="flex items-center justify-between gap-2 py-2.5">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="w-9 h-9 rounded-input bg-danger-bg text-danger flex items-center justify-center shrink-0">
-                    <MapPinIcon className="w-4 h-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-meta font-bold text-text-primary uppercase break-all leading-snug">
-                      {loc.locationCode}
-                    </p>
-                    <p className="text-meta text-text-secondary tnum">{loc.productCount} produk terdaftar</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPendingModal(false);
-                    openLocation(loc.locationCode);
-                  }}
-                  className="shrink-0 min-h-touch px-4 bg-primary text-ivory rounded-input text-meta font-bold active:scale-95 transition"
-                >
-                  Buka
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="max-h-[60vh] overflow-y-auto divide-y divide-border-subtle">
+          {pendingLocations.map((loc) => (
+            <button
+              key={loc.locationCode}
+              type="button"
+              onClick={() => {
+                setShowPendingModal(false);
+                openLocation(loc.locationCode);
+              }}
+              className="w-full py-2.5 px-1 flex items-center justify-between text-left hover:bg-primary-pale/30 transition"
+            >
+              <div>
+                <span className="block text-xs font-bold text-text-primary uppercase">{loc.locationCode}</span>
+                <span className="block text-[10px] text-text-secondary">{loc.productCount} produk terdaftar</span>
+              </div>
+              <span className="text-[11px] font-bold text-primary">Buka →</span>
+            </button>
+          ))}
+        </div>
       </Dialog>
 
-      <Dialog isOpen={!!newLocation} onClose={() => setNewLocation("")} title="Tambah lokasi baru"
-        description={`Lokasi ${newLocation} belum memiliki produk di data perangkat. Lanjutkan untuk menambahkan produk dan jumlah fisiknya.`}>
-        <p className="text-sm mb-4">Lokasi beserta produknya akan ditambahkan ke Master Data saat hasil opname tersinkron.</p>
-        <button className="w-full min-h-touch bg-primary text-ivory rounded-input" onClick={() => {
-          setCache(`products:${newLocation}`, []);
-          router.push(`/input?location=${encodeURIComponent(newLocation)}`);
-        }}>Gunakan lokasi {newLocation}</button>
+      {/* Modal Lokasi Baru */}
+      <Dialog
+        isOpen={showNewLocation}
+        onClose={() => setShowNewLocation(false)}
+        title="Buka Lokasi Baru?"
+      >
+        <div className="space-y-3 text-xs">
+          <p className="text-text-secondary">
+            Lokasi <strong className="text-text-primary font-bold">&quot;{newLocation}&quot;</strong> belum terdaftar di Master Data. Anda tetap dapat melanjutkan untuk menginput produk ke lokasi ini.
+          </p>
+          <div className="flex gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowNewLocation(false)}
+              className="flex-1 py-2.5 bg-surface-warm border border-border rounded-xl font-bold text-text-primary"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowNewLocation(false);
+                router.push(`/input?location=${encodeURIComponent(newLocation)}`);
+              }}
+              className="flex-1 py-2.5 bg-primary text-ivory rounded-xl font-bold shadow-xs"
+            >
+              Lanjutkan
+            </button>
+          </div>
+        </div>
       </Dialog>
+
       <BottomNav activePage="scan" />
     </div>
   );
