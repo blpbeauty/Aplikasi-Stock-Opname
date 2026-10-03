@@ -721,6 +721,17 @@ export async function enqueueWrite(job: PendingWrite): Promise<void> {
 }
 
 export async function getPendingWrites(): Promise<PendingWrite[]> { return getAll<PendingWrite>(STORE_QUEUE); }
+export async function updatePendingWrite(job: PendingWrite): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction([STORE_QUEUE, STORE_HISTORY, STORE_MASTER], "readwrite");
+    tx.objectStore(STORE_QUEUE).put(job);
+    applyPending(tx, job);
+    tx.oncomplete = () => resolve();
+    tx.onabort = tx.onerror = () => reject(tx.error);
+  });
+  window.dispatchEvent(new Event("outbox-change"));
+}
 export async function finishPendingWrite(id: number): Promise<void> {
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {

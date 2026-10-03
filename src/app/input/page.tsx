@@ -11,11 +11,13 @@ import ScannerModal from "@/components/ScannerModal";
 import MoveSheet from "@/components/MoveSheet";
 import QtyInput from "@/components/QtyInput";
 import ConfirmModal from "@/components/ConfirmModal";
+import DuplicateWarningModal from "@/components/DuplicateWarningModal";
 import { PageHeader, LocationBand, EmptyState, Field } from "@/components/ui";
 import Autocomplete from "@/components/Autocomplete";
 import {
   getProductsApi,
   saveStockOpnameApi,
+  updateEntryApi,
   deleteProductApi,
   addMasterProductApi,
   lookupBarcodeApi,
@@ -24,6 +26,8 @@ import {
   getAllProductsApi,
   invalidateMemCache,
 } from "@/lib/api";
+import { findDuplicates, DuplicateMatch } from "@/lib/duplicates";
+import { getHistoryLocal, getPendingWrites, updatePendingWrite } from "@/lib/localDb";
 import { Product, HistoryEntry } from "@/lib/types";
 import { getCache, setCache, clearCache } from "@/lib/cache";
 import {
@@ -69,6 +73,12 @@ function InputPageContent() {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   // Semua-kuantitas-nol: simpan hanya lewat konfirmasi eksplisit
   const [showZeroConfirm, setShowZeroConfirm] = useState(false);
+
+  // Duplicate prevention state
+  const [duplicateMatches, setDuplicateMatches] = useState<DuplicateMatch[]>([]);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [pendingItemsToSave, setPendingItemsToSave] = useState<any[]>([]);
+  const [pendingZeroMode, setPendingZeroMode] = useState(false);
 
   const [newProductForm, setNewProductForm] = useState({
     productName: "",
@@ -457,8 +467,15 @@ function InputPageContent() {
     }
 
     const all = [...products, ...newProducts];
-    if (all.some((p) => p.sku === newProductForm.sku && p.batch === batchValue)) {
-      toast.error("Produk dengan SKU dan Batch yang sama sudah ada");
+    const targetSku = newProductForm.sku.trim().toLowerCase();
+    const targetBatch = batchValue.trim().toLowerCase();
+    const existingIndex = all.findIndex(
+      (p) => p.sku.trim().toLowerCase() === targetSku && String(p.batch || "").trim().toLowerCase() === targetBatch
+    );
+    if (existingIndex !== -1) {
+      toast.error("Produk dengan SKU dan Batch ini sudah ada di daftar. Silakan edit kuantitasnya langsung.");
+      setShowAddForm(false);
+      scrollToNextProduct(existingIndex - 1);
       return;
     }
 
@@ -552,40 +569,9 @@ function InputPageContent() {
     fetchProducts(true);
   };
 
-  const doSave = async (zeroMode: boolean) => {
-    if (saving) return;
-    if (formHasContent) { setShowAddForm(true); toast.error("Masukkan produk dari form ke hitungan sebelum menyimpan hasil."); return; }
-
-    const buildItem = (product: Product, isNew: boolean) => {
-      const k = productKey(product.sku, product.batch);
-      return {
-        productName: product.productName,
-        sku: product.sku,
-        batch: product.batch,
-        barcode: product.barcode || "",
-        qty: zeroMode ? 0 : quantities[k] || 0,
-        formula: zeroMode ? "" : formulas[k] || "",
-        isNew,
-      };
-    };
-
-    const items = zeroMode
-      ? [...products, ...newProducts].map((p) => buildItem(p, newProducts.includes(p)))
-      : [...products, ...newProducts]
-          .filter((product) => counted[productKey(product.sku, product.batch)])
-          .map((p) =>
-            buildItem(
-              p,
-              newProducts.some((n) => n.sku === p.sku && n.batch === p.batch)
-            )
-          );
-
-    if (items.length === 0) {
-      toast.error("Belum ada produk yang ditandai sudah dihitung");
-      return;
-    }
-
+  const executeSave = async (items: any[], zeroMode: boolean) => {
     setSaving(true);
+    setShowDuplicateModal(false);
     setShowZeroConfirm(false);
     const sessionId = `${user?.email}_${Date.now()}`;
     const timestamp = new Date().toISOString();
@@ -632,8 +618,6 @@ function InputPageContent() {
       formula: item.formula || "",
     }));
     setCache(historyCacheKey, [...optimisticEntries, ...(cachedHistory?.data || [])]);
-    // Mirror ke IndexedDB agar Riwayat (semua operator) langsung melihatnya
-
 
     if (typeof window !== "undefined") {
       window.localStorage.setItem("lastSaveTs", String(Date.now()));
@@ -651,6 +635,148 @@ function InputPageContent() {
       "Tersimpan di perangkat. Status pengiriman tersedia di indikator sinkronisasi."
     );
     router.push("/scan");
+  };
+
+  const executeOverwrite = async (items: any[], dups: DuplicateMatch[], zeroMode: boolean) => {
+    setSaving(true);
+    setShowDuplicateModal(false);
+    setShowZeroConfirm(false);
+    const timestamp = new Date().toISOString();
+    const sessionId = `${user?.email}_${Date.now()}`;
+
+    try {
+      const dupMap = new Map<string, DuplicateMatch>();
+      dups.forEach((d) => {
+        const k = `${d.item.sku.trim().toLowerCase()}__${String(d.item.batch || "").trim().toLowerCase()}`;
+        dupMap.set(k, d);
+      });
+
+      const itemsToUpdate = items.filter((item) => {
+        const k = `${item.sku.trim().toLowerCase()}__${String(item.batch || "").trim().toLowerCase()}`;
+        return dupMap.has(k);
+      });
+
+      const itemsToInsert = items.filter((item) => {
+        const k = `${item.sku.trim().toLowerCase()}__${String(item.batch || "").trim().toLowerCase()}`;
+        return !dupMap.has(k);
+      });
+
+      // 1. Process updates for duplicated items
+      for (const item of itemsToUpdate) {
+        const k = `${item.sku.trim().toLowerCase()}__${String(item.batch || "").trim().toLowerCase()}`;
+        const match = dupMap.get(k)!;
+
+        if (match.existing.isPending && match.existing.pendingJobId) {
+          const pendingWrites = await getPendingWrites();
+          const targetJob = pendingWrites.find((j) => j.id === match.existing.pendingJobId);
+          if (targetJob && Array.isArray(targetJob.data.items)) {
+            const itemIdx = targetJob.data.items.findIndex(
+              (p: any) =>
+                String(p.sku || "").trim().toLowerCase() === item.sku.trim().toLowerCase() &&
+                String(p.batch || "").trim().toLowerCase() === String(item.batch || "").trim().toLowerCase()
+            );
+            if (itemIdx !== -1) {
+              targetJob.data.items[itemIdx].qty = item.qty;
+              if (item.formula) targetJob.data.items[itemIdx].formula = item.formula;
+              if (targetJob.entries?.[itemIdx]) {
+                targetJob.entries[itemIdx].qty = item.qty;
+                if (item.formula) targetJob.entries[itemIdx].formula = item.formula;
+                targetJob.entries[itemIdx].editTimestamp = timestamp;
+              }
+              await updatePendingWrite(targetJob);
+            }
+          }
+        } else if (match.existing.rowId) {
+          await updateEntryApi(
+            match.existing.rowId,
+            match.existing.sessionId || sessionId,
+            item.qty,
+            timestamp,
+            { formula: item.formula }
+          );
+        }
+      }
+
+      // 2. Process non-duplicate items if any
+      if (itemsToInsert.length > 0) {
+        await saveStockOpnameApi(
+          sessionId,
+          user?.email || "",
+          location,
+          timestamp,
+          itemsToInsert
+        );
+      }
+
+      saveFinished.current = true;
+      latestDraft.current = null;
+      if (user?.email) {
+        try { removeDraft(user.email, location); } catch {}
+      }
+      invalidateMemCache("getHistory");
+      clearCache("products:");
+      toast.success("Nilai berhasil diperbarui tanpa baris duplikat.");
+      router.push("/scan");
+    } catch {
+      toast.error("Gagal memperbarui data. Coba lagi.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const doSave = async (zeroMode: boolean, bypassDuplicateCheck: boolean = false) => {
+    if (saving) return;
+    if (formHasContent) { setShowAddForm(true); toast.error("Masukkan produk dari form ke hitungan sebelum menyimpan hasil."); return; }
+
+    const buildItem = (product: Product, isNew: boolean) => {
+      const k = productKey(product.sku, product.batch);
+      return {
+        productName: product.productName,
+        sku: product.sku,
+        batch: product.batch,
+        barcode: product.barcode || "",
+        qty: zeroMode ? 0 : quantities[k] || 0,
+        formula: zeroMode ? "" : formulas[k] || "",
+        isNew,
+      };
+    };
+
+    const items = zeroMode
+      ? [...products, ...newProducts].map((p) => buildItem(p, newProducts.includes(p)))
+      : [...products, ...newProducts]
+          .filter((product) => counted[productKey(product.sku, product.batch)])
+          .map((p) =>
+            buildItem(
+              p,
+              newProducts.some((n) => n.sku === p.sku && n.batch === p.batch)
+            )
+          );
+
+    if (items.length === 0) {
+      toast.error("Belum ada produk yang ditandai sudah dihitung");
+      return;
+    }
+
+    if (!bypassDuplicateCheck) {
+      try {
+        const [localHistory, pendingWrites] = await Promise.all([
+          getHistoryLocal(),
+          getPendingWrites(),
+        ]);
+        const dups = findDuplicates(location, items, localHistory, pendingWrites);
+        if (dups.length > 0) {
+          setPendingItemsToSave(items);
+          setPendingZeroMode(zeroMode);
+          setDuplicateMatches(dups);
+          setShowDuplicateModal(true);
+          return;
+        }
+      } catch {
+        // Fallback to direct save if duplicate check fails
+      }
+    }
+
+    await executeSave(items, zeroMode);
   };
 
   const handleSaveClick = () => {
@@ -1295,6 +1421,20 @@ function InputPageContent() {
         onClose={() => setShowBarcodeScanner(false)}
         onScan={handleBarcodeScan}
         title="Pindai Barcode Produk"
+      />
+
+      {/* ── Modal Peringatan Duplikasi ── */}
+      <DuplicateWarningModal
+        isOpen={showDuplicateModal}
+        location={location}
+        duplicates={duplicateMatches}
+        onConfirmOverwrite={() => executeOverwrite(pendingItemsToSave, duplicateMatches, pendingZeroMode)}
+        onConfirmAppend={() => executeSave(pendingItemsToSave, pendingZeroMode)}
+        onCancel={() => {
+          setShowDuplicateModal(false);
+          setSaving(false);
+        }}
+        busy={saving}
       />
 
       <BottomNav activePage="scan" />
