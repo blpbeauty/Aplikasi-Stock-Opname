@@ -119,7 +119,7 @@ export function Dialog({
           size === "sm"
             ? "rounded-card"
             : "rounded-t-sheet sm:rounded-sheet border-b-0 sm:border-b"
-        } border shadow-sheet outline-none flex flex-col max-h-[88vh] animate-slideUp`}
+        } border shadow-sheet outline-none flex flex-col max-h-[88dvh] animate-slideUp`}
       >
         <div className="px-5 pt-4 pb-3 border-b border-border-subtle flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -142,7 +142,9 @@ export function Dialog({
           </button>
         </div>
 
-        <div className="px-5 py-4 pb-16 overflow-y-auto flex-1">{children}</div>
+        {children && (
+          <div className={`px-5 pt-4 overflow-y-auto flex-1 ${footer ? "pb-4" : "pb-16"}`}>{children}</div>
+        )}
 
         {footer && (
           <div className="px-5 py-3 border-t border-border-subtle pb-safe">{footer}</div>
@@ -183,7 +185,7 @@ export function IconButton({
     variant === "primary"
       ? "bg-primary text-ivory hover:bg-primary-light"
       : variant === "danger"
-      ? "bg-danger-bg text-danger hover:bg-danger hover:text-white"
+      ? "bg-danger-bg text-danger hover:bg-danger hover:text-ivory"
       : "bg-surface-warm text-text-primary hover:bg-primary-pale";
   return (
     <button

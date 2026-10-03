@@ -171,7 +171,7 @@ export default function ProfilePage() {
                         </span>
                         <div className="min-w-0">
                           <p className="text-meta font-bold text-text-primary uppercase tnum">{group.name}</p>
-                          <p className="text-meta text-text-secondary tnum">
+                          <p className="text-meta text-text-secondary tabular-nums">
                             {group.scanned} dari {group.total} lokasi pernah dihitung
                           </p>
                         </div>
@@ -201,7 +201,7 @@ export default function ProfilePage() {
                       />
                     </div>
 
-                    <div className="flex items-center justify-between mt-2 text-meta text-text-secondary tnum">
+                    <div className="flex items-center justify-between mt-2 text-meta text-text-secondary tabular-nums">
                       <span>
                         Entri: <strong className="text-text-primary">{group.inputCount}</strong>
                       </span>

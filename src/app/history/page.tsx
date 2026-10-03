@@ -348,7 +348,7 @@ export default function HistoryPage() {
               setHistory(prev);
               setCache(ck, prev);
             }}
-            className="px-3 py-1.5 bg-primary text-white text-meta font-bold rounded-label whitespace-nowrap active:scale-95 transition"
+            className="min-h-touch px-4 bg-primary text-ivory text-meta font-bold rounded-label whitespace-nowrap active:scale-95 transition"
           >
             Batalkan
           </button>
@@ -528,15 +528,15 @@ export default function HistoryPage() {
 
         {/* Dropdown Filter Periode (Minggu & Bulan Saja) */}
         <div className="mt-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+            <span className="text-meta font-bold uppercase tracking-wider text-text-secondary whitespace-nowrap">
               Periode Opname:
             </span>
             <select
               id="history-time-filter"
               value={timeFilter}
               onChange={(e) => setTimeFilter(e.target.value as "week" | "month")}
-              className="px-3 py-1.5 bg-surface-warm border border-border rounded-xl text-xs font-bold text-text-primary focus:outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer"
+              className="shrink-0 max-w-full min-h-touch px-3 py-1.5 bg-surface-warm border border-border rounded-xl text-base2 font-bold text-text-primary focus:outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer"
             >
               <option value="week">Minggu Ini (7 Hari)</option>
               <option value="month">Bulan Ini (30 Hari)</option>
@@ -547,17 +547,17 @@ export default function HistoryPage() {
         {/* Chip Pilihan Area Gudang (CEN/PARAS, CEN/PAYU, dll) */}
         {areaGroups.length > 0 && (
           <div className="mt-2.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-text-secondary block mb-1.5">
+            <span className="text-meta font-bold uppercase tracking-wider text-text-secondary block mb-1.5">
               Area Gudang:
             </span>
             <div className="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1" role="group" aria-label="Filter area gudang">
               <button
                 type="button"
                 onClick={() => setSelectedLocations(new Set())}
-                className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border transition whitespace-nowrap active:scale-95 ${
+                className={`min-h-touch px-3 rounded-xl text-meta font-bold border transition whitespace-nowrap active:scale-95 ${
                   selectedLocations.size === 0
-                    ? "bg-primary text-white border-primary shadow-xs"
-                    : "bg-white text-text-primary border-border hover:bg-surface-warm"
+                    ? "bg-primary text-ivory border-primary"
+                    : "bg-paper text-text-primary border-border hover:bg-surface-warm"
                 }`}
               >
                 Semua Area
@@ -569,16 +569,16 @@ export default function HistoryPage() {
                     key={group.name}
                     type="button"
                     onClick={() => toggleLocation(group.name)}
-                    className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold border transition flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
+                    className={`min-h-touch px-3 rounded-xl text-meta font-semibold border transition flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
                       isSelected
-                        ? "bg-primary text-white border-primary shadow-xs font-bold"
-                        : "bg-white text-text-primary border-border hover:bg-surface-warm"
+                        ? "bg-primary text-ivory border-primary font-bold"
+                        : "bg-paper text-text-primary border-border hover:bg-surface-warm"
                     }`}
                   >
                     <span>{group.name}</span>
                     <span
-                      className={`px-1.5 py-0.5 rounded-full text-[11px] font-black ${
-                        isSelected ? "bg-white/20 text-white" : "bg-primary-pale text-primary"
+                      className={`px-1.5 py-0.5 rounded-full text-meta font-black ${
+                        isSelected ? "bg-paper/20 text-ivory" : "bg-primary-pale text-primary"
                       }`}
                     >
                       {group.count}

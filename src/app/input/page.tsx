@@ -1242,9 +1242,9 @@ function InputPageContent() {
                       )}
                       <details className="relative">
                         <summary className="min-h-touch px-3 flex items-center border border-border rounded-input cursor-pointer text-sm" aria-label={`Tindakan untuk ${product.productName}`}>Tindakan</summary>
-                        <div className="absolute right-0 z-20 w-56 bg-paper border border-border rounded-input shadow-card p-1">
-                          <button className="w-full min-h-touch text-left px-3 text-danger" onClick={() => handleDeleteProduct(product, isNew)}>Hapus produk</button>
-                          <button className="w-full min-h-touch text-left px-3" onClick={() => {
+                        <div className="absolute right-0 z-20 w-64 max-w-[calc(100vw-2rem)] bg-paper border border-border rounded-input shadow-card p-1">
+                          <button className="w-full min-h-touch text-left px-3 whitespace-nowrap text-danger" onClick={() => handleDeleteProduct(product, isNew)}>Hapus produk</button>
+                          <button className="w-full min-h-touch text-left px-3 whitespace-nowrap" onClick={() => {
                             setCounted(prev => { const next = { ...prev }; delete next[k]; return next; });
                             setQuantities(prev => ({ ...prev, [k]: 0 })); setFormulas(prev => ({ ...prev, [k]: '' }));
                           }}>Batalkan hitungan produk</button>
@@ -1399,7 +1399,6 @@ function InputPageContent() {
         message={`Hitungan lokasi ${location} belum dikirim. Draft akan tetap tersedia saat Anda kembali.`}
         confirmText="Simpan Draft & Kembali"
         cancelText="Tetap di Halaman"
-        isDanger
         onConfirm={() => router.push("/scan")}
         onClose={() => setShowExitConfirm(false)}
       />

@@ -9,5 +9,5 @@ export default function DeliveryBadge({ rowIds, hideSynced = false }: { rowIds: 
   if (hideSynced && status === "Tersinkron") return null;
   const tone = status === "Gagal kirim" ? "bg-danger-bg text-danger border-danger/30" :
     status === "Tersinkron" ? "bg-success-bg text-success border-success/20" : "bg-amber-bg text-amber-text border-amber-text/30";
-  return <span className={`inline-flex items-center gap-1.5 border rounded-label px-2 py-1 text-xs font-semibold ${tone}`}><span className="w-1 h-1 rounded-full bg-current" aria-hidden="true" />{status}</span>;
+  return <span className={`inline-flex items-center gap-1.5 border rounded-label px-2 py-1 text-meta font-semibold ${tone}`}><span className="w-1 h-1 rounded-full bg-current" aria-hidden="true" />{status}</span>;
 }

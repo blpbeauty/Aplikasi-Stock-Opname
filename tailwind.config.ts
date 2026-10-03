@@ -1,5 +1,8 @@
 import type { Config } from "tailwindcss";
 
+/* rgb(var(--x-rgb) / <alpha-value>): nilai kanal didefinisikan di :root globals.css */
+const ch = (name: string) => `rgb(var(--${name}-rgb) / <alpha-value>)`;
+
 const config: Config = {
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -14,58 +17,62 @@ const config: Config = {
         mono: ["var(--font-jetbrains)", "Consolas", "monospace"],
       },
       colors: {
+        /* Warna memakai bentuk kanal (--x-rgb) supaya kelas opacity Tailwind
+           (mis. border-primary/25, text-ivory/80) benar-benar menghasilkan CSS. */
         /* Palet inti "Label Rak Operasional" */
-        espresso: "var(--espresso)",
-        cocoa: "var(--cocoa)",
-        ivory: "var(--ivory)",
-        paper: "var(--paper)",
-        ochre: "var(--ochre)",
+        espresso: ch("espresso"),
+        cocoa: ch("cocoa"),
+        ivory: ch("ivory"),
+        paper: ch("paper"),
+        ochre: ch("ochre"),
         amber: {
-          text: "var(--amber-text)",
-          bg: "var(--warning)",
+          text: ch("amber-text"),
+          bg: ch("warning"),
         },
 
         /* Warna semantik */
         success: {
-          DEFAULT: "var(--success)",
-          bg: "var(--success-bg)",
+          DEFAULT: ch("success"),
+          bg: ch("success-bg"),
         },
         danger: {
-          DEFAULT: "var(--danger)",
-          bg: "var(--danger-bg)",
+          DEFAULT: ch("danger"),
+          bg: ch("danger-bg"),
         },
         info: {
-          DEFAULT: "var(--info)",
-          bg: "var(--info-bg)",
+          DEFAULT: ch("info"),
+          bg: ch("info-bg"),
         },
 
         /* Alias yang sudah dipakai luas di aplikasi */
         primary: {
-          DEFAULT: "var(--primary)",
-          light: "var(--primary-light)",
-          dark: "var(--primary-dark)",
-          pale: "var(--primary-pale)",
-          bg: "var(--primary-bg)",
+          DEFAULT: ch("primary"),
+          light: ch("primary-light"),
+          dark: ch("primary-dark"),
+          pale: ch("primary-pale"),
+          bg: ch("primary-bg"),
         },
         surface: {
-          DEFAULT: "var(--surface)",
-          warm: "var(--surface-warm)",
+          DEFAULT: ch("surface"),
+          warm: ch("surface-warm"),
         },
         accent: {
-          yellow: "var(--accent-yellow)",
-          red: "var(--accent-red)",
-          green: "var(--accent-green)",
+          yellow: ch("accent-yellow"),
+          red: ch("accent-red"),
+          green: ch("accent-green"),
         },
-        error: "var(--error)",
+        error: ch("error"),
         warning: {
-          DEFAULT: "var(--warning)",
-          text: "var(--warning-text)",
+          DEFAULT: ch("warning"),
+          text: ch("warning-text"),
         },
-        "text-primary": "var(--text-primary)",
-        "text-secondary": "var(--text-secondary)",
+        "text-primary": ch("text-primary"),
+        "text-secondary": ch("text-secondary"),
         border: {
-          DEFAULT: "var(--border)",
-          subtle: "var(--border-subtle)",
+          DEFAULT: ch("border"),
+          subtle: ch("border-subtle"),
+          /* batas kontrol form: >= 3:1 terhadap kartu dan isi field */
+          input: ch("border-input"),
         },
       },
       fontSize: {

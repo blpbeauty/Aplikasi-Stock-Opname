@@ -297,7 +297,7 @@ export default function ScanDashboard() {
       <header className="history-hero-compact">
         <div className="flex items-center justify-between gap-2">
           <h1>Scan Lokasi<span>.</span></h1>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-bold text-ivory">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-paper/10 border border-paper/15 text-meta font-bold text-ivory">
             <span className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
             <span>{user?.name?.split(" ")[0] || "Operator"}</span>
           </div>
@@ -315,14 +315,14 @@ export default function ScanDashboard() {
         {/* Drafts */}
         {drafts.length > 0 && (
           <section className="rounded-2xl border border-primary/25 bg-primary-pale p-3 space-y-2.5" aria-label="Draft hitungan">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold text-text-primary">Hitungan belum disimpan ({drafts.length}):</h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-meta font-bold text-text-primary">Hitungan belum disimpan ({drafts.length}):</h2>
               <button
                 type="button"
                 onClick={() => setConfirmResetDrafts(true)}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-danger hover:underline px-2 py-0.5 rounded bg-danger-bg/70 border border-danger/25 transition active:scale-95"
+                className="inline-flex shrink-0 whitespace-nowrap items-center gap-1 min-h-touch text-meta font-bold text-danger hover:underline px-3 rounded-input bg-danger-bg/70 border border-danger/25 transition active:scale-95"
               >
-                <TrashIcon className="w-3 h-3" />
+                <TrashIcon className="w-4 h-4" />
                 <span>Reset Semua</span>
               </button>
             </div>
@@ -330,15 +330,16 @@ export default function ScanDashboard() {
               {drafts.slice(0, 5).map((draft) => (
                 <div
                   key={draft.location}
-                  className="flex items-center gap-2 rounded-xl border border-border bg-paper p-1.5 pr-2.5 shadow-xs transition hover:border-primary/40"
+                  className="flex items-center gap-2 rounded-xl border border-border bg-paper p-1.5 pr-1.5 transition hover:border-primary/40"
                 >
                   <button
                     type="button"
-                    className="flex-1 text-left px-2 py-1 text-xs"
+                    className="flex-1 min-w-0 min-h-touch text-left px-2 py-1 text-meta"
                     onClick={() => router.push(`/input?location=${encodeURIComponent(draft.location)}`)}
                   >
-                    <span className="block font-bold text-text-primary">Lanjutkan draft {draft.location}</span>
-                    <span className="text-[11px] text-text-secondary">
+                    <span className="block text-meta text-text-secondary">Lanjutkan draft</span>
+                    <span className="block font-mono text-base2 font-bold text-text-primary whitespace-nowrap">{draft.location}</span>
+                    <span className="block text-meta text-text-secondary">
                       {Object.values(draft.counted).filter(Boolean).length} produk · {formatRelativeTime(new Date(draft.updatedAt).toISOString())}
                     </span>
                   </button>
@@ -347,9 +348,9 @@ export default function ScanDashboard() {
                     onClick={() => setDraftToDelete(draft.location)}
                     title={`Hapus draft ${draft.location}`}
                     aria-label={`Hapus draft lokasi ${draft.location}`}
-                    className="p-1.5 rounded-lg text-text-secondary hover:text-danger hover:bg-danger-bg transition"
+                    className="tap shrink-0 flex items-center justify-center rounded-input text-text-secondary hover:text-danger hover:bg-danger-bg transition"
                   >
-                    <TrashIcon className="w-3.5 h-3.5" />
+                    <TrashIcon className="w-4 h-4" />
                   </button>
                 </div>
               ))}
@@ -360,7 +361,7 @@ export default function ScanDashboard() {
         {/* ── Buka Lokasi Card ── */}
         <section aria-label="Buka lokasi" className="relative z-30 bg-paper border border-border rounded-2xl p-3.5 shadow-card space-y-2.5">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+            <h2 className="text-meta font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
               <MapPinIcon className="w-3.5 h-3.5 text-primary" />
               Pilih / Pindai Lokasi
             </h2>
@@ -375,14 +376,14 @@ export default function ScanDashboard() {
               resolve={resolveLocations}
               getKey={(l) => l.locationCode}
               renderItem={(l) => (
-                <div className="flex items-center justify-between gap-2 w-full min-w-0">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-full min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
                     <MapPinIcon className="w-4 h-4 text-text-secondary shrink-0" />
-                    <span className="font-bold text-text-primary uppercase break-all">
+                    <span className="font-mono text-base2 font-bold text-text-primary uppercase whitespace-nowrap">
                       {l.locationCode}
                     </span>
                   </div>
-                  <span className="text-[11px] text-text-secondary shrink-0 pl-2">{l.productCount} produk</span>
+                  <span className="block pl-6 text-meta text-text-secondary">{l.productCount} produk</span>
                 </div>
               )}
               onSelect={(l) => openLocation(l.locationCode)}
@@ -395,7 +396,7 @@ export default function ScanDashboard() {
             <button
               type="button"
               onClick={() => setShowLocationScanner(true)}
-              className="w-11 h-11 shrink-0 rounded-xl bg-primary text-ivory flex items-center justify-center active:scale-95 transition shadow-xs"
+              className="w-11 h-11 shrink-0 rounded-xl bg-primary text-ivory flex items-center justify-center active:scale-95 transition"
               aria-label="Pindai barcode lokasi"
               title="Pindai barcode lokasi"
             >
@@ -408,13 +409,13 @@ export default function ScanDashboard() {
               type="button"
               onClick={() => openLocation(locationCode)}
               disabled={!locationCode.trim() || loading}
-              className="flex-1 py-2.5 bg-primary text-ivory rounded-xl font-bold text-xs disabled:opacity-50 active:scale-[0.98] transition shadow-xs"
+              className="flex-1 min-h-touch py-2.5 bg-primary text-ivory rounded-xl font-bold text-base2 disabled:opacity-[.55] disabled:cursor-not-allowed disabled:active:scale-100 active:scale-[0.98] transition"
             >
               Buka Lokasi
             </button>
             <button
               type="button"
-              className="py-2.5 px-3 border border-border bg-surface-warm text-text-primary rounded-xl font-bold text-xs hover:bg-gray-200 transition"
+              className="min-h-touch py-2.5 px-4 border border-border bg-surface-warm text-text-primary rounded-xl font-bold text-base2 whitespace-nowrap hover:bg-primary-pale transition"
               onClick={() => {
                 setNewLocation(locationCode.trim().toUpperCase());
                 setShowNewLocation(true);
@@ -425,7 +426,7 @@ export default function ScanDashboard() {
           </div>
 
           {loading && (
-            <p className="flex items-center justify-center gap-2 text-xs text-text-secondary pt-1" role="status">
+            <p className="flex items-center justify-center gap-2 text-meta text-text-secondary pt-1" role="status">
               <LoadingSpinner /> Membuka lokasi…
             </p>
           )}
@@ -435,24 +436,24 @@ export default function ScanDashboard() {
         <section aria-label="Progres opname" className="bg-paper border border-border rounded-2xl p-3.5 shadow-card">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h2 className="text-xs font-bold text-text-primary">Cakupan Lokasi Opname</h2>
-              <p className="text-[11px] text-text-secondary">
+              <h2 className="text-meta font-bold text-text-primary">Cakupan Lokasi Opname</h2>
+              <p className="text-meta text-text-secondary">
                 {stats.scannedCount} dari {stats.total} lokasi tercatat
               </p>
             </div>
-            <div className="px-2.5 py-1 bg-primary-pale border border-primary/20 rounded-lg text-primary font-black text-xs">
+            <div className="px-2.5 py-1 bg-primary-pale border border-primary/20 rounded-lg text-primary font-black text-meta">
               {stats.progress}%
             </div>
           </div>
 
           <div className="w-full h-2.5 bg-surface-warm rounded-full overflow-hidden border border-border-subtle p-0.5">
             <div
-              className="h-full bg-gradient-to-r from-primary to-accent-yellow rounded-full transition-all duration-500"
-              style={{ width: `${Math.max(stats.progress, stats.progress > 0 ? 4 : 0)}%` }}
+              className="h-full w-full origin-left bg-primary rounded-full transition-transform duration-500"
+              style={{ transform: `scaleX(${Math.max(stats.progress, stats.progress > 0 ? 4 : 0) / 100})` }}
             />
           </div>
 
-          <div className="mt-3 flex items-center justify-between text-[11px] pt-2 border-t border-border-subtle">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 text-meta pt-2 border-t border-border-subtle">
             <span className="text-text-secondary">
               Pending: <strong className="text-danger font-bold">{stats.pending} lokasi</strong>
             </span>
@@ -460,7 +461,7 @@ export default function ScanDashboard() {
               <button
                 type="button"
                 onClick={() => setShowPendingModal(true)}
-                className="text-primary font-bold hover:underline"
+                className="inline-flex items-center whitespace-nowrap min-h-touch px-1 text-primary font-bold hover:underline"
               >
                 Lihat daftar pending →
               </button>
@@ -470,20 +471,20 @@ export default function ScanDashboard() {
 
         {/* ── Terakhir Dikerjakan ── */}
         <section aria-label="Terakhir dikerjakan" className="bg-paper border border-border rounded-2xl p-3.5 shadow-card">
-          <div className="flex items-center justify-between mb-2.5">
-            <h2 className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+          <div className="flex items-center justify-between gap-2 mb-2.5">
+            <h2 className="text-meta font-bold text-text-primary flex items-center gap-1.5">
               <ClockIcon className="w-4 h-4 text-text-secondary" /> Terakhir Dikerjakan
             </h2>
             <button
               onClick={() => router.push("/history")}
-              className="text-[11px] font-bold text-primary hover:underline"
+              className="inline-flex shrink-0 items-center whitespace-nowrap min-h-touch px-1 text-meta font-bold text-primary hover:underline"
             >
               Lihat semua →
             </button>
           </div>
 
           {recentScans.length === 0 ? (
-            <p className="text-xs text-text-secondary text-center py-3">Belum ada aktivitas opname</p>
+            <p className="text-meta text-text-secondary text-center py-3">Belum ada aktivitas opname</p>
           ) : (
             <ul className="divide-y divide-border-subtle">
               {recentScans.map((item, idx) => (
@@ -491,17 +492,17 @@ export default function ScanDashboard() {
                   <button
                     type="button"
                     onClick={() => openLocation(item.location)}
-                    className="w-full py-2.5 flex items-center justify-between text-left hover:bg-primary-pale/30 transition"
+                    className="w-full min-h-touch py-2.5 flex items-center justify-between text-left hover:bg-primary-pale/30 transition"
                   >
                     <div className="flex items-center gap-2.5">
-                      <span className="w-7 h-7 rounded-lg bg-surface-warm text-primary flex items-center justify-center shrink-0 text-xs">
-                        📍
+                      <span className="w-7 h-7 rounded-lg bg-surface-warm text-primary flex items-center justify-center shrink-0">
+                        <MapPinIcon className="w-4 h-4" />
                       </span>
                       <div>
-                        <span className="block text-xs font-bold text-text-primary uppercase">
+                        <span className="block font-mono text-base2 font-bold text-text-primary uppercase">
                           {item.location}
                         </span>
-                        <span className="block text-[11px] text-text-secondary">
+                        <span className="block text-meta text-text-secondary">
                           {item.count} item · {formatRelativeTime(item.time)}
                         </span>
                       </div>
@@ -517,7 +518,7 @@ export default function ScanDashboard() {
         {/* ── Cari Posisi Produk ── */}
         <section aria-label="Cari posisi produk" className="bg-paper border border-border rounded-2xl p-3.5 shadow-card">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+            <h2 className="text-meta font-bold text-text-primary flex items-center gap-1.5">
               <SearchIcon className="w-4 h-4 text-primary" /> Cari Posisi Produk
             </h2>
           </div>
@@ -532,12 +533,13 @@ export default function ScanDashboard() {
                 handleProductSearchDebounced(e.target.value);
               }}
               placeholder="Ketik nama produk, SKU, barcode…"
-              className="flex-1 py-2 px-3 bg-surface-warm border border-border rounded-xl text-xs font-semibold text-text-primary focus:bg-paper focus:outline-none focus:ring-2 focus:ring-primary"
+              className="flex-1 min-h-touch py-2 px-3 bg-surface-warm border border-border rounded-xl text-base2 font-semibold text-text-primary focus:bg-paper focus:outline-none focus:ring-2 focus:ring-primary"
             />
             <button
               type="button"
               onClick={() => setShowProductScanner(true)}
-              className="w-9 h-9 shrink-0 rounded-xl bg-surface-warm border border-border text-primary flex items-center justify-center active:scale-95 transition"
+              className="w-11 h-11 shrink-0 rounded-xl bg-surface-warm border border-border text-primary flex items-center justify-center active:scale-95 transition"
+              aria-label="Pindai barcode produk"
               title="Pindai barcode produk"
             >
               <CameraIcon className="w-4 h-4" />
@@ -545,7 +547,7 @@ export default function ScanDashboard() {
           </div>
 
           {productSearchLoading && (
-            <p className="mt-2 flex items-center justify-center gap-2 text-xs text-text-secondary" role="status">
+            <p className="mt-2 flex items-center justify-center gap-2 text-meta text-text-secondary" role="status">
               <LoadingSpinner /> Mencari produk…
             </p>
           )}
@@ -555,26 +557,26 @@ export default function ScanDashboard() {
               {productResults.map((item, idx) => (
                 <li key={`${item.sku}-${item.batch}-${idx}`} className="py-2.5 flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-text-primary truncate">{item.productName}</p>
-                    <p className="text-[11px] text-text-secondary mt-0.5">
+                    <p className="text-base2 font-bold text-text-primary truncate">{item.productName}</p>
+                    <p className="text-meta text-text-secondary mt-0.5">
                       SKU: <strong className="text-text-primary">{item.sku}</strong> | Batch: {item.batch || "—"}
                     </p>
-                    <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-primary-pale text-primary text-[11px] font-bold">
-                      📍 {item.location}
+                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md bg-primary-pale text-primary text-meta font-bold font-mono whitespace-nowrap">
+                      <MapPinIcon className="w-3.5 h-3.5" /> {item.location}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0 pt-0.5">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       type="button"
                       onClick={() => openLocation(item.location)}
-                      className="px-2.5 py-1 bg-surface-warm border border-border rounded-lg text-[11px] font-bold text-text-primary hover:bg-primary-pale"
+                      className="min-h-touch px-3 bg-surface-warm border border-border rounded-lg text-meta font-bold text-text-primary hover:bg-primary-pale"
                     >
                       Buka
                     </button>
                     <button
                       type="button"
                       onClick={() => openQuickMove(item)}
-                      className="px-2.5 py-1 bg-primary text-ivory rounded-lg text-[11px] font-bold shadow-xs hover:bg-primary-light"
+                      className="min-h-touch px-3 bg-primary text-ivory rounded-lg text-meta font-bold hover:bg-primary-light"
                     >
                       Pindah
                     </button>
@@ -627,7 +629,7 @@ export default function ScanDashboard() {
         onClose={() => setShowPendingModal(false)}
         title={`Lokasi Belum Dicatat (${pendingLocations.length})`}
       >
-        <div className="max-h-[60vh] overflow-y-auto divide-y divide-border-subtle">
+        <div className="max-h-[60dvh] overflow-y-auto divide-y divide-border-subtle">
           {pendingLocations.map((loc) => (
             <button
               key={loc.locationCode}
@@ -636,13 +638,13 @@ export default function ScanDashboard() {
                 setShowPendingModal(false);
                 openLocation(loc.locationCode);
               }}
-              className="w-full py-2.5 px-1 flex items-center justify-between text-left hover:bg-primary-pale/30 transition"
+              className="w-full min-h-touch py-2.5 px-1 flex items-center justify-between gap-2 text-left hover:bg-primary-pale/30 transition"
             >
               <div>
-                <span className="block text-xs font-bold text-text-primary uppercase">{loc.locationCode}</span>
-                <span className="block text-[11px] text-text-secondary">{loc.productCount} produk terdaftar</span>
+                <span className="block font-mono text-base2 font-bold text-text-primary uppercase">{loc.locationCode}</span>
+                <span className="block text-meta text-text-secondary">{loc.productCount} produk terdaftar</span>
               </div>
-              <span className="text-[11px] font-bold text-primary">Buka →</span>
+              <span className="text-meta font-bold text-primary whitespace-nowrap">Buka →</span>
             </button>
           ))}
         </div>
@@ -654,7 +656,7 @@ export default function ScanDashboard() {
         onClose={() => setShowNewLocation(false)}
         title="Buka Lokasi Baru?"
       >
-        <div className="space-y-3 text-xs">
+        <div className="space-y-3 text-base2">
           <p className="text-text-secondary">
             Lokasi <strong className="text-text-primary font-bold">&quot;{newLocation}&quot;</strong> belum terdaftar di Master Data. Anda tetap dapat melanjutkan untuk menginput produk ke lokasi ini.
           </p>
@@ -662,7 +664,7 @@ export default function ScanDashboard() {
             <button
               type="button"
               onClick={() => setShowNewLocation(false)}
-              className="flex-1 py-2.5 bg-surface-warm border border-border rounded-xl font-bold text-text-primary"
+              className="flex-1 min-h-touch py-2.5 bg-surface-warm border border-border rounded-xl font-bold text-text-primary"
             >
               Batal
             </button>
@@ -672,7 +674,7 @@ export default function ScanDashboard() {
                 setShowNewLocation(false);
                 router.push(`/input?location=${encodeURIComponent(newLocation)}`);
               }}
-              className="flex-1 py-2.5 bg-primary text-ivory rounded-xl font-bold shadow-xs"
+              className="flex-1 min-h-touch py-2.5 bg-primary text-ivory rounded-xl font-bold"
             >
               Lanjutkan
             </button>

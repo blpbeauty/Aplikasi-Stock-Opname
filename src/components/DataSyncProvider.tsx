@@ -259,7 +259,7 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
       )}
 
       {user && <div className={`mobile-sync-status border-b px-4 py-1.5 ${queueError || syncProgress.status === 'error' ? 'bg-amber-bg border-amber-text/30' : 'bg-surface-warm border-border'}`} role="status" aria-live="polite">
-        <div className="mx-auto max-w-[480px] flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="mx-auto max-w-[480px] flex flex-wrap items-center justify-between gap-2 text-meta">
           <div>
             <p className="font-bold">{!queueReady ? 'Memeriksa status' : queueError ? 'Gagal kirim' : pending ? (offline ? 'Tersimpan di perangkat' : 'Menunggu kirim') : syncProgress.status === 'syncing' ? 'Mengunduh data' : syncProgress.status === 'error' ? 'Gagal unduh data' : isReady ? (offline ? 'Tersimpan di perangkat' : 'Tersinkron') : 'Menyiapkan data'} <span className="font-normal">· {offline ? 'Offline' : 'Online'}{testingOffline ? ' (uji)' : ''}</span></p>
             <p className="text-meta text-text-secondary">{pending ? `${pending} perubahan belum terkirim. ` : ''}{lastSyncTime ? `Data diperbarui ${new Date(lastSyncTime).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'Belum ada unduhan lengkap'}</p>

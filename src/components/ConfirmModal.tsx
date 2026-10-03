@@ -34,12 +34,12 @@ export default function ConfirmModal({
       description={message}
       size="sm"
       footer={
-        <div className="flex gap-2.5">
+        <div className="flex flex-wrap gap-2.5">
           <button
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="flex-1 min-h-touch px-4 bg-surface-warm text-text-primary text-meta font-bold rounded-input transition active:scale-[0.98] disabled:opacity-50"
+            className="flex-1 min-w-max min-h-touch px-4 bg-surface-warm text-text-primary text-meta font-bold whitespace-nowrap rounded-input transition active:scale-[0.98] disabled:opacity-[.55] disabled:cursor-not-allowed"
           >
             {cancelText}
           </button>
@@ -47,7 +47,7 @@ export default function ConfirmModal({
             type="button"
             onClick={onConfirm}
             disabled={busy}
-            className={`flex-1 min-h-touch px-4 text-ivory text-meta font-bold rounded-input transition active:scale-[0.98] disabled:opacity-50 ${
+            className={`flex-1 min-w-max min-h-touch px-4 text-ivory text-meta font-bold whitespace-nowrap rounded-input transition active:scale-[0.98] disabled:opacity-[.55] disabled:cursor-not-allowed ${
               isDanger ? "bg-danger" : "bg-primary"
             }`}
           >

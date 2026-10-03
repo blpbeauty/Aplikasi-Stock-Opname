@@ -403,7 +403,7 @@ export default function AddHistoryEntryModal({
                         key={b}
                         type="button"
                         onClick={() => setBatch(b)}
-                        className={`px-2 py-1 rounded-label text-meta font-bold border ${
+                        className={`min-h-touch px-3 rounded-label text-meta font-bold border ${
                           batch === b
                             ? "bg-primary text-ivory border-primary"
                             : "bg-surface-warm text-text-primary border-border"
