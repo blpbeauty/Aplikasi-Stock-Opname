@@ -203,6 +203,30 @@ export default function HistoryPage() {
 
   const periodLabel = activeMonth ? formatHistoryMonth(activeMonth) : "Memuat periode";
 
+  // Ekstraksi area grup seperti CEN/PARAS, CEN/PAYU
+  const areaGroups = useMemo(() => {
+    const groupMap = new Map<string, number>();
+    history.forEach((e) => {
+      const parts = String(e.location || "").split("/");
+      const groupKey = parts.length >= 2 ? parts.slice(0, 2).join("/") : parts[0];
+      if (groupKey) {
+        groupMap.set(groupKey, (groupMap.get(groupKey) || 0) + 1);
+      }
+    });
+    return Array.from(groupMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, count]) => ({ name, count }));
+  }, [history]);
+
+  const toggleLocation = (locName: string) => {
+    setSelectedLocations((prev) => {
+      const next = new Set(prev);
+      if (next.has(locName)) next.delete(locName);
+      else next.add(locName);
+      return next;
+    });
+  };
+
   const filteredHistory = useMemo(() => {
     let result = history;
 
@@ -233,7 +257,9 @@ export default function HistoryPage() {
     if (selectedLocations.size > 0) {
       result = result.filter((e) => {
         for (const prefix of selectedLocations) {
-          if (e.location === prefix || e.location.startsWith(prefix + "/")) return true;
+          if (e.location === prefix || e.location.startsWith(prefix + "/") || e.location.startsWith(prefix)) {
+            return true;
+          }
         }
         return false;
       });
@@ -261,19 +287,6 @@ export default function HistoryPage() {
       return latestB - latestA;
     });
   }, [filteredHistory]);
-
-  const uniqueLocations = useMemo(() => {
-    const groupMap = new Map<string, number>();
-    history.forEach((e) => {
-      const loc = String(e.location || "").trim();
-      if (loc) {
-        groupMap.set(loc, (groupMap.get(loc) || 0) + 1);
-      }
-    });
-    return Array.from(groupMap.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([loc, count]) => ({ location: loc, count }));
-  }, [history]);
 
   // Summary stats for filtered results
   const summary = useMemo(() => {
@@ -521,45 +534,69 @@ export default function HistoryPage() {
           )}
         </div>
 
-        {/* Dropdown Filter Periode (Week & Month) & Lokasi */}
-        <div className="grid grid-cols-2 gap-2 mt-2.5">
-          <div>
-            <label htmlFor="history-time-filter" className="block text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1">
-              Periode
-            </label>
+        {/* Dropdown Filter Periode */}
+        <div className="mt-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">
+              Filter Periode:
+            </span>
             <select
               id="history-time-filter"
               value={timeFilter}
               onChange={(e) => setTimeFilter(e.target.value as "week" | "month")}
-              className="w-full px-2.5 py-2 bg-surface-warm border border-border rounded-xl text-xs font-bold text-text-primary focus:outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer"
+              className="px-3 py-1.5 bg-surface-warm border border-border rounded-xl text-xs font-bold text-text-primary focus:outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer"
             >
               <option value="week">Minggu Ini (7 Hari)</option>
               <option value="month">Bulan Ini (30 Hari)</option>
             </select>
           </div>
-
-          <div>
-            <label htmlFor="history-loc-filter" className="block text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1">
-              Lokasi
-            </label>
-            <select
-              id="history-loc-filter"
-              value={Array.from(selectedLocations)[0] || "all"}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSelectedLocations(val === "all" ? new Set() : new Set([val]));
-              }}
-              className="w-full px-2.5 py-2 bg-surface-warm border border-border rounded-xl text-xs font-bold text-text-primary focus:outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer"
-            >
-              <option value="all">Semua Lokasi ({uniqueLocations.length})</option>
-              {uniqueLocations.map((loc) => (
-                <option key={loc.location} value={loc.location}>
-                  {loc.location} ({loc.count})
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
+
+        {/* Chip Pilihan Area Gudang (CEN/PARAS, CEN/PAYU, dll) */}
+        {areaGroups.length > 0 && (
+          <div className="mt-2.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-text-secondary block mb-1.5">
+              Area Gudang:
+            </span>
+            <div className="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1" role="group" aria-label="Filter area gudang">
+              <button
+                type="button"
+                onClick={() => setSelectedLocations(new Set())}
+                className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border transition whitespace-nowrap active:scale-95 ${
+                  selectedLocations.size === 0
+                    ? "bg-primary text-white border-primary shadow-xs"
+                    : "bg-white text-text-primary border-border hover:bg-surface-warm"
+                }`}
+              >
+                Semua Area
+              </button>
+              {areaGroups.map((group) => {
+                const isSelected = selectedLocations.has(group.name);
+                return (
+                  <button
+                    key={group.name}
+                    type="button"
+                    onClick={() => toggleLocation(group.name)}
+                    className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold border transition flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
+                      isSelected
+                        ? "bg-primary text-white border-primary shadow-xs font-bold"
+                        : "bg-white text-text-primary border-border hover:bg-surface-warm"
+                    }`}
+                  >
+                    <span>{group.name}</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[9px] font-black ${
+                        isSelected ? "bg-white/20 text-white" : "bg-primary-pale text-primary"
+                      }`}
+                    >
+                      {group.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <main className="history-content">
