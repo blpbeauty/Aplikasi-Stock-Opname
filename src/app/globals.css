@@ -3,18 +3,17 @@
 @tailwind utilities;
 
 :root {
-  /* ── Dusty Rosewood & Mauve Tint Theme ──
-     Deep Plum Truffle = header, tombol primer, kartu aktif.
-     Dusty Rosewood = aksen tombol, border penegas, titik fokus.
-     Soft Mauve = badge status, indikator highlight.
-     Porcelain Rose = latar aplikasi teduh, elegan dan bersih.
+  /* ── Vanilla Silk & Burnt Praline Theme (BLP Beauty 2026) ──
+     Burnt Praline = header, tombol primer, kartu aktif.
+     Vanilla Biscuit = aksen tombol, badge status, highlight.
+     Vanilla Milk = latar aplikasi teduh, elegan dan bersih.
      Paper = permukaan putih bersih untuk kartu/input/modal. */
-  --espresso: #28161c;
-  --cocoa: #7a5e66;
-  --ivory: #faf5f6;
+  --espresso: #231c18;
+  --cocoa: #70645d;
+  --ivory: #f9f8f5;
   --paper: #ffffff;
-  --ochre: #b56172;
-  --amber-text: #9c3b53; /* teks aksen: dulu #b56172 (3.90:1 di atas --warning); audit P10 */
+  --ochre: #7d4e38;
+  --amber-text: #8f5438;
 
   /* Warna semantik */
   --success: #2e6c45;
@@ -23,72 +22,69 @@
   --danger-bg: #fcecef;
   --info: #3b5b7d;
   --info-bg: #edf3f9;
-  --warning: #fdf2f4;
-  --warning-text: #9c3b53;
+  --warning: #fdf6ed;
+  --warning-text: #8f5438;
 
   /* Alias aplikasi */
-  --primary: #351f26;
-  --primary-light: #4a2c35;
-  --primary-dark: #25141a;
-  --primary-pale: #f5e8eb;
-  --primary-bg: #faf5f6;
+  --primary: #7d4e38;
+  --primary-light: #94614a;
+  --primary-dark: #5c3524;
+  --primary-pale: #f2eae3;
+  --primary-bg: #f9f8f5;
   --surface: #ffffff;
-  --surface-warm: #f6ecef;
+  --surface-warm: #f1ece3;
 
-  --accent-yellow: #d994a1;
+  --accent-yellow: #dac4b4;
   --accent-red: #b52d3e;
   --accent-green: #2e6c45;
   --error: #b52d3e;
 
-  --text-primary: #28161c;
-  --text-secondary: #7a5e66;
-  --border: #eadce0;
-  --border-subtle: #f5ebee;
-  /* Batas kontrol form (input/select/textarea/qty): 3.4:1 di atas isi field,
-     3.6:1 di atas --ivory, 3.9:1 di atas --paper. Kartu tetap memakai --border. */
-  --border-input: #937a81;
+  --text-primary: #231c18;
+  --text-secondary: #70645d;
+  --border: #e5dfd6;
+  --border-subtle: #efece6;
+  --border-input: #9c8e84;
 
-  /* Token pendukung (sebelumnya hex lepas di globals.css) */
-  --on-dark: #fdfbf7;
-  --on-dark-muted: #e2cad0;
-  --surface-tint: #f8eef1;
-  --surface-head: #fdfbf9;
+  /* Token pendukung */
+  --on-dark: #fdfbf8;
+  --on-dark-muted: #e2dad2;
+  --surface-tint: #f5efe8;
+  --surface-head: #faf8f5;
   --danger-tint-bg: #fdf2f2;
   --danger-tint-border: #f8d7da;
-  --page-outer: #efe6e9;
+  --page-outer: #ede8df;
 
-  /* Kanal RGB untuk kelas opacity Tailwind (rgb(var(--x-rgb) / a)).
-     Harus identik dengan nilai hex di atas. */
-  --espresso-rgb: 40 22 28;
-  --cocoa-rgb: 122 94 102;
-  --ivory-rgb: 250 245 246;
+  /* Kanal RGB untuk kelas opacity Tailwind (rgb(var(--x-rgb) / a)) */
+  --espresso-rgb: 35 28 24;
+  --cocoa-rgb: 112 100 93;
+  --ivory-rgb: 249 248 245;
   --paper-rgb: 255 255 255;
-  --ochre-rgb: 181 97 114;
-  --amber-text-rgb: 156 59 83;
+  --ochre-rgb: 125 78 56;
+  --amber-text-rgb: 143 84 56;
   --success-rgb: 46 108 69;
   --success-bg-rgb: 235 245 239;
   --danger-rgb: 181 45 62;
   --danger-bg-rgb: 252 236 239;
   --info-rgb: 59 91 125;
   --info-bg-rgb: 237 243 249;
-  --warning-rgb: 253 242 244;
-  --warning-text-rgb: 156 59 83;
-  --primary-rgb: 53 31 38;
-  --primary-light-rgb: 74 44 53;
-  --primary-dark-rgb: 37 20 26;
-  --primary-pale-rgb: 245 232 235;
-  --primary-bg-rgb: 250 245 246;
+  --warning-rgb: 253 246 237;
+  --warning-text-rgb: 143 84 56;
+  --primary-rgb: 125 78 56;
+  --primary-light-rgb: 148 97 74;
+  --primary-dark-rgb: 92 53 36;
+  --primary-pale-rgb: 242 234 227;
+  --primary-bg-rgb: 249 248 245;
   --surface-rgb: 255 255 255;
-  --surface-warm-rgb: 246 236 239;
-  --accent-yellow-rgb: 217 148 161;
+  --surface-warm-rgb: 241 236 227;
+  --accent-yellow-rgb: 218 196 180;
   --accent-red-rgb: 181 45 62;
   --accent-green-rgb: 46 108 69;
   --error-rgb: 181 45 62;
-  --text-primary-rgb: 40 22 28;
-  --text-secondary-rgb: 122 94 102;
-  --border-rgb: 234 220 224;
-  --border-subtle-rgb: 245 235 238;
-  --border-input-rgb: 147 122 129;
+  --text-primary-rgb: 35 28 24;
+  --text-secondary-rgb: 112 100 93;
+  --border-rgb: 229 223 214;
+  --border-subtle-rgb: 239 236 230;
+  --border-input-rgb: 156 142 132;
 
   --focus-ring: 0 0 0 3px rgb(var(--ochre-rgb) / 0.45);
 }
@@ -169,23 +165,23 @@ textarea.border-border:not(:focus) {
 .location-band {
   background-color: var(--primary);
   color: var(--ivory);
-  border-left: 6px solid var(--ochre);
-  border-radius: 4px;
-  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  padding: 12px 14px;
 }
 .location-band .location-band-code {
   font-family: var(--font-jetbrains), Consolas, monospace;
-  font-size: clamp(1.1rem, 5.5vw, 1.75rem);
-  line-height: 1.15;
+  font-size: clamp(1.125rem, 5vw, 1.5rem);
+  line-height: 1.2;
   font-weight: 700;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
   text-transform: uppercase;
-  word-break: break-all;
+  overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
 .location-band .location-band-sub {
-  color: var(--primary-pale);
+  color: var(--on-dark-muted);
   font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .tap {
@@ -221,7 +217,7 @@ input, select, textarea { min-width: 0; }
   padding: 14px 16px 12px;
   color: var(--ivory);
   background: var(--primary);
-  border-bottom: 2px solid var(--ochre);
+  border-bottom: 1px solid rgb(var(--paper-rgb) / 0.16);
 }
 .history-hero-top {
   display: flex;

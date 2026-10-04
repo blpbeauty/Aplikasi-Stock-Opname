@@ -223,7 +223,7 @@ export default function ProfilePage() {
           </span>
           <div className="flex-1 min-w-0">
             <p className="text-meta font-bold text-text-primary">BLP Stock Opname</p>
-            <p className="text-meta text-text-secondary">Versi 2.3.0 · Cokelat Ivory</p>
+            <p className="text-meta text-text-secondary">Versi 2.4.0 · Vanilla Silk & Burnt Praline</p>
           </div>
         </div>
 

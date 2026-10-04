@@ -296,7 +296,7 @@ export default function ScanDashboard() {
       {/* ── Compact Header ── */}
       <header className="history-hero-compact">
         <div className="flex items-center justify-between gap-2">
-          <h1>Scan Lokasi<span>.</span></h1>
+          <h1>Scan Lokasi</h1>
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-paper/10 border border-paper/15 text-meta font-bold text-ivory">
             <span className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
             <span>{user?.name?.split(" ")[0] || "Operator"}</span>
@@ -314,7 +314,7 @@ export default function ScanDashboard() {
       <div className="px-3.5 sm:px-4 pt-3.5 space-y-4">
         {/* Drafts */}
         {drafts.length > 0 && (
-          <section className="rounded-2xl border border-primary/25 bg-primary-pale p-3 space-y-2.5" aria-label="Draft hitungan">
+          <section className="rounded-card border border-primary/25 bg-primary-pale p-3 space-y-2.5" aria-label="Draft hitungan">
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-meta font-bold text-text-primary">Hitungan belum disimpan ({drafts.length}):</h2>
               <button
@@ -359,7 +359,7 @@ export default function ScanDashboard() {
         )}
 
         {/* ── Buka Lokasi Card ── */}
-        <section aria-label="Buka lokasi" className="relative z-30 bg-paper border border-border rounded-2xl p-3.5 shadow-card space-y-2.5">
+        <section aria-label="Buka lokasi" className="relative z-30 bg-paper border border-border rounded-card p-3.5 shadow-card space-y-2.5">
           <div className="flex items-center justify-between">
             <h2 className="text-meta font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
               <MapPinIcon className="w-3.5 h-3.5 text-primary" />
@@ -433,7 +433,7 @@ export default function ScanDashboard() {
         </section>
 
         {/* ── Progress Opname Card ── */}
-        <section aria-label="Progres opname" className="bg-paper border border-border rounded-2xl p-3.5 shadow-card">
+        <section aria-label="Progres opname" className="bg-paper border border-border rounded-card p-3.5 shadow-card">
           <div className="flex items-center justify-between mb-2">
             <div>
               <h2 className="text-meta font-bold text-text-primary">Cakupan Lokasi Opname</h2>
@@ -470,7 +470,7 @@ export default function ScanDashboard() {
         </section>
 
         {/* ── Terakhir Dikerjakan ── */}
-        <section aria-label="Terakhir dikerjakan" className="bg-paper border border-border rounded-2xl p-3.5 shadow-card">
+        <section aria-label="Terakhir dikerjakan" className="bg-paper border border-border rounded-card p-3.5 shadow-card">
           <div className="flex items-center justify-between gap-2 mb-2.5">
             <h2 className="text-meta font-bold text-text-primary flex items-center gap-1.5">
               <ClockIcon className="w-4 h-4 text-text-secondary" /> Terakhir Dikerjakan
@@ -516,7 +516,7 @@ export default function ScanDashboard() {
         </section>
 
         {/* ── Cari Posisi Produk ── */}
-        <section aria-label="Cari posisi produk" className="bg-paper border border-border rounded-2xl p-3.5 shadow-card">
+        <section aria-label="Cari posisi produk" className="bg-paper border border-border rounded-card p-3.5 shadow-card">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-meta font-bold text-text-primary flex items-center gap-1.5">
               <SearchIcon className="w-4 h-4 text-primary" /> Cari Posisi Produk

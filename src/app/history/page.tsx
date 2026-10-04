@@ -485,7 +485,7 @@ export default function HistoryPage() {
       <header className="history-hero-compact">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <h1>Hasil opname<span>.</span></h1>
+            <h1>Hasil opname</h1>
             <div className="compact-stats">
               <span><strong>{summary.totalQty.toLocaleString("id-ID")}</strong> pcs</span>
               <span>·</span>
