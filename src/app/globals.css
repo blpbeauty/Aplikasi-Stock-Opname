@@ -3,16 +3,16 @@
 @tailwind utilities;
 
 :root {
-  /* ── Deep Pistachio Green Theme (Industrial Utilitarian 2026) ──
-     Deep Pistachio (#2E5339) = header, tombol primer, aksen utama.
-     Pale Pistachio Mist (#EAF2EB) = latar badge kode rak/batch yang lembut & jelas.
+  /* ── Deep Teal Theme (Industrial Utilitarian 2026) ──
+     Deep Teal (#0D5C63) = header, tombol primer, aksen utama.
+     Pale Teal Mist (#E6F3F4) = latar badge kode rak/batch yang lembut & jelas.
      Cool Alabaster (#F8FAFC) = latar aplikasi bersih berkerapatan tinggi.
      Paper (#FFFFFF) = permukaan baris/kartu/input/modal. */
   --espresso: #0f172a;
   --cocoa: #475569;
   --ivory: #f8fafc;
   --paper: #ffffff;
-  --ochre: #2e5339;
+  --ochre: #0d5c63;
   --amber-text: #b45309;
 
   /* Warna semantik */
@@ -20,16 +20,16 @@
   --success-bg: #ecfdf5;
   --danger: #dc2626;
   --danger-bg: #fef2f2;
-  --info: #2e5339;
-  --info-bg: #eaf2eb;
+  --info: #0d5c63;
+  --info-bg: #e6f3f4;
   --warning: #fffbeb;
   --warning-text: #b45309;
 
-  /* Alias aplikasi (Deep Pistachio Green) */
-  --primary: #2e5339;
-  --primary-light: #3d6e4c;
-  --primary-dark: #203b28;
-  --primary-pale: #eaf2eb;
+  /* Alias aplikasi (Deep Teal) */
+  --primary: #0d5c63;
+  --primary-light: #14727a;
+  --primary-dark: #083b40;
+  --primary-pale: #e6f3f4;
   --primary-bg: #f8fafc;
   --surface: #ffffff;
   --surface-warm: #f1f5f9;
@@ -59,20 +59,20 @@
   --cocoa-rgb: 71 85 105;
   --ivory-rgb: 248 250 252;
   --paper-rgb: 255 255 255;
-  --ochre-rgb: 46 83 57;
+  --ochre-rgb: 13 92 99;
   --amber-text-rgb: 180 83 9;
   --success-rgb: 22 163 74;
   --success-bg-rgb: 236 253 245;
   --danger-rgb: 220 38 38;
   --danger-bg-rgb: 254 242 242;
-  --info-rgb: 46 83 57;
-  --info-bg-rgb: 234 242 235;
+  --info-rgb: 13 92 99;
+  --info-bg-rgb: 230 243 244;
   --warning-rgb: 255 251 235;
   --warning-text-rgb: 180 83 9;
-  --primary-rgb: 46 83 57;
-  --primary-light-rgb: 61 110 76;
-  --primary-dark-rgb: 32 59 40;
-  --primary-pale-rgb: 234 242 235;
+  --primary-rgb: 13 92 99;
+  --primary-light-rgb: 20 114 122;
+  --primary-dark-rgb: 8 59 64;
+  --primary-pale-rgb: 230 243 244;
   --primary-bg-rgb: 248 250 252;
   --surface-rgb: 255 255 255;
   --surface-warm-rgb: 241 245 249;

@@ -40,13 +40,13 @@ export default function LoginPage() {
   return (
     <div className="max-w-md mx-auto min-h-dvh flex flex-col justify-center p-4 bg-[#F8FAFC] text-[#0F172A] border-x border-slate-200 font-sans antialiased">
       <div className="w-full max-w-sm mx-auto space-y-3">
-        {/* Industrial Deep Pistachio Terminal Header Strip */}
-        <div className="bg-[#2E5339] text-white rounded px-3.5 py-2.5 flex items-center justify-between border border-[#203B28]">
+        {/* Industrial Deep Teal Terminal Header Strip */}
+        <div className="bg-[#0D5C63] text-white rounded px-3.5 py-2.5 flex items-center justify-between border border-[#083B40]">
           <div>
             <span className="font-mono text-xs font-bold tracking-wider uppercase block">
               BLP STOCK OPNAME
             </span>
-            <span className="text-[11px] text-emerald-200/90">
+            <span className="text-[11px] text-teal-200/90">
               Warehouse Inventory Terminal
             </span>
           </div>
@@ -78,7 +78,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-9 px-3 bg-slate-50 border border-slate-300 rounded focus:bg-white focus:outline-none focus:border-[#2E5339] text-sm text-slate-900 font-mono transition-colors"
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-300 rounded focus:bg-white focus:outline-none focus:border-[#0D5C63] text-sm text-slate-900 font-mono transition-colors"
                 placeholder="operator@blpbeauty.com"
                 required
                 disabled={loading}
@@ -99,7 +99,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full h-9 px-3 bg-slate-50 border border-slate-300 rounded focus:bg-white focus:outline-none focus:border-[#2E5339] text-sm text-slate-900 transition-colors"
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-300 rounded focus:bg-white focus:outline-none focus:border-[#0D5C63] text-sm text-slate-900 transition-colors"
                 placeholder="••••••••"
                 required
                 disabled={loading}
@@ -119,7 +119,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-10 bg-[#2E5339] hover:bg-[#3D6E4C] active:bg-[#203B28] text-white rounded font-semibold text-sm transition-colors disabled:opacity-50"
+              className="w-full h-10 bg-[#0D5C63] hover:bg-[#14727A] active:bg-[#083B40] text-white rounded font-semibold text-sm transition-colors disabled:opacity-50"
             >
               {loading ? "Memverifikasi…" : "Masuk Terminal"}
             </button>

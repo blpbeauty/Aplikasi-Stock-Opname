@@ -175,7 +175,7 @@ export default function EditModal({
               type="button"
               onClick={handleSave}
               disabled={invalidQuantity}
-              className="flex-1 h-9 bg-[#2E5339] hover:bg-[#3D6E4C] text-white text-xs font-semibold rounded transition disabled:opacity-40"
+              className="flex-1 h-9 bg-[#0D5C63] hover:bg-[#14727A] text-white text-xs font-semibold rounded transition disabled:opacity-40"
             >
               Simpan Perubahan
             </button>
@@ -240,7 +240,7 @@ export default function EditModal({
                       handleBarcodeScan(barcode);
                     }
                   }}
-                  className="w-full h-9 pl-2.5 pr-16 bg-slate-50 border border-slate-300 rounded font-mono text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-[#2E5339]"
+                  className="w-full h-9 pl-2.5 pr-16 bg-slate-50 border border-slate-300 rounded font-mono text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-[#0D5C63]"
                   placeholder="Barcode…"
                   autoComplete="off"
                 />
@@ -258,7 +258,7 @@ export default function EditModal({
                     type="button"
                     onClick={() => setShowBarcodeScanner(true)}
                     disabled={scanningBarcode}
-                    className="w-7 h-7 rounded bg-[#2E5339] text-white flex items-center justify-center disabled:opacity-40"
+                    className="w-7 h-7 rounded bg-[#0D5C63] text-white flex items-center justify-center disabled:opacity-40"
                     aria-label="Pindai barcode dengan kamera"
                   >
                     <CameraIcon className="w-3.5 h-3.5" />
@@ -306,7 +306,7 @@ export default function EditModal({
                   setSku(e.target.value);
                   setErrors((er) => ({ ...er, sku: undefined }));
                 }}
-                className="w-full h-9 px-2.5 bg-slate-50 border border-slate-300 rounded font-mono text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#2E5339]"
+                className="w-full h-9 px-2.5 bg-slate-50 border border-slate-300 rounded font-mono text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#0D5C63]"
               />
             </Field>
 
@@ -320,7 +320,7 @@ export default function EditModal({
                     setBatch(e.target.value);
                     setErrors((er) => ({ ...er, batch: undefined }));
                   }}
-                  className="w-full h-9 pl-2.5 pr-8 bg-slate-50 border border-slate-300 rounded font-mono text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#2E5339]"
+                  className="w-full h-9 pl-2.5 pr-8 bg-slate-50 border border-slate-300 rounded font-mono text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#0D5C63]"
                   placeholder="Batch"
                 />
                 {batchesForSku.length > 0 && (
@@ -334,7 +334,7 @@ export default function EditModal({
                         ];
                       setBatch(next);
                     }}
-                    className="absolute right-0.5 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-slate-500 hover:text-[#2E5339]"
+                    className="absolute right-0.5 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-slate-500 hover:text-[#0D5C63]"
                     aria-label="Siklus pilihan batch"
                   >
                     <ChevronDownIcon className="w-3.5 h-3.5" />
@@ -353,8 +353,8 @@ export default function EditModal({
                   onClick={() => setBatch(b)}
                   className={`h-6 px-2 rounded font-mono text-[11px] font-semibold border transition ${
                     batch === b
-                      ? "bg-[#2E5339] text-white border-[#2E5339]"
-                      : "bg-[#EAF2EB] text-[#2E5339] border-[#BDD7C4] hover:bg-[#D6E8DC]"
+                      ? "bg-[#0D5C63] text-white border-[#0D5C63]"
+                      : "bg-[#E6F3F4] text-[#0D5C63] border-[#A8D3D6] hover:bg-[#D0EBED]"
                   }`}
                 >
                   {b}

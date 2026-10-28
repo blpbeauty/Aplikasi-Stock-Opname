@@ -355,7 +355,7 @@ export default function HistoryPage() {
               setHistory(prev);
               setCache(ck, prev);
             }}
-            className="h-7 px-3 bg-[#2E5339] hover:bg-[#3D6E4C] text-white text-xs font-bold rounded whitespace-nowrap"
+            className="h-7 px-3 bg-[#0D5C63] hover:bg-[#14727A] text-white text-xs font-bold rounded whitespace-nowrap"
           >
             Batalkan
           </button>
@@ -504,9 +504,9 @@ export default function HistoryPage() {
   return (
     <div className="max-w-md mx-auto min-h-dvh bg-[#F8FAFC] text-[#0F172A] pb-24 border-x border-slate-200 font-sans antialiased">
       {/* ============================================================== */}
-      {/* 1. COMPACT TOP HEADER (~46px, Sticky - Deep Pistachio)        */}
+      {/* 1. COMPACT TOP HEADER (~46px, Sticky - Deep Teal)             */}
       {/* ============================================================== */}
-      <header className="sticky top-0 z-30 h-11 min-h-[46px] bg-[#2E5339] text-white border-b border-[#203B28] px-3 flex items-center justify-between gap-2">
+      <header className="sticky top-0 z-30 h-11 min-h-[46px] bg-[#0D5C63] text-white border-b border-[#083B40] px-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-mono text-xs font-bold bg-white/15 border border-white/25 text-white px-2 py-0.5 rounded tracking-wide">
             RIWAYAT
@@ -515,14 +515,14 @@ export default function HistoryPage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <div className="font-mono text-xs text-emerald-100 tabular-nums tnum">
+          <div className="font-mono text-xs text-teal-100 tabular-nums tnum">
             <strong className="font-bold text-white">
               {summary.totalQty.toLocaleString("id-ID")}
             </strong>{" "}
-            <span className="font-sans text-[11px] text-emerald-200/80">Pcs</span>
+            <span className="font-sans text-[11px] text-teal-200/80">Pcs</span>
             <span className="text-white/25 mx-1">·</span>
             <strong className="font-bold text-white">{summary.locCount}</strong>{" "}
-            <span className="font-sans text-[11px] text-emerald-200/80">Rak</span>
+            <span className="font-sans text-[11px] text-teal-200/80">Rak</span>
           </div>
 
           <button
@@ -555,7 +555,7 @@ export default function HistoryPage() {
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Cari nama barang, SKU, batch, lokasi…"
             autoComplete="off"
-            className="w-full h-9 pl-8 pr-8 bg-slate-50 border border-slate-300 rounded text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#2E5339] transition-colors"
+            className="w-full h-9 pl-8 pr-8 bg-slate-50 border border-slate-300 rounded text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#0D5C63] transition-colors"
           />
           {searchQuery && (
             <button
@@ -613,16 +613,16 @@ export default function HistoryPage() {
                     onClick={() => toggleLocation(group.name)}
                     className={`h-7 px-2 rounded border text-xs font-semibold flex items-center gap-1 transition-colors whitespace-nowrap ${
                       isSelected
-                        ? "bg-[#2E5339] text-white border-[#2E5339]"
-                        : "bg-[#EAF2EB] text-[#2E5339] border-[#BDD7C4] hover:bg-[#D6E8DC]"
+                        ? "bg-[#0D5C63] text-white border-[#0D5C63]"
+                        : "bg-[#E6F3F4] text-[#0D5C63] border-[#A8D3D6] hover:bg-[#D0EBED]"
                     }`}
                   >
                     <span className="font-mono text-[11px]">{group.name}</span>
                     <span
                       className={`font-mono text-[10px] px-1 rounded tabular-nums tnum ${
                         isSelected
-                          ? "bg-[#3D6E4C] text-white"
-                          : "bg-white/80 text-[#2E5339]"
+                          ? "bg-[#14727A] text-white"
+                          : "bg-white/80 text-[#0D5C63]"
                       }`}
                     >
                       {group.count}
@@ -704,7 +704,7 @@ export default function HistoryPage() {
                 >
                   <div className="min-w-0 flex-1 pr-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-mono text-xs font-bold bg-[#EAF2EB] text-[#2E5339] border border-[#BDD7C4] px-1.5 py-0.5 rounded uppercase tnum">
+                      <span className="font-mono text-xs font-bold bg-[#E6F3F4] text-[#0D5C63] border border-[#A8D3D6] px-1.5 py-0.5 rounded uppercase tnum">
                         {loc}
                       </span>
                       <span className="font-mono text-xs text-slate-600 tabular-nums tnum">

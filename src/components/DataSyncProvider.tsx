@@ -320,7 +320,7 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
               {pending > 0 && !offline && (
                 <button
                   type="button"
-                  className="h-5 px-1.5 bg-[#2E5339] hover:bg-[#3D6E4C] text-white rounded text-[10px] font-semibold transition"
+                  className="h-5 px-1.5 bg-[#0D5C63] hover:bg-[#14727A] text-white rounded text-[10px] font-semibold transition"
                   onClick={() => void flushPendingWrites()}
                 >
                   Kirim ({pending})

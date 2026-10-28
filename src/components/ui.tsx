@@ -107,14 +107,14 @@ export function Dialog({
             : "rounded-t-md sm:rounded-md border-b-0 sm:border-b"
         } border border-slate-300 shadow-sheet outline-none flex flex-col max-h-[90dvh] overflow-hidden animate-slideUp`}
       >
-        {/* Compact Pistachio Header Strip */}
-        <div className="px-3.5 py-2.5 bg-[#2E5339] text-white border-b border-[#203B28] flex items-center justify-between gap-2 shrink-0">
+        {/* Compact Teal Header Strip */}
+        <div className="px-3.5 py-2.5 bg-[#0D5C63] text-white border-b border-[#083B40] flex items-center justify-between gap-2 shrink-0">
           <div className="min-w-0">
             <h2 id={titleId} className="text-sm font-bold text-white leading-tight truncate">
               {title}
             </h2>
             {description && (
-              <p id={descId} className="text-xs text-[#D6E8DC] mt-0.5 truncate">
+              <p id={descId} className="text-xs text-[#D0EBED] mt-0.5 truncate">
                 {description}
               </p>
             )}
@@ -169,7 +169,7 @@ export function IconButton({
   const sizeCls = size === "lg" ? "w-10 h-10" : "w-9 h-9";
   const variantCls =
     variant === "primary"
-      ? "bg-[#2E5339] text-white hover:bg-[#3D6E4C]"
+      ? "bg-[#0D5C63] text-white hover:bg-[#14727A]"
       : variant === "danger"
       ? "bg-red-50 text-[#DC2626] border border-red-200 hover:bg-red-100"
       : "bg-slate-100 text-slate-800 border border-slate-300 hover:bg-slate-200";
@@ -203,7 +203,7 @@ export function PageHeader({
   right,
 }: PageHeaderProps) {
   return (
-    <header className="sticky top-0 z-30 h-11 min-h-[44px] bg-[#2E5339] text-white px-3 border-b border-[#203B28] flex items-center justify-between gap-2">
+    <header className="sticky top-0 z-30 h-11 min-h-[44px] bg-[#0D5C63] text-white px-3 border-b border-[#083B40] flex items-center justify-between gap-2">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         {onBack && (
           <button
@@ -218,7 +218,7 @@ export function PageHeader({
         <div className="min-w-0 flex-1 flex items-center gap-2">
           <h1 className="text-sm font-bold text-white leading-tight truncate">{title}</h1>
           {subtitle && (
-            <div className="text-xs text-[#D6E8DC] truncate">{subtitle}</div>
+            <div className="text-xs text-[#D0EBED] truncate">{subtitle}</div>
           )}
         </div>
       </div>
@@ -238,7 +238,7 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
   return (
     <div className="bg-white rounded border border-slate-200 px-4 py-8 text-center">
       {icon && (
-        <div className="w-9 h-9 rounded bg-[#EAF2EB] text-[#2E5339] mx-auto flex items-center justify-center mb-2">
+        <div className="w-9 h-9 rounded bg-[#E6F3F4] text-[#0D5C63] mx-auto flex items-center justify-center mb-2">
           {icon}
         </div>
       )}
@@ -343,7 +343,7 @@ export function SyncStatusBadge() {
       : tone === "warn"
       ? "bg-amber-50 text-[#D97706] border-amber-200"
       : tone === "busy"
-      ? "bg-[#EAF2EB] text-[#2E5339] border-[#BDD7C4]"
+      ? "bg-[#E6F3F4] text-[#0D5C63] border-[#A8D3D6]"
       : "bg-slate-100 text-slate-600 border-slate-200";
 
   return (
@@ -375,7 +375,7 @@ export function SyncStatusBadge() {
               ? "bg-[#16A34A]"
               : tone === "warn"
               ? "bg-[#D97706]"
-              : "bg-[#2E5339]"
+              : "bg-[#0D5C63]"
           }`}
         />
       )}

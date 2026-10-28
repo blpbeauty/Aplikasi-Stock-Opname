@@ -54,8 +54,8 @@ export default function BottomNav({ activePage }: BottomNavProps) {
               aria-current={isActive ? "page" : undefined}
               className={`flex-1 h-13 min-h-[52px] flex flex-col items-center justify-center gap-0.5 py-1 transition border-t-2 ${
                 isActive
-                  ? "border-t-[#2E5339] text-[#2E5339] font-bold bg-[#EAF2EB]/40"
-                  : "border-t-transparent text-slate-500 hover:text-[#2E5339]"
+                  ? "border-t-[#0D5C63] text-[#0D5C63] font-bold bg-[#E6F3F4]/40"
+                  : "border-t-transparent text-slate-500 hover:text-[#0D5C63]"
               }`}
             >
               <span className="flex items-center justify-center">{tab.icon}</span>

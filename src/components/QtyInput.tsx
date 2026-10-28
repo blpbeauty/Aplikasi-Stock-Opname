@@ -192,12 +192,12 @@ export default function QtyInput({
   };
 
   const defaultCls = wide
-    ? "w-full h-9 text-center bg-white border border-slate-300 focus:border-[#2E5339] rounded font-mono text-base font-bold text-slate-900 tabular-nums tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition"
-    : "w-16 h-9 text-center bg-white border border-slate-300 focus:border-[#2E5339] rounded font-mono text-sm font-bold text-slate-900 tabular-nums tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition";
+    ? "w-full h-9 text-center bg-white border border-slate-300 focus:border-[#0D5C63] rounded font-mono text-base font-bold text-slate-900 tabular-nums tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition"
+    : "w-16 h-9 text-center bg-white border border-slate-300 focus:border-[#0D5C63] rounded font-mono text-sm font-bold text-slate-900 tabular-nums tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition";
 
   const opBtnCls = wide
-    ? "flex-1 h-8 rounded bg-slate-100 border border-slate-300 text-slate-800 font-mono text-sm font-bold hover:bg-[#EAF2EB] active:bg-[#2E5339] active:text-white transition select-none flex items-center justify-center"
-    : "w-8 h-8 rounded bg-slate-100 border border-slate-300 text-slate-800 font-mono text-sm font-bold hover:bg-[#EAF2EB] active:bg-[#2E5339] active:text-white transition select-none flex items-center justify-center";
+    ? "flex-1 h-8 rounded bg-slate-100 border border-slate-300 text-slate-800 font-mono text-sm font-bold hover:bg-[#E6F3F4] active:bg-[#0D5C63] active:text-white transition select-none flex items-center justify-center"
+    : "w-8 h-8 rounded bg-slate-100 border border-slate-300 text-slate-800 font-mono text-sm font-bold hover:bg-[#E6F3F4] active:bg-[#0D5C63] active:text-white transition select-none flex items-center justify-center";
 
   return (
     <div className={`relative inline-flex flex-col items-center gap-1 ${wide ? "w-full" : ""}`}>
@@ -234,7 +234,7 @@ export default function QtyInput({
               commit(true);
             }}
             onClick={() => commit(true)}
-            className="h-9 px-3.5 rounded bg-[#2E5339] hover:bg-[#3D6E4C] text-white font-mono text-base font-bold whitespace-nowrap active:bg-[#203B28] transition select-none flex items-center justify-center shrink-0 shadow-sm"
+            className="h-9 px-3.5 rounded bg-[#0D5C63] hover:bg-[#14727A] text-white font-mono text-base font-bold whitespace-nowrap active:bg-[#083B40] transition select-none flex items-center justify-center shrink-0 shadow-sm"
             aria-label="Hitung rumus dan selesai"
             title="Selesai & lanjut ke produk berikutnya"
           >
@@ -282,7 +282,7 @@ export default function QtyInput({
             title={textMode ? "Keypad angka" : "Keyboard penuh (bisa ketik +−×)"}
             aria-label={textMode ? "Ganti ke keypad angka" : "Ganti ke keyboard penuh"}
             aria-pressed={textMode}
-            className={`${opBtnCls} ${textMode ? "!bg-[#2E5339] !text-white !border-[#2E5339]" : ""}`}
+            className={`${opBtnCls} ${textMode ? "!bg-[#0D5C63] !text-white !border-[#0D5C63]" : ""}`}
           >
             {textMode ? "123" : "abc"}
           </button>
@@ -291,7 +291,7 @@ export default function QtyInput({
 
       {isExpr && preview !== null && (
         <span
-          className="font-mono text-xs font-bold text-[#2E5339] bg-[#EAF2EB] border border-[#BDD7C4] px-2 py-0.5 rounded tnum"
+          className="font-mono text-xs font-bold text-[#0D5C63] bg-[#E6F3F4] border border-[#A8D3D6] px-2 py-0.5 rounded tnum"
           role="status"
         >
           = {preview}

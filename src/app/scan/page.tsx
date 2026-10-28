@@ -291,25 +291,25 @@ export default function ScanDashboard() {
 
   return (
     <div className="max-w-md mx-auto min-h-dvh bg-[#F8FAFC] text-[#0F172A] pb-24 border-x border-slate-200 font-sans antialiased">
-      {/* ── 1. Compact Industrial Top Header (~48px, Sticky - Deep Pistachio) ── */}
-      <header className="sticky top-0 z-30 h-12 min-h-[48px] bg-[#2E5339] text-white border-b border-[#203B28] px-3 flex items-center justify-between gap-2">
+      {/* ── 1. Compact Industrial Top Header (~48px, Sticky - Deep Teal) ── */}
+      <header className="sticky top-0 z-30 h-12 min-h-[48px] bg-[#0D5C63] text-white border-b border-[#083B40] px-3 flex items-center justify-between gap-2">
         <div className="min-w-0 flex flex-col justify-center leading-tight">
           <h1 className="font-mono text-xs font-bold text-white tracking-wider uppercase truncate">
             SO WH CENTRAL
           </h1>
-          <span className="font-mono text-[10px] font-semibold text-emerald-200/90 tracking-wide uppercase truncate">
+          <span className="font-mono text-[10px] font-semibold text-teal-200/90 tracking-wide uppercase truncate">
             PARAS &amp; PAYU
           </span>
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          <div className="font-mono text-xs text-emerald-100 tabular-nums tnum">
+          <div className="font-mono text-xs text-teal-100 tabular-nums tnum">
             <strong className="font-bold text-white">{stats.scannedCount}</strong>/
             {stats.total}{" "}
-            <span className="font-sans text-[11px] text-emerald-200/80">Rak</span>
+            <span className="font-sans text-[11px] text-teal-200/80">Rak</span>
           </div>
           <span className="text-white/25">|</span>
-          <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-100">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-teal-100">
             <span className="w-2 h-2 rounded-full bg-[#4ADE80]" />
             <span className="truncate max-w-[80px]">
               {user?.name?.split(" ")[0] || "Operator"}
@@ -362,7 +362,7 @@ export default function ScanDashboard() {
             <button
               type="button"
               onClick={() => setShowLocationScanner(true)}
-              className="w-10 h-10 shrink-0 rounded bg-[#2E5339] hover:bg-[#3D6E4C] text-white flex items-center justify-center active:bg-[#203B28] transition"
+              className="w-10 h-10 shrink-0 rounded bg-[#0D5C63] hover:bg-[#14727A] text-white flex items-center justify-center active:bg-[#083B40] transition"
               aria-label="Pindai barcode lokasi"
               title="Pindai barcode lokasi"
             >
@@ -375,7 +375,7 @@ export default function ScanDashboard() {
               type="button"
               onClick={() => openLocation(locationCode)}
               disabled={!locationCode.trim() || loading}
-              className="flex-1 h-9 bg-[#2E5339] hover:bg-[#3D6E4C] active:bg-[#203B28] text-white rounded font-semibold text-xs disabled:bg-slate-200 disabled:text-slate-400 transition"
+              className="flex-1 h-9 bg-[#0D5C63] hover:bg-[#14727A] active:bg-[#083B40] text-white rounded font-semibold text-xs disabled:bg-slate-200 disabled:text-slate-400 transition"
             >
               {loading ? "Membuka…" : "Buka Lokasi"}
             </button>
@@ -425,7 +425,7 @@ export default function ScanDashboard() {
                     }
                   >
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold bg-[#EAF2EB] text-[#2E5339] border border-[#BDD7C4] px-1.5 py-0.5 rounded tnum">
+                      <span className="font-mono text-xs font-bold bg-[#E6F3F4] text-[#0D5C63] border border-[#A8D3D6] px-1.5 py-0.5 rounded tnum">
                         {draft.location}
                       </span>
                       <span className="font-mono text-xs text-slate-600 tnum">
@@ -509,7 +509,7 @@ export default function ScanDashboard() {
                   handleProductSearchDebounced(e.target.value);
                 }}
                 placeholder="Ketik nama barang, SKU, barcode…"
-                className="w-full h-9 pl-3 pr-10 bg-slate-50 border border-slate-300 rounded text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#2E5339]"
+                className="w-full h-9 pl-3 pr-10 bg-slate-50 border border-slate-300 rounded text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#0D5C63]"
               />
               <button
                 type="button"
@@ -541,7 +541,7 @@ export default function ScanDashboard() {
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-mono text-[11px] font-bold bg-[#EAF2EB] text-[#2E5339] border border-[#BDD7C4] px-1 rounded shrink-0 tnum">
+                      <span className="font-mono text-[11px] font-bold bg-[#E6F3F4] text-[#0D5C63] border border-[#A8D3D6] px-1 rounded shrink-0 tnum">
                         [{item.location}]
                       </span>
                       <p className="text-sm font-semibold text-slate-900 truncate">
@@ -563,7 +563,7 @@ export default function ScanDashboard() {
                     <button
                       type="button"
                       onClick={() => openQuickMove(item)}
-                      className="h-7 px-2.5 bg-[#2E5339] hover:bg-[#3D6E4C] text-white rounded text-xs font-semibold"
+                      className="h-7 px-2.5 bg-[#0D5C63] hover:bg-[#14727A] text-white rounded text-xs font-semibold"
                     >
                       Pindah
                     </button>
@@ -725,7 +725,7 @@ export default function ScanDashboard() {
                 setShowNewLocation(false);
                 router.push(`/input?location=${encodeURIComponent(newLocation)}`);
               }}
-              className="flex-1 h-10 bg-[#2E5339] hover:bg-[#3D6E4C] text-white rounded font-semibold transition"
+              className="flex-1 h-10 bg-[#0D5C63] hover:bg-[#14727A] text-white rounded font-semibold transition"
             >
               Lanjutkan
             </button>

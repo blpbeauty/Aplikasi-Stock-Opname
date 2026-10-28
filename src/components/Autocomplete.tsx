@@ -165,7 +165,7 @@ export default function Autocomplete<T>({
           autoFocus={autoFocus}
           disabled={disabled}
           aria-invalid={!!error}
-          className={`w-full h-9 pl-8 pr-8 bg-slate-50 border rounded focus:bg-white focus:outline-none focus:border-[#2E5339] text-sm font-medium text-slate-900 placeholder:font-normal placeholder:text-slate-400 transition-colors ${
+          className={`w-full h-9 pl-8 pr-8 bg-slate-50 border rounded focus:bg-white focus:outline-none focus:border-[#0D5C63] text-sm font-medium text-slate-900 placeholder:font-normal placeholder:text-slate-400 transition-colors ${
             error ? "border-[#DC2626]" : "border-slate-300"
           } ${uppercase ? "uppercase font-mono" : ""}`}
         />
@@ -210,7 +210,7 @@ export default function Autocomplete<T>({
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => select(item)}
               className={`w-full text-left px-3 py-2 text-xs transition overflow-hidden ${
-                idx === activeIdx ? "bg-[#EAF2EB]" : "hover:bg-slate-50"
+                idx === activeIdx ? "bg-[#E6F3F4]" : "hover:bg-slate-50"
               }`}
             >
               {renderItem(item)}

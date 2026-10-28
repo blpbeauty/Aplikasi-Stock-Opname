@@ -119,9 +119,9 @@ export default function ProfilePage() {
   return (
     <div className="max-w-md mx-auto min-h-dvh bg-[#F8FAFC] text-[#0F172A] pb-24 border-x border-slate-200 font-sans antialiased">
       {/* ============================================================== */}
-      {/* 1. COMPACT TOP HEADER (~46px, Sticky - Deep Pistachio)        */}
+      {/* 1. COMPACT TOP HEADER (~46px, Sticky - Deep Teal)             */}
       {/* ============================================================== */}
-      <header className="sticky top-0 z-30 h-11 min-h-[46px] bg-[#2E5339] text-white border-b border-[#203B28] px-3 flex items-center justify-between gap-2">
+      <header className="sticky top-0 z-30 h-11 min-h-[46px] bg-[#0D5C63] text-white border-b border-[#083B40] px-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-mono text-xs font-bold bg-white/15 border border-white/25 text-white px-2 py-0.5 rounded tracking-wide">
             PROFIL
@@ -131,7 +131,7 @@ export default function ProfilePage() {
           </h1>
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-100 shrink-0">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-teal-100 shrink-0">
           <span
             className={`w-2 h-2 rounded-full ${
               offline || testingOffline ? "bg-[#FBBF24]" : "bg-[#4ADE80]"
@@ -152,7 +152,7 @@ export default function ProfilePage() {
           className="bg-white border border-slate-200 rounded p-3 flex items-center justify-between gap-3"
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-10 h-10 shrink-0 rounded bg-[#2E5339] text-white font-mono font-bold text-base flex items-center justify-center">
+            <div className="w-10 h-10 shrink-0 rounded bg-[#0D5C63] text-white font-mono font-bold text-base flex items-center justify-center">
               {initial}
             </div>
             <div className="min-w-0">
@@ -165,7 +165,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <span className="font-mono text-[11px] font-bold bg-[#EAF2EB] text-[#2E5339] border border-[#BDD7C4] px-2 py-0.5 rounded uppercase shrink-0">
+          <span className="font-mono text-[11px] font-bold bg-[#E6F3F4] text-[#0D5C63] border border-[#A8D3D6] px-2 py-0.5 rounded uppercase shrink-0">
             {user?.role || "Staff"}
           </span>
         </section>
@@ -231,7 +231,7 @@ export default function ProfilePage() {
               className={`h-9 px-3 rounded font-semibold text-xs transition-colors ${
                 testingOffline
                   ? "bg-[#D97706] text-white hover:bg-amber-700"
-                  : "bg-[#2E5339] text-white hover:bg-[#3D6E4C]"
+                  : "bg-[#0D5C63] text-white hover:bg-[#14727A]"
               } disabled:opacity-40`}
             >
               {testingOffline ? "Akhiri Uji Offline" : "Uji Mode Offline"}
@@ -283,7 +283,7 @@ export default function ProfilePage() {
                   <div key={group.name} className="px-3 py-2.5 space-y-1.5">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-mono text-xs font-bold bg-[#EAF2EB] text-[#2E5339] border border-[#BDD7C4] px-1.5 py-0.5 rounded uppercase tnum">
+                        <span className="font-mono text-xs font-bold bg-[#E6F3F4] text-[#0D5C63] border border-[#A8D3D6] px-1.5 py-0.5 rounded uppercase tnum">
                           [{group.name}]
                         </span>
                         <span className="font-mono text-xs text-slate-600 tabular-nums tnum">

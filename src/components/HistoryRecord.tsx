@@ -84,7 +84,7 @@ export default function HistoryRecord({
               {entry.sku || "—"}
             </span>
             <span className="text-slate-300">•</span>
-            <span className="h-5 px-1.5 rounded font-mono text-[11px] font-semibold bg-[#EAF2EB] border border-[#BDD7C4] text-[#2E5339] inline-flex items-center tnum">
+            <span className="h-5 px-1.5 rounded font-mono text-[11px] font-semibold bg-[#E6F3F4] border border-[#A8D3D6] text-[#0D5C63] inline-flex items-center tnum">
               {entry.batch || "NO-BATCH"}
             </span>
             <span className="text-slate-300">•</span>
@@ -94,7 +94,7 @@ export default function HistoryRecord({
 
             {entry.formula && (
               <span
-                className="font-mono text-[10px] font-semibold bg-[#EAF2EB] border border-[#BDD7C4] text-[#2E5339] px-1 py-0.5 rounded tnum"
+                className="font-mono text-[10px] font-semibold bg-[#E6F3F4] border border-[#A8D3D6] text-[#0D5C63] px-1 py-0.5 rounded tnum"
                 data-formula={entry.formula}
               >
                 ={entry.formula}
@@ -119,7 +119,7 @@ export default function HistoryRecord({
             disabled={busy}
             aria-label={`Edit kuantitas ${entry.qty} untuk ${entry.productName}`}
             title="Ketuk untuk ubah cepat kuantitas / rumus"
-            className="h-8 px-2.5 bg-[#EAF2EB]/50 hover:bg-[#EAF2EB] active:bg-[#D6E8DC] border border-[#BDD7C4] rounded font-mono text-sm font-bold text-[#2E5339] tabular-nums tnum flex items-center gap-1 transition-colors"
+            className="h-8 px-2.5 bg-[#E6F3F4]/50 hover:bg-[#E6F3F4] active:bg-[#D0EBED] border border-[#A8D3D6] rounded font-mono text-sm font-bold text-[#0D5C63] tabular-nums tnum flex items-center gap-1 transition-colors"
           >
             <span>{entry.qty.toLocaleString("id-ID")}</span>
             <span className="font-sans text-[10px] font-medium text-slate-500">Pcs</span>
@@ -131,7 +131,7 @@ export default function HistoryRecord({
             disabled={busy}
             aria-label={`Edit detail ${entry.productName}`}
             title="Edit Detail / Pindah Rak"
-            className="w-7 h-8 flex items-center justify-center rounded border border-slate-200 bg-white hover:bg-[#EAF2EB] hover:text-[#2E5339] text-slate-600 transition-colors"
+            className="w-7 h-8 flex items-center justify-center rounded border border-slate-200 bg-white hover:bg-[#E6F3F4] hover:text-[#0D5C63] text-slate-600 transition-colors"
           >
             <PencilIcon className="w-3.5 h-3.5" />
           </button>
@@ -153,12 +153,12 @@ export default function HistoryRecord({
       {editing && (
         <form
           onSubmit={submit}
-          className="px-3 py-2 bg-[#EAF2EB]/40 border-t border-[#BDD7C4] space-y-2"
+          className="px-3 py-2 bg-[#E6F3F4]/40 border-t border-[#A8D3D6] space-y-2"
         >
           <div className="flex items-center justify-between text-xs">
             <label
               htmlFor={`count-${entry.rowId}`}
-              className="font-semibold text-[#2E5339]"
+              className="font-semibold text-[#0D5C63]"
             >
               Edit Jumlah / Rumus:
             </label>
@@ -168,7 +168,7 @@ export default function HistoryRecord({
               </span>
             ) : (
               <span className="font-mono text-xs text-slate-700 tnum" aria-live="polite">
-                Hasil: <strong className="text-[#2E5339]">{result.toLocaleString("id-ID")} Pcs</strong>
+                Hasil: <strong className="text-[#0D5C63]">{result.toLocaleString("id-ID")} Pcs</strong>
               </span>
             )}
           </div>
@@ -188,7 +188,7 @@ export default function HistoryRecord({
               onKeyDown={(event) => {
                 if (event.key === "Escape") setEditing(false);
               }}
-              className="flex-1 h-8 px-2.5 bg-white border border-slate-300 rounded font-mono text-sm font-bold text-slate-900 focus:outline-none focus:border-[#2E5339] tabular-nums tnum"
+              className="flex-1 h-8 px-2.5 bg-white border border-slate-300 rounded font-mono text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0D5C63] tabular-nums tnum"
             />
 
             <div className="flex items-center gap-1">
@@ -212,7 +212,7 @@ export default function HistoryRecord({
                     );
                     inputRef.current?.focus();
                   }}
-                  className="w-7 h-8 bg-white hover:bg-[#EAF2EB] border border-slate-300 rounded font-mono text-sm font-bold text-[#2E5339] flex items-center justify-center"
+                  className="w-7 h-8 bg-white hover:bg-[#E6F3F4] border border-slate-300 rounded font-mono text-sm font-bold text-[#0D5C63] flex items-center justify-center"
                 >
                   {operator === "/" ? "÷" : operator === "-" ? "−" : operator}
                 </button>
@@ -232,7 +232,7 @@ export default function HistoryRecord({
             <button
               type="submit"
               disabled={result === null || busy}
-              className="h-7 px-3 bg-[#2E5339] hover:bg-[#3D6E4C] text-white rounded text-xs font-semibold disabled:opacity-40"
+              className="h-7 px-3 bg-[#0D5C63] hover:bg-[#14727A] text-white rounded text-xs font-semibold disabled:opacity-40"
             >
               {busy ? "Menyimpan…" : "Simpan"}
             </button>

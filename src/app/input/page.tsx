@@ -1051,9 +1051,9 @@ function InputPageContent() {
   return (
     <div className="max-w-md mx-auto min-h-dvh flex flex-col bg-[#F8FAFC] text-[#0F172A] font-sans antialiased select-none border-x border-slate-200">
       {/* ============================================================== */}
-      {/* 1. COMPACT TOP HEADER (Tinggi ~46px, Sticky - Deep Pistachio)  */}
+      {/* 1. COMPACT TOP HEADER (Tinggi ~46px, Sticky - Deep Teal)       */}
       {/* ============================================================== */}
-      <header className="h-11 min-h-[46px] sticky top-0 bg-[#2E5339] text-white border-b border-[#203B28] px-2.5 flex items-center justify-between gap-2 shrink-0 z-30">
+      <header className="h-11 min-h-[46px] sticky top-0 bg-[#0D5C63] text-white border-b border-[#083B40] px-2.5 flex items-center justify-between gap-2 shrink-0 z-30">
         {/* Kiri: Back + Kode Lokasi Aktif */}
         <div className="flex items-center gap-1.5 min-w-0">
           <button
@@ -1078,13 +1078,13 @@ function InputPageContent() {
         <div className="flex items-center gap-2 shrink-0">
           <div className="font-mono text-xs font-bold text-white tabular-nums tnum">
             {countedCount}/{allProducts.length}{" "}
-            <span className="font-sans text-[11px] font-medium text-sky-100/80">Item</span>
+            <span className="font-sans text-[11px] font-medium text-teal-100/80">Item</span>
           </div>
 
           <span className="text-white/25">|</span>
 
           <div
-            className="flex items-center gap-1 text-[11px] font-medium text-sky-100/90"
+            className="flex items-center gap-1 text-[11px] font-medium text-teal-100/90"
             title={
               draftError
                 ? draftError
@@ -1284,7 +1284,7 @@ function InputPageContent() {
                 <button
                   type="button"
                   onClick={() => setShowAddForm(true)}
-                  className="h-9 px-4 bg-[#2E5339] hover:bg-[#3D6E4C] text-white rounded font-semibold text-xs"
+                  className="h-9 px-4 bg-[#0D5C63] hover:bg-[#14727A] text-white rounded font-semibold text-xs"
                 >
                   + Tambah Produk
                 </button>
@@ -1378,8 +1378,8 @@ function InputPageContent() {
                         title="Klik untuk ubah Batch / Lot"
                         className={`h-5 px-1.5 rounded font-mono text-[11px] font-semibold border transition flex items-center gap-1 ${
                           isEditingBatch
-                            ? "bg-[#2E5339] text-white border-[#2E5339]"
-                            : "bg-[#EAF2EB] text-[#2E5339] border-[#BDD7C4] hover:bg-[#D6E8DC]"
+                            ? "bg-[#0D5C63] text-white border-[#0D5C63]"
+                            : "bg-[#E6F3F4] text-[#0D5C63] border-[#A8D3D6] hover:bg-[#D0EBED]"
                         }`}
                       >
                         <span>{product.batch || "NO-BATCH"}</span>
@@ -1415,7 +1415,7 @@ function InputPageContent() {
                       onClick={() => setExpandedRowKey(isExpanded ? null : k)}
                       className={`h-8 px-2.5 rounded font-mono text-xs font-bold border transition flex items-center justify-center gap-1 tabular-nums tnum shadow-sm active:scale-95 touch-manipulation ${
                         isItemCounted
-                          ? "bg-[#EAF2EB] text-[#2E5339] border-[#BDD7C4] hover:bg-[#D6E8DC]"
+                          ? "bg-[#E6F3F4] text-[#0D5C63] border-[#A8D3D6] hover:bg-[#D0EBED]"
                           : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
                       }`}
                       title={
@@ -1461,8 +1461,8 @@ function InputPageContent() {
                             onClick={() => handleBatchSave(product.sku, product.batch, isNew, b)}
                             className={`h-6 px-2 rounded font-mono text-[11px] font-semibold border transition active:scale-95 ${
                               product.batch === b
-                                ? "bg-[#2E5339] text-white border-[#2E5339]"
-                                : "bg-[#EAF2EB] text-[#2E5339] border-[#BDD7C4] hover:bg-[#D6E8DC]"
+                                ? "bg-[#0D5C63] text-white border-[#0D5C63]"
+                                : "bg-[#E6F3F4] text-[#0D5C63] border-[#A8D3D6] hover:bg-[#D0EBED]"
                             }`}
                           >
                             {b}
@@ -1482,12 +1482,12 @@ function InputPageContent() {
                           if (e.key === "Escape") setEditingBatchKey(null);
                         }}
                         placeholder="Ketik batch baru…"
-                        className="h-7 px-2 flex-1 bg-white border border-slate-300 rounded font-mono text-xs font-bold text-slate-900 focus:outline-none focus:border-[#2E5339]"
+                        className="h-7 px-2 flex-1 bg-white border border-slate-300 rounded font-mono text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0D5C63]"
                       />
                       <button
                         type="button"
                         onClick={() => handleBatchSave(product.sku, product.batch, isNew)}
-                        className="h-7 px-2.5 bg-[#2E5339] hover:bg-[#3D6E4C] text-white rounded text-xs font-semibold"
+                        className="h-7 px-2.5 bg-[#0D5C63] hover:bg-[#14727A] text-white rounded text-xs font-semibold"
                       >
                         OK
                       </button>
@@ -1569,7 +1569,7 @@ function InputPageContent() {
             setScannerMode("quick");
             setShowBarcodeScanner(true);
           }}
-          className="w-[70%] h-10 bg-[#2E5339] hover:bg-[#3D6E4C] active:bg-[#203B28] text-white font-semibold text-sm rounded flex items-center justify-center gap-2 transition-colors touch-manipulation"
+          className="w-[70%] h-10 bg-[#0D5C63] hover:bg-[#14727A] active:bg-[#083B40] text-white font-semibold text-sm rounded flex items-center justify-center gap-2 transition-colors touch-manipulation"
         >
           <CameraIcon className="w-4 h-4" />
           <span>SCAN BARCODE</span>
@@ -1645,7 +1645,7 @@ function InputPageContent() {
                     setShowBarcodeScanner(true);
                   }}
                   disabled={scanningBarcode}
-                  className="w-8 h-8 rounded bg-[#2E5339] hover:bg-[#3D6E4C] text-white flex items-center justify-center disabled:opacity-40"
+                  className="w-8 h-8 rounded bg-[#0D5C63] hover:bg-[#14727A] text-white flex items-center justify-center disabled:opacity-40"
                   aria-label="Pindai barcode dengan kamera"
                 >
                   <CameraIcon className="w-4 h-4" />
@@ -1762,7 +1762,7 @@ function InputPageContent() {
             <button
               type="button"
               onClick={handleAddNewProduct}
-              className="w-full h-10 bg-[#2E5339] hover:bg-[#3D6E4C] text-white rounded font-semibold text-sm active:bg-[#203B28] transition-colors"
+              className="w-full h-10 bg-[#0D5C63] hover:bg-[#14727A] text-white rounded font-semibold text-sm active:bg-[#083B40] transition-colors"
             >
               Masukkan ke Hitungan Opname
             </button>
