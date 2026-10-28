@@ -23,28 +23,28 @@ export default function BottomNav({ activePage }: BottomNavProps) {
       key: "scan" as const,
       label: "Scan",
       href: "/scan",
-      icon: <ScanIcon className="w-6 h-6" />,
+      icon: <ScanIcon className="w-5 h-5" />,
     },
     {
       key: "history" as const,
       label: "Riwayat",
       href: "/history",
-      icon: <ClipboardIcon className="w-6 h-6" />,
+      icon: <ClipboardIcon className="w-5 h-5" />,
     },
     {
       key: "profile" as const,
       label: "Profil",
       href: "/profile",
-      icon: <UserIcon className="w-6 h-6" />,
+      icon: <UserIcon className="w-5 h-5" />,
     },
   ];
 
   return (
     <nav
       aria-label="Navigasi utama"
-      className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 bg-paper border-t border-border shadow-bar"
+      className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200"
     >
-      <div className="flex justify-around items-stretch max-w-[480px] mx-auto px-2 pb-safe">
+      <div className="flex justify-around items-stretch max-w-md mx-auto px-2 pb-safe">
         {tabs.map((tab) => {
           const isActive = activePage === tab.key;
           return (
@@ -52,18 +52,14 @@ export default function BottomNav({ activePage }: BottomNavProps) {
               key={tab.key}
               href={tab.href}
               aria-current={isActive ? "page" : undefined}
-              className={`flex-1 min-h-[4rem] flex flex-col items-center justify-center gap-0.5 py-1.5 transition rounded-input ${
-                isActive ? "text-primary font-bold" : "text-text-secondary"
+              className={`flex-1 h-13 min-h-[52px] flex flex-col items-center justify-center gap-0.5 py-1 transition border-t-2 ${
+                isActive
+                  ? "border-t-[#2E5339] text-[#2E5339] font-bold bg-[#EAF2EB]/40"
+                  : "border-t-transparent text-slate-500 hover:text-[#2E5339]"
               }`}
             >
-              <span
-                className={`flex items-center justify-center w-12 h-8 rounded-full transition ${
-                  isActive ? "bg-primary text-ivory" : ""
-                }`}
-              >
-                {tab.icon}
-              </span>
-              <span className="text-meta leading-none">{tab.label}</span>
+              <span className="flex items-center justify-center">{tab.icon}</span>
+              <span className="text-xs leading-none tracking-tight">{tab.label}</span>
             </Link>
           );
         })}

@@ -2,24 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 
-/**
- * Evaluasi ekspresi matematika sederhana secara aman tanpa new Function / eval.
- * Mendukung penjumlahan (+), pengurangan (-), perkalian (* atau x), dan pembagian (/).
- */
 export function calcExpr(expr: string): number | null {
   if (!expr || typeof expr !== "string") return null;
 
-  // Normalisasi: ganti x, X, × dengan *, hapus spasi
   const clean = expr.replace(/[xX×]/g, "*").replace(/\s+/g, "");
-
-  // Hanya izinkan karakter angka dan operator dasar
   if (!/^[\d+\-*./]+$/.test(clean)) return null;
-
-  // Harus diawali dan diakhiri dengan angka
   if (!/^\d/.test(clean) || !/\d$/.test(clean)) return null;
 
   try {
-    // Tokenisasi angka dan operator
     const tokens: (number | string)[] = [];
     let currentNum = "";
 
@@ -41,7 +31,6 @@ export function calcExpr(expr: string): number | null {
       tokens.push(parseFloat(currentNum));
     }
 
-    // Pass 1: Perkalian (*) dan Pembagian (/)
     const pass1: (number | string)[] = [];
     let idx = 0;
     while (idx < tokens.length) {
@@ -50,7 +39,6 @@ export function calcExpr(expr: string): number | null {
         const prevNum = pass1.pop() as number;
         const nextNum = tokens[idx + 1] as number;
         if (typeof prevNum !== "number" || typeof nextNum !== "number") return null;
-
         if (token === "/" && nextNum === 0) return null;
         const res = token === "*" ? prevNum * nextNum : prevNum / nextNum;
         pass1.push(res);
@@ -61,7 +49,6 @@ export function calcExpr(expr: string): number | null {
       }
     }
 
-    // Pass 2: Penjumlahan (+) dan Pengurangan (-)
     let result = pass1[0] as number;
     if (typeof result !== "number") return null;
 
@@ -94,7 +81,6 @@ interface QtyInputProps {
   onExprCommit?: (expr: string) => void;
   onFocus?: () => void;
   onCommit?: () => void;
-  /** Nama aksesibel untuk input kuantitas. */
   ariaLabel?: string;
   unfilled?: boolean;
   onValidityChange?: (valid: boolean) => void;
@@ -156,12 +142,12 @@ export default function QtyInput({
     inputRef.current?.focus();
   };
 
-  const commit = () => {
-    if (!dirtyRef.current) {
+  const commit = (isExplicit = false) => {
+    if (!dirtyRef.current && !isExplicit) {
       setFocused(false);
       return;
     }
-    if (exprCommittedRef.current) {
+    if (exprCommittedRef.current && !isExplicit) {
       setFocused(false);
       return;
     }
@@ -182,13 +168,21 @@ export default function QtyInput({
       return;
     }
     if (unfilled && (display === "" || isNaN(parseInt(display, 10)))) {
-      setDisplay(""); setPreview(null); setFocused(false); return;
+      setDisplay("");
+      setPreview(null);
+      setFocused(false);
+      return;
     }
     if (display === "" || isNaN(parseInt(display, 10))) {
       setDisplay("0");
       onChange(0);
       if (onExprCommit) onExprCommit("");
+      if (isExplicit) onCommit?.();
     } else {
+      const num = parseInt(display, 10);
+      if (!isNaN(num) && num >= 0) {
+        onChange(num);
+      }
       if (onExprCommit) onExprCommit("");
       onCommit?.();
     }
@@ -198,12 +192,12 @@ export default function QtyInput({
   };
 
   const defaultCls = wide
-    ? "w-full h-12 text-center bg-surface-warm border border-border focus:border-primary focus:bg-paper rounded-input text-xl font-bold text-text-primary tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition"
-    : "w-20 h-11 text-center bg-surface-warm border border-border focus:border-primary focus:bg-paper rounded-input text-lg font-bold text-text-primary tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition";
+    ? "w-full h-9 text-center bg-white border border-slate-300 focus:border-[#2E5339] rounded font-mono text-base font-bold text-slate-900 tabular-nums tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition"
+    : "w-16 h-9 text-center bg-white border border-slate-300 focus:border-[#2E5339] rounded font-mono text-sm font-bold text-slate-900 tabular-nums tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition";
 
   const opBtnCls = wide
-    ? "flex-1 min-h-[44px] rounded-input bg-surface-warm border border-border text-text-primary text-xl font-bold hover:bg-primary-pale active:bg-primary active:text-ivory transition select-none flex items-center justify-center"
-    : "w-11 h-11 rounded-input bg-surface-warm border border-border text-text-primary text-lg font-bold hover:bg-primary-pale active:bg-primary active:text-ivory transition select-none flex items-center justify-center";
+    ? "flex-1 h-8 rounded bg-slate-100 border border-slate-300 text-slate-800 font-mono text-sm font-bold hover:bg-[#EAF2EB] active:bg-[#2E5339] active:text-white transition select-none flex items-center justify-center"
+    : "w-8 h-8 rounded bg-slate-100 border border-slate-300 text-slate-800 font-mono text-sm font-bold hover:bg-[#EAF2EB] active:bg-[#2E5339] active:text-white transition select-none flex items-center justify-center";
 
   return (
     <div className={`relative inline-flex flex-col items-center gap-1 ${wide ? "w-full" : ""}`}>
@@ -221,24 +215,28 @@ export default function QtyInput({
             e.target.select();
             onFocus?.();
           }}
-          onBlur={commit}
+          onBlur={() => commit(false)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              commit();
+              commit(true);
               (e.target as HTMLInputElement).blur();
             }
           }}
           aria-label={ariaLabel}
           className={className || defaultCls}
         />
-        {wide && focused && (
+        {wide && (
           <button
             type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={commit}
-            className="h-12 px-5 rounded-input bg-primary text-ivory text-lg font-bold whitespace-nowrap active:bg-primary-light transition select-none"
-            aria-label="Hitung rumus"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              commit(true);
+            }}
+            onClick={() => commit(true)}
+            className="h-9 px-3.5 rounded bg-[#2E5339] hover:bg-[#3D6E4C] text-white font-mono text-base font-bold whitespace-nowrap active:bg-[#203B28] transition select-none flex items-center justify-center shrink-0 shadow-sm"
+            aria-label="Hitung rumus dan selesai"
+            title="Selesai & lanjut ke produk berikutnya"
           >
             =
           </button>
@@ -246,7 +244,7 @@ export default function QtyInput({
       </div>
 
       {wide && (
-        <div className="flex gap-1.5 w-full items-center mt-1">
+        <div className="flex gap-1 w-full items-center">
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
@@ -284,7 +282,7 @@ export default function QtyInput({
             title={textMode ? "Keypad angka" : "Keyboard penuh (bisa ketik +−×)"}
             aria-label={textMode ? "Ganti ke keypad angka" : "Ganti ke keyboard penuh"}
             aria-pressed={textMode}
-            className={`${opBtnCls} ${textMode ? "!bg-primary !text-ivory !border-primary" : ""}`}
+            className={`${opBtnCls} ${textMode ? "!bg-[#2E5339] !text-white !border-[#2E5339]" : ""}`}
           >
             {textMode ? "123" : "abc"}
           </button>
@@ -293,7 +291,7 @@ export default function QtyInput({
 
       {isExpr && preview !== null && (
         <span
-          className="text-meta font-bold text-amber-text bg-amber-bg px-3 py-1 rounded-label mt-1 tnum"
+          className="font-mono text-xs font-bold text-[#2E5339] bg-[#EAF2EB] border border-[#BDD7C4] px-2 py-0.5 rounded tnum"
           role="status"
         >
           = {preview}

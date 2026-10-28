@@ -6,7 +6,7 @@ import { useDataSync } from "@/components/DataSyncProvider";
 import BottomNav from "@/components/BottomNav";
 import ConfirmModal from "@/components/ConfirmModal";
 import { getHistoryApi, getAllLocationsApi } from "@/lib/api";
-import { MapPinIcon, InfoIcon, LogoutIcon } from "@/components/icons";
+import { InfoIcon, LogoutIcon, RefreshIcon } from "@/components/icons";
 import { HistoryEntry } from "@/lib/types";
 import { getCache, setCache } from "@/lib/cache";
 
@@ -14,7 +14,14 @@ type LocationResult = { locationCode: string; productCount: number };
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
-  const { isReady, offline, testingOffline, toggleOfflineTest, forceSync, syncProgress } = useDataSync();
+  const {
+    isReady,
+    offline,
+    testingOffline,
+    toggleOfflineTest,
+    forceSync,
+    syncProgress,
+  } = useDataSync();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [allLocations, setAllLocations] = useState<LocationResult[]>([]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -87,7 +94,12 @@ export default function ProfilePage() {
         group.inputCount += 1;
         group.totalQty += e.qty;
       } else {
-        groupMap.set(prefix, { total: 0, scanned: 0, inputCount: 1, totalQty: e.qty });
+        groupMap.set(prefix, {
+          total: 0,
+          scanned: 0,
+          inputCount: 1,
+          totalQty: e.qty,
+        });
       }
     });
 
@@ -102,83 +114,190 @@ export default function ProfilePage() {
   }, [history, allLocations]);
 
   const initial = user?.name?.charAt(0)?.toUpperCase() || "U";
+  const isSyncing = syncProgress.status === "syncing";
 
   return (
-    <div className="mobile-container pb-32">
-      {/* ── Identitas operator ── */}
-      <header className="bg-paper pt-7 pb-5 px-5 border-b border-border">
-        <div className="flex items-center gap-4 max-w-md mx-auto sm:mx-0">
-          <div className="w-16 h-16 shrink-0 rounded-card bg-primary text-ivory flex items-center justify-center">
-            <span className="text-2xl font-bold">{initial}</span>
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold text-text-primary leading-snug break-words">
-              {user?.name || "Operator Gudang"}
-            </h1>
-            <p className="text-meta text-text-secondary break-all">{user?.email || "-"}</p>
-            <span className="mt-1 inline-block px-2.5 py-0.5 bg-primary-pale text-primary rounded-label font-bold text-meta">
-              {user?.role || "Staff Gudang"}
-            </span>
-          </div>
+    <div className="max-w-md mx-auto min-h-dvh bg-[#F8FAFC] text-[#0F172A] pb-24 border-x border-slate-200 font-sans antialiased">
+      {/* ============================================================== */}
+      {/* 1. COMPACT TOP HEADER (~46px, Sticky - Deep Pistachio)        */}
+      {/* ============================================================== */}
+      <header className="sticky top-0 z-30 h-11 min-h-[46px] bg-[#2E5339] text-white border-b border-[#203B28] px-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-mono text-xs font-bold bg-white/15 border border-white/25 text-white px-2 py-0.5 rounded tracking-wide">
+            PROFIL
+          </span>
+          <h1 className="text-sm font-bold text-white truncate">
+            Operator & Sistem
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-100 shrink-0">
+          <span
+            className={`w-2 h-2 rounded-full ${
+              offline || testingOffline ? "bg-[#FBBF24]" : "bg-[#4ADE80]"
+            }`}
+          />
+          <span>
+            {testingOffline ? "Simulasi Offline" : offline ? "Offline" : "Online"}
+          </span>
         </div>
       </header>
 
-      <div className="px-4 sm:px-6 pt-4 space-y-5">
-        <section className="bg-paper border border-border rounded-card p-4 space-y-3" aria-label="Pengaturan sinkronisasi">
-          <h2 className="text-base font-bold">Data dan mode offline</h2>
-          <p className="text-sm text-text-secondary">Uji offline menggunakan data perangkat dan menahan pengiriman sampai pengujian diakhiri.</p>
-          <div className="flex flex-wrap gap-2">
-            <button disabled={!isReady} onClick={toggleOfflineTest} className="min-h-touch px-4 rounded-input bg-primary text-ivory font-bold disabled:opacity-50">{testingOffline ? 'Akhiri uji offline' : 'Uji offline'}</button>
-            <button disabled={offline || syncProgress.status === 'syncing'} onClick={() => void forceSync()} className="min-h-touch px-4 rounded-input border border-border font-bold disabled:opacity-50">{syncProgress.status === 'syncing' ? 'Mengunduh…' : 'Unduh data terbaru'}</button>
+      <div className="p-3 space-y-3">
+        {/* ============================================================== */}
+        {/* 2. COMPACT OPERATOR IDENTITY PANEL                             */}
+        {/* ============================================================== */}
+        <section
+          aria-label="Identitas operator"
+          className="bg-white border border-slate-200 rounded p-3 flex items-center justify-between gap-3"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 shrink-0 rounded bg-[#2E5339] text-white font-mono font-bold text-base flex items-center justify-center">
+              {initial}
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-slate-900 truncate leading-tight">
+                {user?.name || "Operator Gudang"}
+              </h2>
+              <p className="font-mono text-xs text-slate-500 truncate mt-0.5">
+                {user?.email || "-"}
+              </p>
+            </div>
           </div>
+
+          <span className="font-mono text-[11px] font-bold bg-[#EAF2EB] text-[#2E5339] border border-[#BDD7C4] px-2 py-0.5 rounded uppercase shrink-0">
+            {user?.role || "Staff"}
+          </span>
         </section>
-        {/* ── Statistik operator ── */}
-        <section aria-label="Statistik pekerjaan" className="bg-paper rounded-card border border-border grid grid-cols-3 divide-x divide-border-subtle overflow-hidden">
-          <div className="py-4 px-2 text-center">
-            <p className="text-xl font-bold text-text-primary tnum">{stats.discan}</p>
-            <p className="text-meta text-text-secondary mt-0.5">Lokasi Dikerjakan</p>
+
+        {/* ============================================================== */}
+        {/* 3. TELEMETRY & KPI STRIP (3 Kolom Tabular)                     */}
+        {/* ============================================================== */}
+        <section
+          aria-label="Statistik pekerjaan"
+          className="bg-white border border-slate-200 rounded grid grid-cols-3 divide-x divide-slate-200 overflow-hidden"
+        >
+          <div className="py-2.5 px-2 text-center">
+            <p className="font-mono text-base font-bold text-slate-900 tabular-nums tnum">
+              {stats.discan}
+            </p>
+            <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+              Rak Dikerjakan
+            </p>
           </div>
-          <div className="py-4 px-2 text-center">
-            <p className="text-xl font-bold text-text-primary tnum">
+          <div className="py-2.5 px-2 text-center">
+            <p className="font-mono text-base font-bold text-slate-900 tabular-nums tnum">
               {stats.entries.toLocaleString("id-ID")}
             </p>
-            <p className="text-meta text-text-secondary mt-0.5">Produk Diinput</p>
+            <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+              SKU Diinput
+            </p>
           </div>
-          <div className="py-4 px-2 text-center">
-            <p className="text-xl font-bold text-amber-text tnum">
+          <div className="py-2.5 px-2 text-center">
+            <p className="font-mono text-base font-bold text-[#16A34A] tabular-nums tnum">
               {stats.items.toLocaleString("id-ID")}
             </p>
-            <p className="text-meta text-text-secondary mt-0.5">Total Pcs</p>
+            <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+              Total Pcs
+            </p>
           </div>
         </section>
 
-        {/* ── Progress per area gudang ── */}
+        {/* ============================================================== */}
+        {/* 4. SINKRONISASI DATA & MODE OFFLINE                            */}
+        {/* ============================================================== */}
+        <section
+          aria-label="Pengaturan sinkronisasi"
+          className="bg-white border border-slate-200 rounded p-3 space-y-2"
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Data & Sinkronisasi Offline
+            </h2>
+            {isSyncing && (
+              <span className="font-mono text-[11px] text-blue-600 font-semibold">
+                Menyinkronkan…
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-slate-600 leading-snug">
+            Mode uji offline memakai database lokal perangkat (IndexedDB) dan menahan antrean kirim hingga dimatikan.
+          </p>
+          <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+            <button
+              type="button"
+              disabled={!isReady}
+              onClick={toggleOfflineTest}
+              className={`h-9 px-3 rounded font-semibold text-xs transition-colors ${
+                testingOffline
+                  ? "bg-[#D97706] text-white hover:bg-amber-700"
+                  : "bg-[#2E5339] text-white hover:bg-[#3D6E4C]"
+              } disabled:opacity-40`}
+            >
+              {testingOffline ? "Akhiri Uji Offline" : "Uji Mode Offline"}
+            </button>
+
+            <button
+              type="button"
+              disabled={offline || isSyncing}
+              onClick={() => void forceSync()}
+              className="h-9 px-3 rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-800 font-semibold text-xs flex items-center justify-center gap-1.5 disabled:opacity-40 transition-colors"
+            >
+              <RefreshIcon className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+              <span>{isSyncing ? "Mengunduh…" : "Sync Data"}</span>
+            </button>
+          </div>
+        </section>
+
+        {/* ============================================================== */}
+        {/* 5. PROGRESS PER AREA GUDANG (Dense List)                       */}
+        {/* ============================================================== */}
         {locationGroups.length > 0 && (
-          <section aria-label="Progress per area gudang">
-            <h2 className="text-base2 font-bold text-text-primary mb-2">Progress per Area Gudang</h2>
-            <p className="text-meta text-text-secondary mb-2 -mt-1">
-              Dihitung dari seluruh riwayat tersimpan Anda.
-            </p>
-            <div className="space-y-3">
+          <section
+            aria-label="Progress per area gudang"
+            className="bg-white border border-slate-200 rounded overflow-hidden"
+          >
+            <div className="px-3 py-2 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                Cakupan per Area Gudang
+              </h2>
+              <span className="font-mono text-[11px] text-slate-500 tnum">
+                {locationGroups.length} Area
+              </span>
+            </div>
+
+            <div className="divide-y divide-slate-200">
               {locationGroups.map((group) => {
-                const pct = group.total > 0 ? Math.round((group.scanned / group.total) * 100) : 0;
+                const pct =
+                  group.total > 0
+                    ? Math.round((group.scanned / group.total) * 100)
+                    : 0;
+                const barColor =
+                  pct === 100
+                    ? "bg-[#16A34A]"
+                    : pct > 0
+                    ? "bg-blue-600"
+                    : "bg-slate-300";
+
                 return (
-                  <div key={group.name} className="bg-paper rounded-card border border-border p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-9 h-9 rounded-input bg-primary-pale text-primary flex items-center justify-center shrink-0">
-                          <MapPinIcon className="w-4 h-4" />
+                  <div key={group.name} className="px-3 py-2.5 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-mono text-xs font-bold bg-[#EAF2EB] text-[#2E5339] border border-[#BDD7C4] px-1.5 py-0.5 rounded uppercase tnum">
+                          [{group.name}]
                         </span>
-                        <div className="min-w-0">
-                          <p className="text-meta font-bold text-text-primary uppercase tnum">{group.name}</p>
-                          <p className="text-meta text-text-secondary tabular-nums">
-                            {group.scanned} dari {group.total} lokasi pernah dihitung
-                          </p>
-                        </div>
+                        <span className="font-mono text-xs text-slate-600 tabular-nums tnum">
+                          {group.scanned}/{group.total} Rak
+                        </span>
                       </div>
+
                       <span
-                        className={`text-base2 font-bold tnum ${
-                          pct === 100 ? "text-success" : pct > 0 ? "text-text-primary" : "text-text-secondary"
+                        className={`font-mono text-xs font-bold tabular-nums tnum ${
+                          pct === 100
+                            ? "text-[#16A34A]"
+                            : pct > 0
+                            ? "text-slate-900"
+                            : "text-slate-400"
                         }`}
                       >
                         {pct}%
@@ -186,7 +305,7 @@ export default function ProfilePage() {
                     </div>
 
                     <div
-                      className="w-full h-2.5 bg-surface-warm rounded-full overflow-hidden border border-border-subtle"
+                      className="w-full h-1.5 bg-slate-100 rounded overflow-hidden"
                       role="progressbar"
                       aria-valuenow={pct}
                       aria-valuemin={0}
@@ -194,19 +313,20 @@ export default function ProfilePage() {
                       aria-label={`Progress area ${group.name}: ${pct} persen`}
                     >
                       <div
-                        className={`h-full rounded-full transition-[width] duration-500 ease-out ${
-                          pct === 100 ? "bg-success" : "bg-primary"
-                        }`}
+                        className={`h-full transition-all duration-300 ${barColor}`}
                         style={{ width: `${Math.max(pct, pct > 0 ? 4 : 0)}%` }}
                       />
                     </div>
 
-                    <div className="flex items-center justify-between mt-2 text-meta text-text-secondary tabular-nums">
+                    <div className="flex items-center justify-between font-mono text-[11px] text-slate-500 tabular-nums tnum">
                       <span>
-                        Entri: <strong className="text-text-primary">{group.inputCount}</strong>
+                        Entri: <strong className="text-slate-800">{group.inputCount}</strong>
                       </span>
                       <span>
-                        Total item: <strong className="text-text-primary">{group.totalQty}</strong>
+                        Total:{" "}
+                        <strong className="text-slate-800">
+                          {group.totalQty.toLocaleString("id-ID")} Pcs
+                        </strong>
                       </span>
                     </div>
                   </div>
@@ -216,29 +336,32 @@ export default function ProfilePage() {
           </section>
         )}
 
-        {/* ── Info aplikasi ── */}
-        <div className="bg-paper rounded-card border border-border p-4 flex items-center gap-3">
-          <span className="w-9 h-9 rounded-input bg-primary-pale text-primary flex items-center justify-center shrink-0">
-            <InfoIcon className="w-4 h-4" />
-          </span>
-          <div className="flex-1 min-w-0">
-            <p className="text-meta font-bold text-text-primary">BLP Stock Opname</p>
-            <p className="text-meta text-text-secondary">Versi 2.4.0 · Vanilla Silk & Burnt Praline</p>
+        {/* ============================================================== */}
+        {/* 6. INFO SISTEM & LOGOUT                                        */}
+        {/* ============================================================== */}
+        <div className="bg-white border border-slate-200 rounded px-3 py-2.5 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <InfoIcon className="w-4 h-4 text-slate-500 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-slate-900">BLP Stock Opname</p>
+              <p className="font-mono text-[11px] text-slate-500 truncate">
+                v2.5.0 · Industrial Compact UI
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* ── Logout: tindakan berbahaya, dipisah di bawah ── */}
-        <button
-          type="button"
-          onClick={() => setShowLogoutModal(true)}
-          className="w-full flex items-center justify-center gap-2 min-h-touch bg-danger-bg text-danger rounded-input font-bold text-meta border border-danger/30 transition active:scale-[0.98]"
-        >
-          <LogoutIcon className="w-4 h-4" aria-hidden="true" />
-          Keluar dari Akun
-        </button>
+          <button
+            type="button"
+            onClick={() => setShowLogoutModal(true)}
+            className="h-8 px-3 bg-red-50 hover:bg-red-100 border border-red-200 text-[#DC2626] rounded font-semibold text-xs flex items-center gap-1.5 shrink-0 transition-colors"
+          >
+            <LogoutIcon className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>Keluar</span>
+          </button>
+        </div>
       </div>
 
-      {/* ── Konfirmasi logout ── */}
+      {/* Konfirmasi logout */}
       <ConfirmModal
         isOpen={showLogoutModal}
         title="Keluar dari Akun?"

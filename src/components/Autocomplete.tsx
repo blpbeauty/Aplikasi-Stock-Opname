@@ -1,18 +1,9 @@
 "use client";
 
-/**
- * Autocomplete bersama untuk pencarian produk / lokasi / batch
- * yang sebelumnya berulang di Scan, Input, dan EditModal.
- *
- * Semantik combobox dasar: input dengan aria-expanded/aria-controls,
- * daftar role="listbox", navigasi panah, Enter memilih, Escape menutup.
- */
-
 import {
   useEffect,
   useRef,
   useState,
-  useId,
   useCallback,
   ReactNode,
 } from "react";
@@ -23,31 +14,21 @@ interface AutocompleteProps<T> {
   label?: string;
   value: string;
   onValueChange: (v: string) => void;
-  /** Ambil kandidat hasil untuk query (sudah termasuk debounce bila perlu). */
   resolve: (query: string) => Promise<T[]>;
-  /** Nilai unik tiap item. */
   getKey: (item: T, index: number) => string;
-  /** Render isi satu baris hasil. */
   renderItem: (item: T) => ReactNode;
   onSelect: (item: T) => void;
   placeholder?: string;
-  /** Minimal karakter sebelum resolve dipanggil. Default 1. */
   minChars?: number;
-  /** Tampilkan hasil saat input difokus walau query kosong (mis. daftar lokasi). */
   showOnEmpty?: boolean;
-  /** Debounce resolve dalam ms. Default 200. */
   debounceMs?: number;
-  /** Teks saat tidak ada hasil. */
   emptyText?: string;
-  /** Teks bawah input (di luar dropdown). */
   hint?: string;
-  /** Pesan error validasi (ditampilkan + aria-invalid). */
   error?: string;
   className?: string;
   uppercase?: boolean;
   autoFocus?: boolean;
   disabled?: boolean;
-  /** Dipanggil saat query berubah (mis. untuk sinkron state form). */
   onQueryChange?: (q: string) => void;
 }
 
@@ -98,11 +79,10 @@ export default function Autocomplete<T>({
       setLoading(true);
       try {
         const result = await resolve(query);
-        if (seq !== seqRef.current) return; // kedaluwarsa
+        if (seq !== seqRef.current) return;
         setItems(result);
         setOpen(true);
         setActiveIdx(-1);
-        // Scroll dropdown into view inside scrollable parent (e.g. Dialog)
         requestAnimationFrame(() => {
           containerRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
         });
@@ -154,17 +134,18 @@ export default function Autocomplete<T>({
     }
   };
 
-  const showEmptyState = open && !loading && items.length === 0 && value.trim().length >= minChars;
+  const showEmptyState =
+    open && !loading && items.length === 0 && value.trim().length >= minChars;
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       {label && (
-        <label htmlFor={id} className="block text-meta font-bold text-text-primary mb-1">
+        <label htmlFor={id} className="block text-xs font-semibold text-slate-700 mb-1">
           {label}
         </label>
       )}
-      <div className="relative">
-        <SearchIcon className="absolute left-3 w-4 h-4 text-text-secondary pointer-events-none top-1/2 -translate-y-1/2" />
+      <div className="relative flex items-center">
+        <SearchIcon className="absolute left-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
         <input
           id={id}
           type="text"
@@ -184,9 +165,9 @@ export default function Autocomplete<T>({
           autoFocus={autoFocus}
           disabled={disabled}
           aria-invalid={!!error}
-          className={`w-full tap pl-9 pr-9 bg-surface-warm border rounded-input focus:bg-paper text-base2 font-semibold text-text-primary placeholder:font-normal placeholder:text-text-secondary ${
-            error ? "border-danger" : "border-border"
-          } ${uppercase ? "uppercase" : ""}`}
+          className={`w-full h-9 pl-8 pr-8 bg-slate-50 border rounded focus:bg-white focus:outline-none focus:border-[#2E5339] text-sm font-medium text-slate-900 placeholder:font-normal placeholder:text-slate-400 transition-colors ${
+            error ? "border-[#DC2626]" : "border-slate-300"
+          } ${uppercase ? "uppercase font-mono" : ""}`}
         />
         {value && !disabled && (
           <button
@@ -197,16 +178,16 @@ export default function Autocomplete<T>({
               setItems([]);
               setOpen(false);
             }}
-            className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center text-text-secondary hover:bg-primary-pale"
+            className="absolute right-1 w-7 h-7 rounded flex items-center justify-center text-slate-400 hover:text-slate-700"
             aria-label="Bersihkan isian"
           >
-            <XIcon className="w-4 h-4" />
+            <XIcon className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
-      {hint && !error && <p className="text-meta text-text-secondary mt-1">{hint}</p>}
+      {hint && !error && <p className="text-[11px] text-slate-500 mt-0.5">{hint}</p>}
       {error && (
-        <p role="alert" className="text-meta font-semibold text-danger mt-1">
+        <p role="alert" className="text-[11px] font-semibold text-[#DC2626] mt-0.5">
           {error}
         </p>
       )}
@@ -215,10 +196,10 @@ export default function Autocomplete<T>({
         <div
           id={listId}
           role="listbox"
-          className="absolute z-[100] left-0 right-0 mt-1 bg-paper border border-border rounded-input shadow-card overflow-hidden max-h-60 overflow-y-auto"
+          className="absolute z-[100] left-0 right-0 mt-1 bg-white border border-slate-300 rounded shadow-md overflow-hidden max-h-52 overflow-y-auto divide-y divide-slate-100"
         >
           {loading && (
-            <p className="px-3 py-2 text-meta text-text-secondary">Mencari…</p>
+            <p className="px-3 py-2 text-xs text-slate-500">Mencari…</p>
           )}
           {items.map((item, idx) => (
             <button
@@ -228,15 +209,15 @@ export default function Autocomplete<T>({
               aria-selected={idx === activeIdx}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => select(item)}
-              className={`w-full text-left px-3 py-2.5 border-b border-border-subtle last:border-b-0 transition overflow-hidden ${
-                idx === activeIdx ? "bg-primary-pale" : "hover:bg-primary-pale/60"
+              className={`w-full text-left px-3 py-2 text-xs transition overflow-hidden ${
+                idx === activeIdx ? "bg-[#EAF2EB]" : "hover:bg-slate-50"
               }`}
             >
               {renderItem(item)}
             </button>
           ))}
           {showEmptyState && (
-            <p className="px-3 py-3 text-meta text-text-secondary">{emptyText}</p>
+            <p className="px-3 py-2.5 text-xs text-slate-500">{emptyText}</p>
           )}
         </div>
       )}

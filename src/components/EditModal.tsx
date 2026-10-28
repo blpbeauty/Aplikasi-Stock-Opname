@@ -8,6 +8,7 @@ import QtyInput from "@/components/QtyInput";
 import { Dialog, Field } from "@/components/ui";
 import Autocomplete from "@/components/Autocomplete";
 import FormulaBreakdown from "@/components/FormulaBreakdown";
+import { CameraIcon, SearchIcon, ChevronDownIcon } from "@/components/icons";
 import toast from "react-hot-toast";
 
 export interface EditData {
@@ -44,9 +45,13 @@ export default function EditModal({
   const [barcode, setBarcode] = useState("");
   const [scanningBarcode, setScanningBarcode] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; sku?: string; batch?: string; location?: string }>({});
+  const [errors, setErrors] = useState<{
+    name?: string;
+    sku?: string;
+    batch?: string;
+    location?: string;
+  }>({});
 
-  // Get unique batches for current SKU from allProducts
   const batchesForSku = useMemo(() => {
     const skuVal = sku.trim().toLowerCase();
     if (!skuVal || !allProducts) return [];
@@ -59,7 +64,6 @@ export default function EditModal({
     return Array.from(batchSet).sort();
   }, [sku, allProducts]);
 
-  // Filtered batches based on current input
   const filteredBatches = useMemo(() => {
     const q = batch.trim().toLowerCase();
     if (!q) return batchesForSku;
@@ -123,15 +127,16 @@ export default function EditModal({
     }
   };
 
-  const locChanged = location.trim().toUpperCase() !== entry.location.trim().toUpperCase();
+  const locChanged =
+    location.trim().toUpperCase() !== entry.location.trim().toUpperCase();
 
   const handleSave = () => {
     if (invalidQuantity) return;
     const nextErrors: typeof errors = {};
     if (!productName.trim()) nextErrors.name = "Nama produk wajib diisi";
     if (!sku.trim()) nextErrors.sku = "SKU wajib diisi";
-    // Batch boleh kosong — produk tanpa batch tersimpan dengan batch kosong.
-    if (locChanged && !location.trim()) nextErrors.location = "Lokasi tidak boleh kosong";
+    if (locChanged && !location.trim())
+      nextErrors.location = "Lokasi tidak boleh kosong";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
@@ -151,13 +156,13 @@ export default function EditModal({
         isOpen={isOpen}
         onClose={scanningBarcode ? () => {} : onClose}
         title="Edit Entri Opname"
-        description={entry.productName}
+        description={`${entry.location} · ${entry.sku}`}
         footer={
-          <div className="flex gap-2.5">
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 min-h-touch bg-surface-warm text-text-primary text-meta font-bold rounded-input transition active:scale-[0.98]"
+              className="flex-1 h-9 bg-white border border-slate-300 text-slate-700 text-xs font-semibold rounded hover:bg-slate-100 transition"
             >
               Batal
             </button>
@@ -165,97 +170,98 @@ export default function EditModal({
               type="button"
               onClick={handleSave}
               disabled={invalidQuantity}
-              className="flex-1 min-h-touch bg-primary text-ivory text-meta font-bold rounded-input transition active:scale-[0.98] disabled:opacity-40"
+              className="flex-1 h-9 bg-[#2E5339] hover:bg-[#3D6E4C] text-white text-xs font-semibold rounded transition disabled:opacity-40"
             >
               Simpan Perubahan
             </button>
           </div>
         }
       >
-        <div className="space-y-4">
-          {/* Lokasi */}
-          <Autocomplete<{ locationCode: string; productCount: number }>
-            id="edit-location"
-            label="Lokasi"
-            value={location}
-            onValueChange={(v) => {
-              setLocation(v);
-              setErrors((e) => ({ ...e, location: undefined }));
-            }}
-            resolve={async (q) => {
-              try {
-                const result = await searchLocationsApi(q);
-                return result.success && result.locations ? result.locations : [];
-              } catch {
-                return [];
+        <div className="space-y-2.5">
+          {/* Lokasi & Barcode dalam 2 kolom padat atau berurutan */}
+          <div className="grid grid-cols-2 gap-2">
+            <Autocomplete<{ locationCode: string; productCount: number }>
+              id="edit-location"
+              label="Lokasi Rak"
+              value={location}
+              onValueChange={(v) => {
+                setLocation(v);
+                setErrors((e) => ({ ...e, location: undefined }));
+              }}
+              resolve={async (q) => {
+                try {
+                  const result = await searchLocationsApi(q);
+                  return result.success && result.locations
+                    ? result.locations
+                    : [];
+                } catch {
+                  return [];
+                }
+              }}
+              getKey={(l) => l.locationCode}
+              renderItem={(l) => (
+                <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                  <span className="font-mono font-bold text-slate-900 uppercase truncate flex-1 min-w-0">
+                    {l.locationCode}
+                  </span>
+                  <span className="font-mono text-[11px] text-slate-500 shrink-0">
+                    {l.productCount}
+                  </span>
+                </div>
+              )}
+              onSelect={(l) => setLocation(l.locationCode)}
+              placeholder="Kode rak"
+              uppercase
+              minChars={1}
+              emptyText="Lokasi tidak ditemukan"
+              hint={
+                locChanged
+                  ? `${entry.location} → ${location.trim().toUpperCase()}`
+                  : undefined
               }
-            }}
-            getKey={(l) => l.locationCode}
-            renderItem={(l) => (
-              <div className="flex items-center justify-between gap-2 w-full min-w-0">
-                <span className="font-bold text-text-primary uppercase truncate flex-1 min-w-0">{l.locationCode}</span>
-                <span className="text-meta text-text-secondary shrink-0 pl-2">{l.productCount} produk</span>
-              </div>
-            )}
-            onSelect={(l) => setLocation(l.locationCode)}
-            placeholder="Kode lokasi"
-            uppercase
-            minChars={1}
-            emptyText="Lokasi tidak ditemukan"
-            hint={
-              locChanged
-                ? `Lokasi berubah: ${entry.location} → ${location.trim().toUpperCase()}`
-                : undefined
-            }
-            error={errors.location}
-          />
+              error={errors.location}
+            />
 
-          {/* Barcode */}
-          <Field id="edit-barcode" label="Barcode" hint="Pindai atau ketik untuk mencari produk.">
-            <div className="relative flex items-center">
-              <input
-                id="edit-barcode"
-                type="text"
-                value={barcode}
-                onChange={(e) => setBarcode(e.target.value.trim())}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && barcode) {
-                    e.preventDefault();
-                    handleBarcodeScan(barcode);
-                  }
-                }}
-                className="w-full min-h-touch pl-3 pr-24 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary"
-                placeholder="Scan / ketik barcode"
-                autoComplete="off"
-              />
-              <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => barcode && handleBarcodeScan(barcode)}
-                  disabled={!barcode || scanningBarcode}
-                  className="w-11 h-11 rounded-input bg-paper border border-border flex items-center justify-center text-primary disabled:opacity-50 active:scale-95 transition"
-                  aria-label="Cari barcode"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="M21 21l-4.35-4.35" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowBarcodeScanner(true)}
-                  disabled={scanningBarcode}
-                  className="w-11 h-11 rounded-input bg-primary text-ivory flex items-center justify-center disabled:opacity-50 active:scale-95 transition"
-                  aria-label="Pindai barcode dengan kamera"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-                    <circle cx="12" cy="13" r="4" />
-                  </svg>
-                </button>
+            <Field id="edit-barcode" label="Scan / Cari Barcode">
+              <div className="relative flex items-center">
+                <input
+                  id="edit-barcode"
+                  type="text"
+                  value={barcode}
+                  onChange={(e) => setBarcode(e.target.value.trim())}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && barcode) {
+                      e.preventDefault();
+                      handleBarcodeScan(barcode);
+                    }
+                  }}
+                  className="w-full h-9 pl-2.5 pr-16 bg-slate-50 border border-slate-300 rounded font-mono text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-[#2E5339]"
+                  placeholder="Barcode…"
+                  autoComplete="off"
+                />
+                <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => barcode && handleBarcodeScan(barcode)}
+                    disabled={!barcode || scanningBarcode}
+                    className="w-7 h-7 rounded bg-white border border-slate-300 flex items-center justify-center text-slate-700 disabled:opacity-40"
+                    aria-label="Cari barcode"
+                  >
+                    <SearchIcon className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowBarcodeScanner(true)}
+                    disabled={scanningBarcode}
+                    className="w-7 h-7 rounded bg-[#2E5339] text-white flex items-center justify-center disabled:opacity-40"
+                    aria-label="Pindai barcode dengan kamera"
+                  >
+                    <CameraIcon className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-            </div>
-          </Field>
+            </Field>
+          </div>
 
           {/* Nama Produk */}
           <Autocomplete<Product>
@@ -270,22 +276,22 @@ export default function EditModal({
             getKey={(p, i) => `${p.sku}-${i}`}
             renderItem={(p) => (
               <>
-                <p className="font-bold text-text-primary text-meta">{p.productName}</p>
-                <p className="text-meta text-text-secondary">
+                <p className="font-semibold text-slate-900 text-xs">{p.productName}</p>
+                <p className="font-mono text-[11px] text-slate-500">
                   SKU: {p.sku} | Batch: {p.batch}
                 </p>
               </>
             )}
             onSelect={handleSelectProduct}
-            placeholder="Ketik min. 2 huruf untuk mencari…"
+            placeholder="Ketik min. 2 huruf…"
             minChars={2}
-            debounceMs={180}
+            debounceMs={150}
             emptyText="Produk tidak ditemukan"
             error={errors.name}
           />
 
           {/* SKU & Batch */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <Field id="edit-sku" label="SKU" required error={errors.sku}>
               <input
                 id="edit-sku"
@@ -295,11 +301,11 @@ export default function EditModal({
                   setSku(e.target.value);
                   setErrors((er) => ({ ...er, sku: undefined }));
                 }}
-                className="w-full min-h-touch px-3 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary"
+                className="w-full h-9 px-2.5 bg-slate-50 border border-slate-300 rounded font-mono text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#2E5339]"
               />
             </Field>
 
-            <Field id="edit-batch" label="Batch" required error={errors.batch}>
+            <Field id="edit-batch" label="Batch" error={errors.batch}>
               <div className="relative">
                 <input
                   id="edit-batch"
@@ -309,60 +315,67 @@ export default function EditModal({
                     setBatch(e.target.value);
                     setErrors((er) => ({ ...er, batch: undefined }));
                   }}
-                  className="w-full min-h-touch pl-3 pr-10 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary"
+                  className="w-full h-9 pl-2.5 pr-8 bg-slate-50 border border-slate-300 rounded font-mono text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#2E5339]"
                   placeholder="Batch"
                 />
                 {batchesForSku.length > 0 && (
                   <button
                     type="button"
                     onClick={() => {
-                      // pilih batch pertama yang tersedia, siklus berikutnya
-                      const next = filteredBatches[(filteredBatches.indexOf(batch) + 1) % filteredBatches.length];
+                      const next =
+                        filteredBatches[
+                          (filteredBatches.indexOf(batch) + 1) %
+                            filteredBatches.length
+                        ];
                       setBatch(next);
                     }}
-                    className="absolute right-0.5 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-text-secondary hover:text-primary active:scale-95 transition"
-                    aria-label="Tampilkan pilihan batch"
+                    className="absolute right-0.5 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-slate-500 hover:text-[#2E5339]"
+                    aria-label="Siklus pilihan batch"
                   >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
+                    <ChevronDownIcon className="w-3.5 h-3.5" />
                   </button>
-                )}
-
-                {batchesForSku.length > 0 && (
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {filteredBatches.slice(0, 4).map((b) => (
-                      <button
-                        key={b}
-                        type="button"
-                        onClick={() => setBatch(b)}
-                        className={`min-h-touch px-3 rounded-label text-meta font-bold border ${
-                          batch === b
-                            ? "bg-primary text-ivory border-primary"
-                            : "bg-surface-warm text-text-primary border-border"
-                        }`}
-                      >
-                        {b}
-                      </button>
-                    ))}
-                  </div>
                 )}
               </div>
             </Field>
           </div>
 
+          {batchesForSku.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {filteredBatches.slice(0, 5).map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => setBatch(b)}
+                  className={`h-6 px-2 rounded font-mono text-[11px] font-semibold border transition ${
+                    batch === b
+                      ? "bg-[#2E5339] text-white border-[#2E5339]"
+                      : "bg-[#EAF2EB] text-[#2E5339] border-[#BDD7C4] hover:bg-[#D6E8DC]"
+                  }`}
+                >
+                  {b}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Quantity */}
-          <div>
-            <p className="text-meta font-bold text-text-primary mb-1">Jumlah / rumus hitung</p>
+          <div className="pt-1 border-t border-slate-200">
+            <p className="text-xs font-semibold text-slate-700 mb-1">
+              Jumlah / Rumus Hitung
+            </p>
             <QtyInput
               value={quantity}
               onChange={(v) => setQuantity(v)}
               onExprCommit={(expr) => setFormula(expr)}
-              onValidityChange={valid => setInvalidQuantity(!valid)}
+              onValidityChange={(valid) => setInvalidQuantity(!valid)}
               wide
               ariaLabel="Kuantitas entri"
             />
-            {invalidQuantity && <p className="text-meta text-danger mt-2">Lengkapi angka dan rumus sebelum menyimpan.</p>}
+            {invalidQuantity && (
+              <p className="text-[11px] font-semibold text-[#DC2626] mt-1">
+                Lengkapi angka dan rumus sebelum menyimpan.
+              </p>
+            )}
             <FormulaBreakdown formula={formula} quantity={quantity} />
           </div>
         </div>

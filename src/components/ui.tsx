@@ -1,26 +1,14 @@
 "use client";
 
-/**
- * Primitif UI bersama — konsep "Label Rak Operasional".
- * Hanya komponen yang benar-benar dipakai berulang di beberapa halaman.
- */
-
 import {
   useEffect,
   useId,
   useRef,
   useState,
-  useCallback,
   ReactNode,
 } from "react";
 import { useDataSync } from "@/components/DataSyncProvider";
 import { XIcon, RefreshIcon, ChevronLeftIcon } from "@/components/icons";
-
-/* ────────────────────────────────────────────────────────────────
-   Dialog / BottomSheet — semantik dialog lengkap:
-   role="dialog" + judul, focus trap, Escape, pengembalian fokus,
-   dan penguncian scroll body.
-   ──────────────────────────────────────────────────────────────── */
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -32,7 +20,6 @@ interface DialogProps {
   description?: string;
   children?: ReactNode;
   footer?: ReactNode;
-  /** sm untuk konfirmasi, md untuk form/sheet */
   size?: "sm" | "md";
 }
 
@@ -54,7 +41,6 @@ export function Dialog({
     if (!isOpen) return;
     restoreFocusRef.current = document.activeElement as HTMLElement | null;
 
-    // Fokus ke elemen pertama yang bisa difokus (atau panel itu sendiri)
     const focusFirst = () => {
       const panel = panelRef.current;
       if (!panel) return;
@@ -102,8 +88,8 @@ export function Dialog({
 
   return (
     <div
-      className={`fixed inset-0 z-[70] bg-black/60 flex ${
-        size === "sm" ? "items-center p-4" : "items-end sm:items-center sm:p-4"
+      className={`fixed inset-0 z-[70] bg-slate-900/50 flex ${
+        size === "sm" ? "items-center p-3" : "items-end sm:items-center sm:p-3"
       } justify-center animate-fadeIn`}
       onClick={onClose}
     >
@@ -115,19 +101,20 @@ export function Dialog({
         aria-describedby={description ? descId : undefined}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className={`bg-paper w-full ${size === "sm" ? "max-w-sm" : "sm:max-w-md"} ${
+        className={`bg-white w-full ${size === "sm" ? "max-w-sm" : "max-w-md"} ${
           size === "sm"
-            ? "rounded-card"
-            : "rounded-t-sheet sm:rounded-sheet border-b-0 sm:border-b"
-        } border shadow-sheet outline-none flex flex-col max-h-[88dvh] animate-slideUp`}
+            ? "rounded-md"
+            : "rounded-t-md sm:rounded-md border-b-0 sm:border-b"
+        } border border-slate-300 shadow-sheet outline-none flex flex-col max-h-[90dvh] overflow-hidden animate-slideUp`}
       >
-        <div className="px-5 pt-4 pb-3 border-b border-border-subtle flex items-start justify-between gap-3">
+        {/* Compact Pistachio Header Strip */}
+        <div className="px-3.5 py-2.5 bg-[#2E5339] text-white border-b border-[#203B28] flex items-center justify-between gap-2 shrink-0">
           <div className="min-w-0">
-            <h2 id={titleId} className="text-base font-bold text-text-primary leading-snug">
+            <h2 id={titleId} className="text-sm font-bold text-white leading-tight truncate">
               {title}
             </h2>
             {description && (
-              <p id={descId} className="text-meta text-text-secondary mt-0.5">
+              <p id={descId} className="text-xs text-[#D6E8DC] mt-0.5 truncate">
                 {description}
               </p>
             )}
@@ -135,35 +122,34 @@ export function Dialog({
           <button
             type="button"
             onClick={onClose}
-            className="tap shrink-0 -mr-2 -mt-1 w-11 h-11 rounded-input flex items-center justify-center text-text-secondary hover:bg-surface-warm transition"
+            className="shrink-0 w-7 h-7 rounded bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition"
             aria-label="Tutup dialog"
           >
-            <XIcon className="w-5 h-5" />
+            <XIcon className="w-4 h-4" />
           </button>
         </div>
 
         {children && (
-          <div className={`px-5 pt-4 overflow-y-auto flex-1 ${footer ? "pb-4" : "pb-16"}`}>{children}</div>
+          <div className={`px-3.5 py-3 overflow-y-auto flex-1 ${footer ? "" : "pb-6"}`}>
+            {children}
+          </div>
         )}
 
         {footer && (
-          <div className="px-5 py-3 border-t border-border-subtle pb-safe">{footer}</div>
+          <div className="px-3.5 py-2.5 bg-slate-50 border-t border-slate-200 pb-[max(0.625rem,env(safe-area-inset-bottom))] shrink-0">
+            {footer}
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────
-   IconButton — tombol ikon wajib punya nama aksesibel.
-   ──────────────────────────────────────────────────────────────── */
-
 interface IconButtonProps {
   label: string;
   onClick: () => void;
   children: ReactNode;
   variant?: "neutral" | "primary" | "danger";
-  /** 44px default, 48px untuk aksi utama */
   size?: "md" | "lg";
   disabled?: boolean;
   title?: string;
@@ -180,13 +166,13 @@ export function IconButton({
   title,
   className = "",
 }: IconButtonProps) {
-  const sizeCls = size === "lg" ? "w-12 h-12" : "w-11 h-11";
+  const sizeCls = size === "lg" ? "w-10 h-10" : "w-9 h-9";
   const variantCls =
     variant === "primary"
-      ? "bg-primary text-ivory hover:bg-primary-light"
+      ? "bg-[#2E5339] text-white hover:bg-[#3D6E4C]"
       : variant === "danger"
-      ? "bg-danger-bg text-danger hover:bg-danger hover:text-ivory"
-      : "bg-surface-warm text-text-primary hover:bg-primary-pale";
+      ? "bg-red-50 text-[#DC2626] border border-red-200 hover:bg-red-100"
+      : "bg-slate-100 text-slate-800 border border-slate-300 hover:bg-slate-200";
   return (
     <button
       type="button"
@@ -194,16 +180,12 @@ export function IconButton({
       disabled={disabled}
       title={title || label}
       aria-label={label}
-      className={`${sizeCls} ${variantCls} rounded-input flex items-center justify-center transition active:scale-95 disabled:opacity-50 disabled:active:scale-100 ${className}`}
+      className={`${sizeCls} ${variantCls} rounded flex items-center justify-center transition disabled:opacity-50 ${className}`}
     >
       {children}
     </button>
   );
 }
-
-/* ────────────────────────────────────────────────────────────────
-   PageHeader — header halaman konsisten: kembali + judul + slot kanan.
-   ──────────────────────────────────────────────────────────────── */
 
 interface PageHeaderProps {
   title: string;
@@ -221,33 +203,29 @@ export function PageHeader({
   right,
 }: PageHeaderProps) {
   return (
-    <header className="sticky top-0 z-30 bg-paper px-4 pt-3 pb-2.5 border-b border-border">
-      <div className="flex items-center gap-2">
+    <header className="sticky top-0 z-30 h-11 min-h-[44px] bg-[#2E5339] text-white px-3 border-b border-[#203B28] flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
         {onBack && (
           <button
             type="button"
             onClick={onBack}
-            className="tap w-11 h-11 -ml-2 rounded-input flex items-center justify-center text-text-primary hover:bg-surface-warm transition"
+            className="w-7 h-7 rounded bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition shrink-0"
             aria-label={backLabel}
           >
-            <ChevronLeftIcon className="w-6 h-6" />
+            <ChevronLeftIcon className="w-4 h-4" />
           </button>
         )}
-        <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-bold text-text-primary leading-tight">{title}</h1>
+        <div className="min-w-0 flex-1 flex items-center gap-2">
+          <h1 className="text-sm font-bold text-white leading-tight truncate">{title}</h1>
           {subtitle && (
-            <div className="text-meta text-text-secondary leading-snug">{subtitle}</div>
+            <div className="text-xs text-[#D6E8DC] truncate">{subtitle}</div>
           )}
         </div>
-        {right}
       </div>
+      {right}
     </header>
   );
 }
-
-/* ────────────────────────────────────────────────────────────────
-   EmptyState — semua keadaan kosong memberi umpan balik jelas.
-   ──────────────────────────────────────────────────────────────── */
 
 interface EmptyStateProps {
   icon?: ReactNode;
@@ -258,24 +236,20 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className="bg-paper rounded-card border border-border px-6 py-10 text-center">
+    <div className="bg-white rounded border border-slate-200 px-4 py-8 text-center">
       {icon && (
-        <div className="w-12 h-12 rounded-input bg-primary-pale text-primary mx-auto flex items-center justify-center mb-3">
+        <div className="w-9 h-9 rounded bg-[#EAF2EB] text-[#2E5339] mx-auto flex items-center justify-center mb-2">
           {icon}
         </div>
       )}
-      <p className="text-base2 font-bold text-text-primary">{title}</p>
+      <p className="text-sm font-bold text-slate-900">{title}</p>
       {description && (
-        <p className="text-meta text-text-secondary mt-1 max-w-xs mx-auto">{description}</p>
+        <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">{description}</p>
       )}
-      {action && <div className="mt-4 flex justify-center">{action}</div>}
+      {action && <div className="mt-3 flex justify-center">{action}</div>}
     </div>
   );
 }
-
-/* ────────────────────────────────────────────────────────────────
-   Field — label terasosiasi + hint + error untuk semua form.
-   ──────────────────────────────────────────────────────────────── */
 
 interface FieldProps {
   id: string;
@@ -298,29 +272,24 @@ export function Field({
 }: FieldProps) {
   return (
     <div className={className}>
-      <label htmlFor={id} className="block text-meta font-bold text-text-primary mb-1">
+      <label htmlFor={id} className="block text-xs font-semibold text-slate-700 mb-1">
         {label}
         {required && (
-          <span className="text-danger ml-0.5" aria-hidden="true">
+          <span className="text-[#DC2626] ml-0.5" aria-hidden="true">
             *
           </span>
         )}
       </label>
       {children}
-      {hint && !error && <p className="text-meta text-text-secondary mt-1">{hint}</p>}
+      {hint && !error && <p className="text-[11px] text-slate-500 mt-0.5">{hint}</p>}
       {error && (
-        <p id={`${id}-error`} role="alert" className="text-meta font-semibold text-danger mt-1">
+        <p id={`${id}-error`} role="alert" className="text-[11px] font-semibold text-[#DC2626] mt-0.5">
           {error}
         </p>
       )}
     </div>
   );
 }
-
-/* ────────────────────────────────────────────────────────────────
-   LocationBand — pita lokasi kontras di atas layar Scan/Input.
-   Selalu menjawab: "saya sedang bekerja di lokasi mana?".
-   ──────────────────────────────────────────────────────────────── */
 
 export function LocationBand({ code, sub }: { code: string; sub?: ReactNode }) {
   return (
@@ -330,15 +299,6 @@ export function LocationBand({ code, sub }: { code: string; sub?: ReactNode }) {
     </div>
   );
 }
-
-/* ────────────────────────────────────────────────────────────────
-   SyncStatusBadge — status sinkronisasi yang jujur:
-   - Menyinkronkan (proses berjalan)
-   - Gagal sinkron — Coba lagi (error + aksi)
-   - Siap offline (data terakhir tersedia untuk dibaca)
-   - Belum sinkron (belum pernah sync)
-   Status dibedakan dengan teks + ikon, bukan warna saja.
-   ──────────────────────────────────────────────────────────────── */
 
 export function SyncStatusBadge() {
   const { syncProgress, lastSyncTime, forceSync } = useDataSync();
@@ -361,16 +321,16 @@ export function SyncStatusBadge() {
   let label: string;
   let tone: "neutral" | "ok" | "warn" | "busy";
   if (syncing) {
-    label = "Menyinkronkan…";
+    label = "Sinkron…";
     tone = "busy";
   } else if (failed && !online) {
-    label = "Offline — pakai data lokal";
+    label = "Offline";
     tone = "warn";
   } else if (failed) {
-    label = "Gagal sinkron";
+    label = "Gagal";
     tone = "warn";
   } else if (lastSyncTime) {
-    label = "Siap offline";
+    label = "Tersimpan";
     tone = "ok";
   } else {
     label = "Belum sinkron";
@@ -379,12 +339,12 @@ export function SyncStatusBadge() {
 
   const toneCls =
     tone === "ok"
-      ? "bg-surface-warm text-text-primary border-border"
+      ? "bg-emerald-50 text-[#16A34A] border-emerald-200"
       : tone === "warn"
-      ? "bg-amber-bg text-amber-text border-amber-text/30"
+      ? "bg-amber-50 text-[#D97706] border-amber-200"
       : tone === "busy"
-      ? "bg-info-bg text-info border-info/30"
-      : "bg-surface-warm text-text-secondary border-border";
+      ? "bg-[#EAF2EB] text-[#2E5339] border-[#BDD7C4]"
+      : "bg-slate-100 text-slate-600 border-slate-200";
 
   return (
     <button
@@ -403,19 +363,19 @@ export function SyncStatusBadge() {
           : "Ketuk untuk sinkronisasi"
       }
       aria-label={`Status sinkronisasi: ${label}. Ketuk untuk sinkron ulang.`}
-      className={`tap h-11 px-3 inline-flex items-center gap-1.5 rounded-label border ${toneCls} text-meta font-bold transition active:scale-95 disabled:active:scale-100`}
+      className={`h-7 px-2 inline-flex items-center gap-1 rounded border ${toneCls} text-[11px] font-semibold transition`}
     >
       {syncing ? (
-        <RefreshIcon className="w-3.5 h-3.5 animate-spin" />
-      ) : tone === "warn" ? (
-        <span aria-hidden="true" className="text-sm leading-none">
-          !
-        </span>
+        <RefreshIcon className="w-3 h-3 animate-spin" />
       ) : (
         <span
           aria-hidden="true"
-          className={`w-2 h-2 rounded-full ${
-            tone === "ok" ? "bg-primary" : tone === "busy" ? "bg-info" : "bg-text-secondary"
+          className={`w-1.5 h-1.5 rounded-full ${
+            tone === "ok"
+              ? "bg-[#16A34A]"
+              : tone === "warn"
+              ? "bg-[#D97706]"
+              : "bg-[#2E5339]"
           }`}
         />
       )}

@@ -13,7 +13,7 @@ import ScannerModal from "@/components/ScannerModal";
 import QtyInput from "@/components/QtyInput";
 import { Dialog, Field } from "@/components/ui";
 import Autocomplete from "@/components/Autocomplete";
-import { CalculatorIcon, CameraIcon, SearchIcon } from "@/components/icons";
+import { CalculatorIcon, CameraIcon, SearchIcon, ChevronDownIcon } from "@/components/icons";
 import toast from "react-hot-toast";
 
 interface AddHistoryEntryModalProps {
@@ -142,9 +142,6 @@ export default function AddHistoryEntryModal({
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    // Batch mengikuti master data: boleh kosong bila master tidak punya
-    // batch untuk SKU ini; satu batch terisi otomatis; beberapa batch
-    // wajib dipilih operator.
     let finalBatch = targetBatch;
     if (!finalBatch) {
       if (batchesForSku.length === 1) finalBatch = batchesForSku[0];
@@ -188,11 +185,11 @@ export default function AddHistoryEntryModal({
         rowId: result.rowIds?.[0] || `optimistic_${Date.now()}`,
         timestamp,
         operator: user?.email || "",
-      location: targetLoc,
-      productName: targetName,
-      sku: targetSku,
-      batch: finalBatch,
-      qty: quantity,
+        location: targetLoc,
+        productName: targetName,
+        sku: targetSku,
+        batch: finalBatch,
+        qty: quantity,
         edited: "",
         editTimestamp: "",
         formula: formula || "",
@@ -214,15 +211,15 @@ export default function AddHistoryEntryModal({
       <Dialog
         isOpen={isOpen}
         onClose={submitting || scanningBarcode ? () => {} : onClose}
-        title={`Tambah Produk di ${location || "Lokasi"}`}
-        description="Masukkan data produk yang ingin ditambahkan ke riwayat opname."
+        title={`Tambah Produk — ${location || "Lokasi"}`}
+        description="Catat produk baru ke riwayat opname rak ini."
         footer={
-          <div className="flex gap-2.5">
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="flex-1 min-h-touch bg-surface-warm text-text-primary text-meta font-bold rounded-input transition active:scale-[0.98] disabled:opacity-50"
+              className="flex-1 h-9 bg-white border border-slate-300 text-slate-700 text-xs font-semibold rounded hover:bg-slate-100 transition disabled:opacity-50"
             >
               Batal
             </button>
@@ -230,88 +227,91 @@ export default function AddHistoryEntryModal({
               type="button"
               onClick={handleSubmit}
               disabled={submitting}
-              className="flex-1 min-h-touch bg-primary text-ivory text-meta font-bold rounded-input transition active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-1.5"
+              className="flex-1 h-9 bg-[#2E5339] hover:bg-[#3D6E4C] text-white text-xs font-semibold rounded transition disabled:opacity-50"
             >
               {submitting ? "Menyimpan…" : "Tambah Produk"}
             </button>
           </div>
         }
       >
-        <div className="space-y-4">
-          {/* Lokasi */}
-          <Autocomplete<{ locationCode: string; productCount: number }>
-            id="add-entry-location"
-            label="Lokasi"
-            value={location}
-            onValueChange={(v) => {
-              setLocation(v);
-              setErrors((e) => ({ ...e, location: undefined }));
-            }}
-            resolve={async (q) => {
-              try {
-                const result = await searchLocationsApi(q);
-                return result.success && result.locations ? result.locations : [];
-              } catch {
-                return [];
-              }
-            }}
-            getKey={(l) => l.locationCode}
-            renderItem={(l) => (
-              <div className="flex items-center justify-between gap-2 w-full min-w-0">
-                <span className="font-bold text-text-primary uppercase truncate flex-1 min-w-0">{l.locationCode}</span>
-                <span className="text-meta text-text-secondary shrink-0 pl-2">{l.productCount} produk</span>
-              </div>
-            )}
-            onSelect={(l) => setLocation(l.locationCode)}
-            placeholder="Kode lokasi"
-            uppercase
-            minChars={1}
-            emptyText="Lokasi tidak ditemukan"
-            error={errors.location}
-          />
+        <div className="space-y-2.5">
+          <div className="grid grid-cols-2 gap-2">
+            <Autocomplete<{ locationCode: string; productCount: number }>
+              id="add-entry-location"
+              label="Lokasi Rak"
+              value={location}
+              onValueChange={(v) => {
+                setLocation(v);
+                setErrors((e) => ({ ...e, location: undefined }));
+              }}
+              resolve={async (q) => {
+                try {
+                  const result = await searchLocationsApi(q);
+                  return result.success && result.locations ? result.locations : [];
+                } catch {
+                  return [];
+                }
+              }}
+              getKey={(l) => l.locationCode}
+              renderItem={(l) => (
+                <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                  <span className="font-mono font-bold text-slate-900 uppercase truncate flex-1 min-w-0">
+                    {l.locationCode}
+                  </span>
+                  <span className="font-mono text-[11px] text-slate-500 shrink-0">
+                    {l.productCount}
+                  </span>
+                </div>
+              )}
+              onSelect={(l) => setLocation(l.locationCode)}
+              placeholder="Kode rak"
+              uppercase
+              minChars={1}
+              emptyText="Lokasi tidak ditemukan"
+              error={errors.location}
+            />
 
-          {/* Barcode */}
-          <Field id="add-entry-barcode" label="Barcode" hint="Pindai atau ketik untuk mencari otomatis.">
-            <div className="relative flex items-center">
-              <input
-                id="add-entry-barcode"
-                type="text"
-                value={barcode}
-                onChange={(e) => setBarcode(e.target.value.trim())}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && barcode) {
-                    e.preventDefault();
-                    handleBarcodeScan(barcode);
-                  }
-                }}
-                className="w-full min-h-touch pl-3 pr-24 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary"
-                placeholder="Scan / ketik barcode"
-                autoComplete="off"
-              />
-              <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => barcode && handleBarcodeScan(barcode)}
-                  disabled={!barcode || scanningBarcode}
-                  className="w-11 h-11 rounded-input bg-paper border border-border flex items-center justify-center text-primary disabled:opacity-50 active:scale-95 transition"
-                  aria-label="Cari barcode"
-                >
-                  <SearchIcon className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowBarcodeScanner(true)}
-                  disabled={scanningBarcode}
-                  className="w-11 h-11 rounded-input bg-primary text-ivory flex items-center justify-center disabled:opacity-50 active:scale-95 transition"
-                  aria-label="Pindai barcode dengan kamera"
-                >
-                  <CameraIcon className="w-4 h-4" />
-                </button>
+            <Field id="add-entry-barcode" label="Scan / Cari Barcode">
+              <div className="relative flex items-center">
+                <input
+                  id="add-entry-barcode"
+                  type="text"
+                  value={barcode}
+                  onChange={(e) => setBarcode(e.target.value.trim())}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && barcode) {
+                      e.preventDefault();
+                      handleBarcodeScan(barcode);
+                    }
+                  }}
+                  className="w-full h-9 pl-2.5 pr-16 bg-slate-50 border border-slate-300 rounded font-mono text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-[#2E5339]"
+                  placeholder="Barcode…"
+                  autoComplete="off"
+                />
+                <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => barcode && handleBarcodeScan(barcode)}
+                    disabled={!barcode || scanningBarcode}
+                    className="w-7 h-7 rounded bg-white border border-slate-300 flex items-center justify-center text-slate-700 disabled:opacity-40"
+                    aria-label="Cari barcode"
+                  >
+                    <SearchIcon className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowBarcodeScanner(true)}
+                    disabled={scanningBarcode}
+                    className="w-7 h-7 rounded bg-[#2E5339] text-white flex items-center justify-center disabled:opacity-40"
+                    aria-label="Pindai barcode dengan kamera"
+                  >
+                    <CameraIcon className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-            </div>
-          </Field>
+            </Field>
+          </div>
 
-          {/* Nama Produk */}
           <Autocomplete<Product>
             id="add-entry-product-name"
             label="Nama Produk"
@@ -324,23 +324,22 @@ export default function AddHistoryEntryModal({
             getKey={(p, i) => `${p.sku}-${i}`}
             renderItem={(p) => (
               <>
-                <p className="font-bold text-text-primary text-meta">{p.productName}</p>
-                <p className="text-meta text-text-secondary">
+                <p className="font-semibold text-slate-900 text-xs">{p.productName}</p>
+                <p className="font-mono text-[11px] text-slate-500">
                   SKU: {p.sku}
                   {p.batch ? ` · Batch: ${p.batch}` : " · tanpa batch"}
                 </p>
               </>
             )}
             onSelect={handleSelectProduct}
-            placeholder="Ketik min. 2 huruf untuk mencari…"
+            placeholder="Ketik min. 2 huruf…"
             minChars={2}
-            debounceMs={180}
+            debounceMs={150}
             emptyText="Produk tidak ditemukan di master"
             error={errors.name}
           />
 
-          {/* SKU & Batch */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <Field id="add-entry-sku" label="SKU" required error={errors.sku}>
               <input
                 id="add-entry-sku"
@@ -351,16 +350,11 @@ export default function AddHistoryEntryModal({
                   setErrors((er) => ({ ...er, sku: undefined }));
                 }}
                 placeholder="SKU produk"
-                className="w-full min-h-touch px-3 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary uppercase"
+                className="w-full h-9 px-2.5 bg-slate-50 border border-slate-300 rounded font-mono text-xs font-bold text-slate-900 uppercase focus:bg-white focus:outline-none focus:border-[#2E5339]"
               />
             </Field>
 
-            <Field
-              id="add-entry-batch"
-              label="Batch"
-              hint="Opsional — kosongkan bila produk tanpa batch di master."
-              error={errors.batch}
-            >
+            <Field id="add-entry-batch" label="Batch" error={errors.batch}>
               <div className="relative">
                 <input
                   id="add-entry-batch"
@@ -370,7 +364,7 @@ export default function AddHistoryEntryModal({
                     setBatch(e.target.value);
                     setErrors((er) => ({ ...er, batch: undefined }));
                   }}
-                  className="w-full min-h-touch pl-3 pr-10 bg-surface-warm border border-border rounded-input text-meta font-semibold text-text-primary"
+                  className="w-full h-9 pl-2.5 pr-8 bg-slate-50 border border-slate-300 rounded font-mono text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#2E5339]"
                   placeholder="Batch (opsional)"
                 />
                 {batchesForSku.length > 0 && (
@@ -378,49 +372,42 @@ export default function AddHistoryEntryModal({
                     type="button"
                     onClick={() => {
                       const next =
-                        filteredBatches[(filteredBatches.indexOf(batch) + 1) % filteredBatches.length];
+                        filteredBatches[
+                          (filteredBatches.indexOf(batch) + 1) % filteredBatches.length
+                        ];
                       setBatch(next);
                     }}
-                    className="absolute right-0.5 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-text-secondary hover:text-primary active:scale-95 transition"
+                    className="absolute right-0.5 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-slate-500 hover:text-[#2E5339]"
                     aria-label="Pilih batch yang ada"
                   >
-                    <svg
-                      className="w-4 h-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
+                    <ChevronDownIcon className="w-3.5 h-3.5" />
                   </button>
-                )}
-
-                {batchesForSku.length > 0 && (
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {filteredBatches.slice(0, 4).map((b) => (
-                      <button
-                        key={b}
-                        type="button"
-                        onClick={() => setBatch(b)}
-                        className={`min-h-touch px-3 rounded-label text-meta font-bold border ${
-                          batch === b
-                            ? "bg-primary text-ivory border-primary"
-                            : "bg-surface-warm text-text-primary border-border"
-                        }`}
-                      >
-                        {b}
-                      </button>
-                    ))}
-                  </div>
                 )}
               </div>
             </Field>
           </div>
 
-          {/* Quantity */}
-          <div>
-            <p className="text-meta font-bold text-text-primary mb-1">Quantity</p>
+          {batchesForSku.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {filteredBatches.slice(0, 5).map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => setBatch(b)}
+                  className={`h-6 px-2 rounded font-mono text-[11px] font-semibold border transition ${
+                    batch === b
+                      ? "bg-[#2E5339] text-white border-[#2E5339]"
+                      : "bg-[#EAF2EB] text-[#2E5339] border-[#BDD7C4] hover:bg-[#D6E8DC]"
+                  }`}
+                >
+                  {b}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="pt-1 border-t border-slate-200">
+            <p className="text-xs font-semibold text-slate-700 mb-1">Quantity</p>
             <QtyInput
               value={quantity}
               onChange={(v) => {
@@ -431,15 +418,13 @@ export default function AddHistoryEntryModal({
               wide
               ariaLabel="Kuantitas produk"
             />
-            {errors.qty && <p className="text-danger text-meta mt-1">{errors.qty}</p>}
+            {errors.qty && <p className="text-[#DC2626] text-[11px] font-semibold mt-1">{errors.qty}</p>}
             {formula && (
-              <p className="inline-flex items-center gap-1 text-meta text-amber-text mt-1.5 font-bold tnum">
-                <CalculatorIcon className="w-4 h-4" aria-hidden="true" /> Rumus: {formula}
+              <p className="inline-flex items-center gap-1 text-xs text-[#2E5339] mt-1 font-mono font-bold tnum">
+                <CalculatorIcon className="w-3.5 h-3.5" aria-hidden="true" /> Rumus: {formula}
               </p>
             )}
           </div>
-
-          <p className="text-meta text-text-secondary">Produk baru akan ditambahkan ke Master Data lokasi saat tersinkron.</p>
         </div>
       </Dialog>
 

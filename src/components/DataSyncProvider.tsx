@@ -258,19 +258,87 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
         </div>
       )}
 
-      {user && <div className={`mobile-sync-status border-b px-4 py-1.5 ${queueError || syncProgress.status === 'error' ? 'bg-amber-bg border-amber-text/30' : 'bg-surface-warm border-border'}`} role="status" aria-live="polite">
-        <div className="mx-auto max-w-[480px] flex flex-wrap items-center justify-between gap-2 text-meta">
-          <div>
-            <p className="font-bold">{!queueReady ? 'Memeriksa status' : queueError ? 'Gagal kirim' : pending ? (offline ? 'Tersimpan di perangkat' : 'Menunggu kirim') : syncProgress.status === 'syncing' ? 'Mengunduh data' : syncProgress.status === 'error' ? 'Gagal unduh data' : isReady ? (offline ? 'Tersimpan di perangkat' : 'Tersinkron') : 'Menyiapkan data'} <span className="font-normal">· {offline ? 'Offline' : 'Online'}{testingOffline ? ' (uji)' : ''}</span></p>
-            <p className="text-meta text-text-secondary">{pending ? `${pending} perubahan belum terkirim. ` : ''}{lastSyncTime ? `Data diperbarui ${new Date(lastSyncTime).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'Belum ada unduhan lengkap'}</p>
+      {user && (
+        <div
+          className={`mobile-sync-status border-b px-3 h-6 flex items-center justify-between text-[11px] transition-colors ${
+            queueError || syncProgress.status === "error"
+              ? "bg-amber-50 border-amber-200 text-amber-800"
+              : "bg-slate-100/90 border-slate-200 text-slate-600"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="mx-auto max-w-md w-full flex items-center justify-between gap-2 min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0 truncate">
+              <span
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                  queueError || syncProgress.status === "error"
+                    ? "bg-[#DC2626]"
+                    : pending || offline || testingOffline
+                    ? "bg-[#D97706]"
+                    : syncProgress.status === "syncing"
+                    ? "bg-blue-600 animate-pulse"
+                    : "bg-[#16A34A]"
+                }`}
+              />
+              <span className="font-semibold truncate">
+                {!queueReady
+                  ? "Cek status…"
+                  : queueError
+                  ? "Gagal kirim"
+                  : pending
+                  ? offline
+                    ? `${pending} tersimpan di HP`
+                    : `${pending} belum terkirim`
+                  : syncProgress.status === "syncing"
+                  ? "Sinkron…"
+                  : syncProgress.status === "error"
+                  ? "Gagal unduh"
+                  : offline
+                  ? "Tersimpan di HP"
+                  : "Tersinkron"}
+              </span>
+              <span className="text-slate-400">·</span>
+              <span className="text-slate-500 truncate">
+                {offline ? "Offline" : "Online"}
+                {testingOffline ? " (uji)" : ""}
+              </span>
+              {lastSyncTime && (
+                <>
+                  <span className="text-slate-300">·</span>
+                  <span className="font-mono text-[10px] text-slate-500 tabular-nums tnum">
+                    {new Date(lastSyncTime).toLocaleTimeString("id-ID", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              {pending > 0 && !offline && (
+                <button
+                  type="button"
+                  className="h-5 px-1.5 bg-[#2E5339] hover:bg-[#3D6E4C] text-white rounded text-[10px] font-semibold transition"
+                  onClick={() => void flushPendingWrites()}
+                >
+                  Kirim ({pending})
+                </button>
+              )}
+              {syncProgress.status === "error" && !offline && (
+                <button
+                  type="button"
+                  className="h-5 px-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded text-[10px] font-semibold transition"
+                  onClick={() => void forceSync()}
+                >
+                  Coba lagi
+                </button>
+              )}
+            </div>
           </div>
-          {pending > 0 && !offline && <button className="min-h-touch px-3 border border-border rounded-input font-bold" onClick={() => void flushPendingWrites()}>Kirim ulang</button>}
-          {syncProgress.status === 'error' && !offline && <button className="min-h-touch px-3 border border-border rounded-input font-bold" onClick={() => void forceSync()}>Coba unduh lagi</button>}
         </div>
-        {queueError && <p className="mx-auto max-w-[480px] text-sm text-danger break-words">{queueError}. Data tetap tersimpan di perangkat.</p>}
-        {isReady && syncProgress.status === 'error' && <p className="mx-auto max-w-[480px] text-sm text-danger break-words">{syncProgress.error}</p>}
-        {isReady && syncProgress.status === 'syncing' && <p className="mx-auto max-w-[480px] text-sm">{syncProgress.step}</p>}
-      </div>}
+      )}
       {children}
     </DataSyncContext.Provider>
   );

@@ -12,14 +12,10 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        /* Inter = UI sans; JetBrains Mono = kode lokasi/SKU/batch/angka (.tnum) */
         sans: ["var(--font-inter)", "Arial", "sans-serif"],
         mono: ["var(--font-jetbrains)", "Consolas", "monospace"],
       },
       colors: {
-        /* Warna memakai bentuk kanal (--x-rgb) supaya kelas opacity Tailwind
-           (mis. border-primary/25, text-ivory/80) benar-benar menghasilkan CSS. */
-        /* Palet inti "Label Rak Operasional" */
         espresso: ch("espresso"),
         cocoa: ch("cocoa"),
         ivory: ch("ivory"),
@@ -29,8 +25,6 @@ const config: Config = {
           text: ch("amber-text"),
           bg: ch("warning"),
         },
-
-        /* Warna semantik */
         success: {
           DEFAULT: ch("success"),
           bg: ch("success-bg"),
@@ -43,8 +37,6 @@ const config: Config = {
           DEFAULT: ch("info"),
           bg: ch("info-bg"),
         },
-
-        /* Alias yang sudah dipakai luas di aplikasi */
         primary: {
           DEFAULT: ch("primary"),
           light: ch("primary-light"),
@@ -71,32 +63,28 @@ const config: Config = {
         border: {
           DEFAULT: ch("border"),
           subtle: ch("border-subtle"),
-          /* batas kontrol form: >= 3:1 terhadap kartu dan isi field */
           input: ch("border-input"),
         },
       },
       fontSize: {
-        /* Skala minimum: 16px isi/form, 14px metadata */
-        meta: ["0.875rem", { lineHeight: "1.35" }],
-        base2: ["1rem", { lineHeight: "1.45" }],
+        meta: ["0.75rem", { lineHeight: "1.35" }],
+        base2: ["0.875rem", { lineHeight: "1.4" }],
       },
       boxShadow: {
-        card: "0 1px 3px rgba(45, 30, 20, 0.08), 0 4px 14px rgba(45, 30, 20, 0.06)",
-        subtle: "0 1px 2px rgba(45, 30, 20, 0.05)",
-        bar: "0 -4px 20px rgba(45, 30, 20, 0.08)",
-        sheet: "0 -8px 40px rgba(30, 20, 12, 0.25)",
+        card: "none",
+        subtle: "none",
+        bar: "none",
+        sheet: "0 -4px 20px rgba(15, 23, 42, 0.15)",
       },
       borderRadius: {
-        /* Radius berbeda berdasar fungsi: input 10px, kartu 14px,
-           lembar/sheet 20px, chip/badge/status pill penuh. */
-        input: "0.625rem",
-        card: "0.875rem",
-        sheet: "1.25rem",
-        label: "9999px",
+        input: "0.25rem", /* 4px */
+        card: "0.375rem", /* 6px */
+        sheet: "0.5rem", /* 8px */
+        label: "0.25rem", /* 4px */
       },
       minHeight: {
-        touch: "2.75rem", /* 44px */
-        touchLg: "3rem", /* 48px */
+        touch: "2.25rem", /* 36px (h-9 compact) */
+        touchLg: "2.5rem", /* 40px (h-10) */
       },
     },
   },

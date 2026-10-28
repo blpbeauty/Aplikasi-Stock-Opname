@@ -7,9 +7,6 @@ import { Toaster } from "react-hot-toast";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import InstallPrompt from "@/components/InstallPrompt";
 
-/* Font di-host lokal agar konsisten saat offline (kondisi gudang).
-   Inter: sans modern untuk UI; JetBrains Mono: kode lokasi, SKU, batch,
-   dan angka jumlah — pasangan font dengan digit tabular. */
 const inter = localFont({
   src: "../fonts/inter-latin-variable.woff2",
   weight: "400 700",
@@ -29,16 +26,15 @@ const jetbrainsMono = localFont({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#7d4e38",
+  themeColor: "#2e5339",
   width: "device-width",
   initialScale: 1,
-  // Pinch zoom sengaja TIDAK dibatasi agar pengguna bisa memperbesar teks.
   userScalable: true,
 };
 
 export const metadata: Metadata = {
-  title: "Stock Opname App",
-  description: "Aplikasi Stock Opname Gudang",
+  title: "BLP Stock Opname",
+  description: "Aplikasi Stock Opname Gudang BLP Beauty",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -62,7 +58,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body
-        className={`${inter.className} bg-[var(--primary-bg)] text-text-primary text-base2`}
+        className={`${inter.className} bg-[#F8FAFC] text-[#0F172A] text-sm antialiased`}
       >
         <AuthProvider>
           <DataSyncProvider>

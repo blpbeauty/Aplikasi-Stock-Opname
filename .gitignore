@@ -43,3 +43,6 @@ hist_head_tmp.tsx
 /public/offline-assets.js
 
 .agents/
+
+.kilo/
+brag-output/

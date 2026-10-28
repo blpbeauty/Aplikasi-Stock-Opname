@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { Field } from "@/components/ui";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -13,7 +12,6 @@ export default function LoginPage() {
   const { login, user } = useAuth();
   const router = useRouter();
 
-  // Redirect already logged-in users to scan page
   useEffect(() => {
     if (user) {
       router.push("/scan");
@@ -40,56 +38,79 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen min-h-dvh flex items-center justify-center p-4 bg-ivory">
-      <div className="w-full max-w-sm">
-        {/* Location-band sebagai identitas aplikasi */}
-        <div className="location-band mb-6" aria-hidden="true">
-          <p className="location-band-code">Stock Opname</p>
-          <p className="location-band-sub">Gudang BLP</p>
+    <div className="max-w-md mx-auto min-h-dvh flex flex-col justify-center p-4 bg-[#F8FAFC] text-[#0F172A] border-x border-slate-200 font-sans antialiased">
+      <div className="w-full max-w-sm mx-auto space-y-3">
+        {/* Industrial Deep Pistachio Terminal Header Strip */}
+        <div className="bg-[#2E5339] text-white rounded px-3.5 py-2.5 flex items-center justify-between border border-[#203B28]">
+          <div>
+            <span className="font-mono text-xs font-bold tracking-wider uppercase block">
+              BLP STOCK OPNAME
+            </span>
+            <span className="text-[11px] text-emerald-200/90">
+              Warehouse Inventory Terminal
+            </span>
+          </div>
+          <span className="font-mono text-[10px] font-bold bg-white/15 border border-white/25 px-1.5 py-0.5 rounded text-white">
+            v2.5
+          </span>
         </div>
 
-        <div className="bg-paper rounded-card border border-border shadow-card p-6">
-          <h1 className="text-lg font-bold text-text-primary tracking-tight">
-            Masuk Operator
-          </h1>
-          <p className="text-meta text-text-secondary mt-1 mb-5">
-            Masuk untuk memulai penghitungan stok.
-          </p>
+        <div className="bg-white rounded border border-slate-200 p-4 space-y-3.5">
+          <div>
+            <h1 className="text-sm font-bold text-slate-900">
+              Autentikasi Operator
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Masuk untuk memulai sesi penghitungan rak gudang.
+            </p>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate={false}>
-            <Field id="login-email" label="Email Operator" required>
+          <form onSubmit={handleSubmit} className="space-y-3" noValidate={false}>
+            <div>
+              <label
+                htmlFor="login-email"
+                className="block text-xs font-semibold text-slate-700 mb-1"
+              >
+                Email Operator <span className="text-[#DC2626]">*</span>
+              </label>
               <input
                 id="login-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full min-h-touch px-3.5 bg-surface-warm border border-border rounded-input focus:bg-paper text-base2 text-text-primary transition"
-                placeholder="nama@perusahaan.com"
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-300 rounded focus:bg-white focus:outline-none focus:border-[#2E5339] text-sm text-slate-900 font-mono transition-colors"
+                placeholder="operator@blpbeauty.com"
                 required
                 disabled={loading}
                 autoComplete="email"
                 inputMode="email"
               />
-            </Field>
+            </div>
 
-            <Field id="login-password" label="Kata Sandi" required>
+            <div>
+              <label
+                htmlFor="login-password"
+                className="block text-xs font-semibold text-slate-700 mb-1"
+              >
+                Kata Sandi <span className="text-[#DC2626]">*</span>
+              </label>
               <input
                 id="login-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full min-h-touch px-3.5 bg-surface-warm border border-border rounded-input focus:bg-paper text-base2 text-text-primary transition"
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-300 rounded focus:bg-white focus:outline-none focus:border-[#2E5339] text-sm text-slate-900 transition-colors"
                 placeholder="••••••••"
                 required
                 disabled={loading}
                 autoComplete="current-password"
               />
-            </Field>
+            </div>
 
             {error && (
               <div
                 role="alert"
-                className="bg-danger-bg border border-danger/30 text-danger px-3.5 py-2.5 rounded-input text-meta font-semibold"
+                className="bg-red-50 border border-red-200 border-l-4 border-l-[#DC2626] text-[#DC2626] px-3 py-2 rounded text-xs font-semibold"
               >
                 {error}
               </div>
@@ -98,16 +119,12 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full min-h-touch bg-primary text-ivory rounded-input font-bold text-base2 transition disabled:opacity-50 active:scale-[0.98] mt-1"
+              className="w-full h-10 bg-[#2E5339] hover:bg-[#3D6E4C] active:bg-[#203B28] text-white rounded font-semibold text-sm transition-colors disabled:opacity-50"
             >
-              {loading ? "Memproses…" : "Masuk"}
+              {loading ? "Memverifikasi…" : "Masuk Terminal"}
             </button>
           </form>
         </div>
-
-        <p className="text-center text-meta text-text-secondary mt-6">
-          BLP Stock Opname
-        </p>
       </div>
     </div>
   );
