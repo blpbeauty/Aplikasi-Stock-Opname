@@ -242,16 +242,16 @@ export default function HistoryPage() {
       return ts >= minTimestamp;
     });
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
+    const trimmedQuery = String(searchQuery || "").trim().toLowerCase();
+    if (trimmedQuery) {
       result = result.filter(
         (e) =>
-          String(e.productName || "").toLowerCase().includes(q) ||
-          String(e.sku || "").toLowerCase().includes(q) ||
-          String(e.batch || "").toLowerCase().includes(q) ||
-          String(e.location || "").toLowerCase().includes(q) ||
-          String(e.operator || "").toLowerCase().includes(q) ||
-          String(e.formula || "").toLowerCase().includes(q)
+          String(e.productName || "").toLowerCase().includes(trimmedQuery) ||
+          String(e.sku || "").toLowerCase().includes(trimmedQuery) ||
+          String(e.batch || "").toLowerCase().includes(trimmedQuery) ||
+          String(e.location || "").toLowerCase().includes(trimmedQuery) ||
+          String(e.operator || "").toLowerCase().includes(trimmedQuery) ||
+          String(e.formula || "").toLowerCase().includes(trimmedQuery)
       );
     }
 
@@ -302,7 +302,7 @@ export default function HistoryPage() {
   }, [filteredHistory, groupedHistory]);
 
   const isGroupExpanded = (loc: string) => {
-    if (searchQuery.trim()) return true;
+    if (String(searchQuery || "").trim()) return true;
     return expandedGroups.has(loc);
   };
 

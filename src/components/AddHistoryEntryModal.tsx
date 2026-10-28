@@ -68,19 +68,19 @@ export default function AddHistoryEntryModal({
   }, [isOpen, initialLocation]);
 
   const batchesForSku = useMemo(() => {
-    const skuVal = sku.trim().toLowerCase();
+    const skuVal = String(sku || "").trim().toLowerCase();
     if (!skuVal || !allProducts) return [];
     const batchSet = new Set<string>();
     allProducts.forEach((p) => {
-      if (p.sku.trim().toLowerCase() === skuVal && p.batch) {
-        batchSet.add(p.batch);
+      if (p && String(p.sku || "").trim().toLowerCase() === skuVal && p.batch) {
+        batchSet.add(String(p.batch));
       }
     });
     return Array.from(batchSet).sort();
   }, [sku, allProducts]);
 
   const filteredBatches = useMemo(() => {
-    const q = batch.trim().toLowerCase();
+    const q = String(batch || "").trim().toLowerCase();
     if (!q) return batchesForSku;
     if (batchesForSku.some((b) => b.toLowerCase() === q)) return batchesForSku;
     return batchesForSku.filter((b) => b.toLowerCase().includes(q));
@@ -128,10 +128,10 @@ export default function AddHistoryEntryModal({
   };
 
   const handleSubmit = async () => {
-    const targetLoc = location.trim().toUpperCase();
-    const targetName = productName.trim();
-    const targetSku = sku.trim();
-    const targetBatch = batch.trim();
+    const targetLoc = String(location || "").trim().toUpperCase();
+    const targetName = String(productName || "").trim();
+    const targetSku = String(sku || "").trim();
+    const targetBatch = String(batch || "").trim();
 
     const nextErrors: typeof errors = {};
     if (!targetLoc) nextErrors.location = "Lokasi wajib diisi";

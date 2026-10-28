@@ -146,25 +146,25 @@ function InputPageContent() {
 
   // Get unique batches for current SKU
   const batchesForSku = useMemo(() => {
-    const sku = newProductForm.sku.trim().toLowerCase();
+    const sku = String(newProductForm.sku || "").trim().toLowerCase();
     if (!sku) return [];
     const all = allProductsRef.current || [];
     const batchSet = new Set<string>();
     all.forEach((p) => {
-      if (p.sku.trim().toLowerCase() === sku && p.batch) {
-        batchSet.add(p.batch);
+      if (p && String(p.sku || "").trim().toLowerCase() === sku && p.batch) {
+        batchSet.add(String(p.batch));
       }
     });
     products.forEach((p) => {
-      if (p.sku.trim().toLowerCase() === sku && p.batch) {
-        batchSet.add(p.batch);
+      if (p && String(p.sku || "").trim().toLowerCase() === sku && p.batch) {
+        batchSet.add(String(p.batch));
       }
     });
     return Array.from(batchSet).sort();
   }, [newProductForm.sku, products]);
 
   const filteredBatches = useMemo(() => {
-    const q = newProductForm.batch.trim().toLowerCase();
+    const q = String(newProductForm.batch || "").trim().toLowerCase();
     if (!q) return batchesForSku;
     if (batchesForSku.some((b) => b.toLowerCase() === q)) return batchesForSku;
     return batchesForSku.filter((b) => b.toLowerCase().includes(q));
@@ -177,12 +177,12 @@ function InputPageContent() {
     const all = allProductsRef.current || [];
     const batchSet = new Set<string>();
     all.forEach((p) => {
-      if (String(p.sku).trim().toLowerCase() === sku && p.batch) {
+      if (p && String(p.sku || "").trim().toLowerCase() === sku && p.batch) {
         batchSet.add(String(p.batch));
       }
     });
     [...products, ...newProducts].forEach((p) => {
-      if (String(p.sku).trim().toLowerCase() === sku && p.batch) {
+      if (p && String(p.sku || "").trim().toLowerCase() === sku && p.batch) {
         batchSet.add(String(p.batch));
       }
     });
@@ -190,7 +190,7 @@ function InputPageContent() {
   }, [editingBatchSku, products, newProducts]);
 
   const inlineFilteredBatches = useMemo(() => {
-    const q = editingBatchValue.trim().toLowerCase();
+    const q = String(editingBatchValue || "").trim().toLowerCase();
     if (!q) return inlineBatchesForSku;
     if (inlineBatchesForSku.some((b) => b.toLowerCase() === q)) return inlineBatchesForSku;
     return inlineBatchesForSku.filter((b) => b.toLowerCase().includes(q));
@@ -480,8 +480,8 @@ function InputPageContent() {
       const all = [...products, ...newProducts];
       const matchIdx = all.findIndex(
         (p) =>
-          (p.barcode && String(p.barcode).trim().toLowerCase() === cleanCode.toLowerCase()) ||
-          String(p.sku).trim().toLowerCase() === cleanCode.toLowerCase()
+          (p?.barcode && String(p.barcode).trim().toLowerCase() === cleanCode.toLowerCase()) ||
+          String(p?.sku || "").trim().toLowerCase() === cleanCode.toLowerCase()
       );
       if (matchIdx !== -1) {
         const matched = all[matchIdx];
@@ -548,12 +548,12 @@ function InputPageContent() {
     }
 
     const all = [...products, ...newProducts];
-    const targetSku = newProductForm.sku.trim().toLowerCase();
+    const targetSku = String(newProductForm.sku || "").trim().toLowerCase();
     const targetBatch = batchValue.trim().toLowerCase();
     const existingIndex = all.findIndex(
       (p) =>
-        p.sku.trim().toLowerCase() === targetSku &&
-        String(p.batch || "").trim().toLowerCase() === targetBatch
+        String(p?.sku || "").trim().toLowerCase() === targetSku &&
+        String(p?.batch || "").trim().toLowerCase() === targetBatch
     );
     if (existingIndex !== -1) {
       toast.error("Produk dengan SKU dan Batch ini sudah ada di daftar. Silakan edit kuantitasnya langsung.");
@@ -748,22 +748,22 @@ function InputPageContent() {
     try {
       const dupMap = new Map<string, DuplicateMatch>();
       dups.forEach((d) => {
-        const k = `${d.item.sku.trim().toLowerCase()}__${String(d.item.batch || "").trim().toLowerCase()}`;
+        const k = `${String(d.item?.sku || "").trim().toLowerCase()}__${String(d.item?.batch || "").trim().toLowerCase()}`;
         dupMap.set(k, d);
       });
 
       const itemsToUpdate = items.filter((item) => {
-        const k = `${item.sku.trim().toLowerCase()}__${String(item.batch || "").trim().toLowerCase()}`;
+        const k = `${String(item?.sku || "").trim().toLowerCase()}__${String(item?.batch || "").trim().toLowerCase()}`;
         return dupMap.has(k);
       });
 
       const itemsToInsert = items.filter((item) => {
-        const k = `${item.sku.trim().toLowerCase()}__${String(item.batch || "").trim().toLowerCase()}`;
+        const k = `${String(item?.sku || "").trim().toLowerCase()}__${String(item?.batch || "").trim().toLowerCase()}`;
         return !dupMap.has(k);
       });
 
       for (const item of itemsToUpdate) {
-        const k = `${item.sku.trim().toLowerCase()}__${String(item.batch || "").trim().toLowerCase()}`;
+        const k = `${String(item?.sku || "").trim().toLowerCase()}__${String(item?.batch || "").trim().toLowerCase()}`;
         const match = dupMap.get(k)!;
 
         if (match.existing.isPending && match.existing.pendingJobId) {
@@ -772,8 +772,8 @@ function InputPageContent() {
           if (targetJob && Array.isArray(targetJob.data.items)) {
             const itemIdx = targetJob.data.items.findIndex(
               (p: any) =>
-                String(p.sku || "").trim().toLowerCase() === item.sku.trim().toLowerCase() &&
-                String(p.batch || "").trim().toLowerCase() === String(item.batch || "").trim().toLowerCase()
+                String(p?.sku || "").trim().toLowerCase() === String(item?.sku || "").trim().toLowerCase() &&
+                String(p?.batch || "").trim().toLowerCase() === String(item?.batch || "").trim().toLowerCase()
             );
             if (itemIdx !== -1) {
               targetJob.data.items[itemIdx].qty = item.qty;
@@ -914,10 +914,10 @@ function InputPageContent() {
       .filter(({ product, isNew }) => {
         if (q) {
           const matchesText =
-            product.productName.toLowerCase().includes(q) ||
-            product.sku.toLowerCase().includes(q) ||
-            String(product.batch).toLowerCase().includes(q) ||
-            String(product.barcode || "").toLowerCase().includes(q);
+            String(product?.productName || "").toLowerCase().includes(q) ||
+            String(product?.sku || "").toLowerCase().includes(q) ||
+            String(product?.batch || "").toLowerCase().includes(q) ||
+            String(product?.barcode || "").toLowerCase().includes(q);
           if (!matchesText) return false;
         }
         const k = productKey(product.sku, product.batch);

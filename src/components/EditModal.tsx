@@ -53,19 +53,19 @@ export default function EditModal({
   }>({});
 
   const batchesForSku = useMemo(() => {
-    const skuVal = sku.trim().toLowerCase();
+    const skuVal = String(sku || "").trim().toLowerCase();
     if (!skuVal || !allProducts) return [];
     const batchSet = new Set<string>();
     allProducts.forEach((p) => {
-      if (p.sku.trim().toLowerCase() === skuVal && p.batch) {
-        batchSet.add(p.batch);
+      if (p && String(p.sku || "").trim().toLowerCase() === skuVal && p.batch) {
+        batchSet.add(String(p.batch));
       }
     });
     return Array.from(batchSet).sort();
   }, [sku, allProducts]);
 
   const filteredBatches = useMemo(() => {
-    const q = batch.trim().toLowerCase();
+    const q = String(batch || "").trim().toLowerCase();
     if (!q) return batchesForSku;
     if (batchesForSku.some((b) => b.toLowerCase() === q)) return batchesForSku;
     return batchesForSku.filter((b) => b.toLowerCase().includes(q));
@@ -128,25 +128,30 @@ export default function EditModal({
   };
 
   const locChanged =
-    location.trim().toUpperCase() !== entry.location.trim().toUpperCase();
+    String(location || "").trim().toUpperCase() !== String(entry?.location || "").trim().toUpperCase();
 
   const handleSave = () => {
     if (invalidQuantity) return;
     const nextErrors: typeof errors = {};
-    if (!productName.trim()) nextErrors.name = "Nama produk wajib diisi";
-    if (!sku.trim()) nextErrors.sku = "SKU wajib diisi";
-    if (locChanged && !location.trim())
+    const trimmedName = String(productName || "").trim();
+    const trimmedSku = String(sku || "").trim();
+    const trimmedBatch = String(batch || "").trim();
+    const trimmedLoc = String(location || "").trim().toUpperCase();
+
+    if (!trimmedName) nextErrors.name = "Nama produk wajib diisi";
+    if (!trimmedSku) nextErrors.sku = "SKU wajib diisi";
+    if (locChanged && !trimmedLoc)
       nextErrors.location = "Lokasi tidak boleh kosong";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
     onSave({
       newQty: quantity,
-      productName: productName.trim(),
-      sku: sku.trim(),
-      batch: batch.trim(),
+      productName: trimmedName,
+      sku: trimmedSku,
+      batch: trimmedBatch,
       formula,
-      location: locChanged ? location.trim().toUpperCase() : undefined,
+      location: locChanged ? trimmedLoc : undefined,
     });
   };
 

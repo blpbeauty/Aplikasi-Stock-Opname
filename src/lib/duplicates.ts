@@ -46,7 +46,7 @@ export function findDuplicates(
   const matches: DuplicateMatch[] = [];
 
   for (const item of itemsToSave) {
-    const itemSku = item.sku.trim().toLowerCase();
+    const itemSku = String(item?.sku || "").trim().toLowerCase();
     const itemBatch = String(item.batch || "").trim().toLowerCase();
 
     // 1. Check pending writes in queue (most recent unsynced operations)
