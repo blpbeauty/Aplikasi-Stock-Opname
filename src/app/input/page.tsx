@@ -11,6 +11,7 @@ import MoveSheet from "@/components/MoveSheet";
 import QtyInput, { calcExpr } from "@/components/QtyInput";
 import ConfirmModal from "@/components/ConfirmModal";
 import DuplicateWarningModal from "@/components/DuplicateWarningModal";
+import BatchPickerModal from "@/components/BatchPickerModal";
 import { Dialog, EmptyState, Field } from "@/components/ui";
 import Autocomplete from "@/components/Autocomplete";
 import {
@@ -100,18 +101,15 @@ function InputPageContent() {
   const [newProductFormula, setNewProductFormula] = useState("");
   const [savingMasterData, setSavingMasterData] = useState(false);
 
-  // Inline batch editing
-  const [editingBatchKey, setEditingBatchKey] = useState<string | null>(null);
-  const [editingBatchValue, setEditingBatchValue] = useState("");
-  const [editingBatchSku, setEditingBatchSku] = useState("");
-
-  // Batch dropdown (add form)
-  const [showBatchDropdown, setShowBatchDropdown] = useState(false);
-  const batchDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Batch dropdown (inline edit)
-  const [showInlineBatchDropdown, setShowInlineBatchDropdown] = useState(false);
-  const inlineBatchDropdownRef = useRef<HTMLDivElement>(null);
+  // Pop-up Pilih Batch (Model Chip) untuk baris produk di lokasi & untuk Tambah Produk Baru
+  const [batchModalTarget, setBatchModalTarget] = useState<{
+    productName: string;
+    sku: string;
+    batch: string;
+    isNew: boolean;
+  } | null>(null);
+  const [showAddFormBatchModal, setShowAddFormBatchModal] = useState(false);
+  const [masterDataTick, setMasterDataTick] = useState(0);
 
   // Move location (shared MoveSheet)
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -144,35 +142,9 @@ function InputPageContent() {
     barcode: String(p.barcode ?? ""),
   });
 
-  // Get unique batches for current SKU
+  // Get unique batches for current SKU (Tambah Produk Baru)
   const batchesForSku = useMemo(() => {
     const sku = String(newProductForm.sku || "").trim().toLowerCase();
-    if (!sku) return [];
-    const all = allProductsRef.current || [];
-    const batchSet = new Set<string>();
-    all.forEach((p) => {
-      if (p && String(p.sku || "").trim().toLowerCase() === sku && p.batch) {
-        batchSet.add(String(p.batch));
-      }
-    });
-    products.forEach((p) => {
-      if (p && String(p.sku || "").trim().toLowerCase() === sku && p.batch) {
-        batchSet.add(String(p.batch));
-      }
-    });
-    return Array.from(batchSet).sort();
-  }, [newProductForm.sku, products]);
-
-  const filteredBatches = useMemo(() => {
-    const q = String(newProductForm.batch || "").trim().toLowerCase();
-    if (!q) return batchesForSku;
-    if (batchesForSku.some((b) => b.toLowerCase() === q)) return batchesForSku;
-    return batchesForSku.filter((b) => b.toLowerCase().includes(q));
-  }, [newProductForm.batch, batchesForSku]);
-
-  // Batches for inline edit
-  const inlineBatchesForSku = useMemo(() => {
-    const sku = String(editingBatchSku || "").trim().toLowerCase();
     if (!sku) return [];
     const all = allProductsRef.current || [];
     const batchSet = new Set<string>();
@@ -187,29 +159,26 @@ function InputPageContent() {
       }
     });
     return Array.from(batchSet).sort();
-  }, [editingBatchSku, products, newProducts]);
+  }, [newProductForm.sku, products, newProducts, masterDataTick]);
 
-  const inlineFilteredBatches = useMemo(() => {
-    const q = String(editingBatchValue || "").trim().toLowerCase();
-    if (!q) return inlineBatchesForSku;
-    if (inlineBatchesForSku.some((b) => b.toLowerCase() === q)) return inlineBatchesForSku;
-    return inlineBatchesForSku.filter((b) => b.toLowerCase().includes(q));
-  }, [editingBatchValue, inlineBatchesForSku]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (batchDropdownRef.current && !batchDropdownRef.current.contains(e.target as Node)) {
-        setShowBatchDropdown(false);
+  // Batches for row BatchPickerModal
+  const inlineBatchesForSku = useMemo(() => {
+    const sku = String(batchModalTarget?.sku || "").trim().toLowerCase();
+    if (!sku) return [];
+    const all = allProductsRef.current || [];
+    const batchSet = new Set<string>();
+    all.forEach((p) => {
+      if (p && String(p.sku || "").trim().toLowerCase() === sku && p.batch) {
+        batchSet.add(String(p.batch));
       }
-      if (inlineBatchDropdownRef.current && !inlineBatchDropdownRef.current.contains(e.target as Node)) {
-        setShowInlineBatchDropdown(false);
+    });
+    [...products, ...newProducts].forEach((p) => {
+      if (p && String(p.sku || "").trim().toLowerCase() === sku && p.batch) {
+        batchSet.add(String(p.batch));
       }
-    };
-    if (showBatchDropdown || showInlineBatchDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showBatchDropdown, showInlineBatchDropdown]);
+    });
+    return Array.from(batchSet).sort();
+  }, [batchModalTarget?.sku, products, newProducts, masterDataTick]);
 
   useEffect(() => {
     if (!isReady) return;
@@ -218,12 +187,14 @@ function InputPageContent() {
       const cached = getCache<Product[]>("allProducts");
       if (cached && cached.age < 120) {
         allProductsRef.current = cached.data;
+        setMasterDataTick((t) => t + 1);
       }
       try {
         const result = await getAllProductsApi();
         if (result.success && result.products) {
           allProductsRef.current = result.products;
           setCache("allProducts", result.products);
+          setMasterDataTick((t) => t + 1);
         }
       } catch {}
     };
@@ -242,6 +213,8 @@ function InputPageContent() {
   const fetchProducts = async (ignoreDraft = false) => {
     setDraftReady(false);
     saveFinished.current = false;
+    setExpandedRowKey(null);
+    setBatchModalTarget(null);
     const draft = !ignoreDraft && user?.email ? getDraft(user.email, location) : null;
     if (draft) {
       setProducts(draft.products);
@@ -256,9 +229,6 @@ function InputPageContent() {
       setDraftDirty(true);
       setLoading(false);
       setDraftReady(true);
-      if (draft.products.length > 0) {
-        setExpandedRowKey(productKey(draft.products[0].sku, draft.products[0].batch));
-      }
       return;
     }
     setNewProducts([]);
@@ -279,9 +249,6 @@ function InputPageContent() {
       normalized.forEach((p) => (init[productKey(p.sku, p.batch)] = 0));
       setQuantities(init);
       setLoading(false);
-      if (normalized.length > 0) {
-        setExpandedRowKey(productKey(normalized[0].sku, normalized[0].batch));
-      }
     }
 
     try {
@@ -298,9 +265,6 @@ function InputPageContent() {
           });
           return next;
         });
-        if (normalized.length > 0) {
-          setExpandedRowKey(productKey(normalized[0].sku, normalized[0].batch));
-        }
       } else if (!cached) {
         toast.error(result.message || "Gagal mengambil data produk");
         router.push("/scan");
@@ -443,15 +407,32 @@ function InputPageContent() {
 
   const resolveProductNames = async (query: string): Promise<Product[]> => {
     const q = query.trim().toLowerCase();
+    const dedupBySku = (items: Product[]) => {
+      const seen = new Set<string>();
+      const out: Product[] = [];
+      for (const p of items) {
+        const key = String(p.sku || "").trim().toLowerCase() || String(p.productName || "").trim().toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          out.push(p);
+        }
+        if (out.length >= 10) break;
+      }
+      return out;
+    };
     if (allProductsRef.current) {
-      const filtered = allProductsRef.current
-        .filter((p) => String(p.productName || "").toLowerCase().includes(q))
-        .slice(0, 10);
+      const filtered = dedupBySku(
+        allProductsRef.current.filter(
+          (p) =>
+            String(p.productName || "").toLowerCase().includes(q) ||
+            String(p.sku || "").toLowerCase().includes(q)
+        )
+      );
       if (filtered.length > 0) return filtered;
     }
     try {
       const result = await searchProductsApi(query.trim());
-      return result.success && result.products ? result.products : [];
+      return result.success && result.products ? dedupBySku(result.products) : [];
     } catch {
       return [];
     }
@@ -462,12 +443,20 @@ function InputPageContent() {
       ...prev,
       productName: product.productName,
       sku: product.sku,
-      batch: product.batch,
+      batch: "",
       barcode: product.barcode || prev.barcode,
     }));
-    setTimeout(() => {
-      addFormQtyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 150);
+    // Munculkan pop-up pilih batch (model chip) terlebih dahulu sebelum fokus ke input Qty
+    setShowAddFormBatchModal(true);
+  };
+
+  const handleOpenRowBatchPicker = (product: Product, isNew: boolean) => {
+    setBatchModalTarget({
+      productName: product.productName,
+      sku: product.sku,
+      batch: product.batch,
+      isNew,
+    });
   };
 
   const handleBarcodeScan = async (barcode: string) => {
@@ -485,11 +474,10 @@ function InputPageContent() {
       );
       if (matchIdx !== -1) {
         const matched = all[matchIdx];
-        const k = productKey(matched.sku, matched.batch);
+        const isNew = matchIdx >= products.length;
         setActiveTab("all");
         setFilterQuery("");
-        handleStepQuantity(k, 1);
-        toast.success(`+1 ${matched.productName}`);
+        handleOpenRowBatchPicker(matched, isNew);
         setTimeout(() => {
           const rowEl = productListRef.current?.querySelector(
             `[data-product-idx="${matchIdx}"]`
@@ -510,12 +498,10 @@ function InputPageContent() {
           ...prev,
           productName: result.product!.productName,
           sku: result.product!.sku,
-          batch: result.product!.batch || "",
+          batch: "",
           barcode: cleanCode,
         }));
-        setTimeout(() => {
-          addFormQtyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-        }, 150);
+        setShowAddFormBatchModal(true);
       } else {
         setNewProductForm((prev) => ({ ...prev, barcode: cleanCode }));
         toast.error(result.message || "Produk tidak ditemukan di Master, isi manual");
@@ -533,18 +519,17 @@ function InputPageContent() {
       toast.error("Nama Produk dan SKU harus diisi");
       return;
     }
-    if (newProductForm.qty <= 0) {
-      toast.error("Quantity harus lebih dari 0");
+
+    const batchValue = newProductForm.batch.trim();
+    if (!batchValue) {
+      toast.error("Pilih nomor batch terlebih dahulu");
+      setShowAddFormBatchModal(true);
       return;
     }
 
-    let batchValue = newProductForm.batch.trim();
-    if (!batchValue) {
-      if (batchesForSku.length === 1) batchValue = batchesForSku[0];
-      else if (batchesForSku.length > 1) {
-        toast.error("Produk ini punya beberapa batch di master — pilih salah satu");
-        return;
-      }
+    if (newProductForm.qty <= 0) {
+      toast.error("Quantity harus lebih dari 0");
+      return;
     }
 
     const all = [...products, ...newProducts];
@@ -583,37 +568,49 @@ function InputPageContent() {
     toast.success("Produk ditambahkan ke hitungan");
   };
 
-  const handleBatchEdit = (key: string, currentBatch: string, sku: string) => {
-    setEditingBatchKey(key);
-    setEditingBatchValue(String(currentBatch));
-    setEditingBatchSku(sku);
-    setShowInlineBatchDropdown(true);
-  };
-
   const handleBatchSave = (
     sku: string,
     oldBatch: string,
     isNew: boolean,
-    overrideBatch?: string
+    selectedBatch: string
   ) => {
-    const newBatch = (overrideBatch !== undefined ? overrideBatch : editingBatchValue).trim();
+    const newBatch = selectedBatch.trim().toUpperCase();
     if (!newBatch) {
       toast.error("Batch tidak boleh kosong");
       return;
     }
+
     const all = [...products, ...newProducts];
-    if (
-      all.some(
-        (p) => p.sku === sku && p.batch === newBatch && String(p.batch) !== oldBatch
-      )
-    ) {
+    const oldKey = productKey(sku, oldBatch);
+    const duplicateInLoc = all.some(
+      (p) =>
+        String(p.sku || "").trim().toLowerCase() === String(sku || "").trim().toLowerCase() &&
+        String(p.batch || "").trim().toLowerCase() === newBatch.toLowerCase() &&
+        String(p.batch || "") !== oldBatch
+    );
+
+    if (duplicateInLoc) {
+      // Jika baris asal belum dihitung, langsung arahkan & buka input Qty pada baris batch yang sudah ada di lokasi
+      if (!counted[oldKey]) {
+        setBatchModalTarget(null);
+        const existingKey = productKey(sku, newBatch);
+        setExpandedRowKey(existingKey);
+        setTimeout(() => {
+          const rowEl = productListRef.current?.querySelector(
+            `[data-product-key="${existingKey}"]`
+          ) as HTMLElement | null;
+          rowEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+          const qtyInput = rowEl?.querySelector('input[type="text"]') as HTMLInputElement | null;
+          qtyInput?.focus();
+          qtyInput?.select();
+        }, 120);
+        return;
+      }
       toast.error("Batch tersebut sudah dipakai SKU ini di lokasi");
       return;
     }
-    setEditingBatchKey(null);
-    setEditingBatchValue("");
-    setEditingBatchSku("");
-    setShowInlineBatchDropdown(false);
+
+    setBatchModalTarget(null);
 
     if (newBatch !== oldBatch) {
       if (isNew) {
@@ -626,7 +623,6 @@ function InputPageContent() {
         );
       }
 
-      const oldKey = productKey(sku, oldBatch);
       const newKey = productKey(sku, newBatch);
       setDraftDirty(true);
       if (oldKey !== newKey) {
@@ -653,13 +649,17 @@ function InputPageContent() {
       }
     }
 
-    // Flow otomatis: saat input batch selesai, otomatis pindah & buka input qty produk ini!
+    // Flow otomatis: setelah pilih chip batch di pop-up, langsung buka & fokus ke input Qty!
     const targetKey = productKey(sku, newBatch);
     setExpandedRowKey(targetKey);
     setTimeout(() => {
-      const rowEl = productListRef.current?.querySelector(`[data-product-key="${targetKey}"]`);
+      const rowEl = productListRef.current?.querySelector(
+        `[data-product-key="${targetKey}"]`
+      ) as HTMLElement | null;
+      rowEl?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       const qtyInput = rowEl?.querySelector('input[type="text"]') as HTMLInputElement | null;
       qtyInput?.focus();
+      qtyInput?.select();
     }, 120);
   };
 
@@ -930,29 +930,8 @@ function InputPageContent() {
       });
   }, [allProducts, products.length, filterQuery, activeTab, counted, quantities]);
 
-  const handleNextProduct = (currentVisibleIdx: number) => {
-    if (currentVisibleIdx < visibleProducts.length - 1) {
-      const nextItem = visibleProducts[currentVisibleIdx + 1];
-      const nextKey = productKey(nextItem.product.sku, nextItem.product.batch);
-      // Otomatis buka kalkulator produk selanjutnya
-      setExpandedRowKey(nextKey);
-      setTimeout(() => {
-        const nextCard = productListRef.current?.querySelector(
-          `[data-product-idx="${nextItem.idx}"]`
-        ) as HTMLElement | null;
-        if (nextCard) {
-          nextCard.scrollIntoView({ behavior: "smooth", block: "center" });
-          const nextInput = nextCard.querySelector('input[type="text"]') as HTMLInputElement | null;
-          if (nextInput) {
-            nextInput.focus();
-            nextInput.select();
-          }
-        }
-      }, 150);
-    } else {
-      setExpandedRowKey(null);
-      toast.success("Semua produk di daftar selesai dihitung. Silakan Submit.");
-    }
+  const handleFinishRowQty = () => {
+    setExpandedRowKey(null);
   };
 
   const scrollToNextProduct = (currentGlobalIdx: number) => {
@@ -1311,14 +1290,16 @@ function InputPageContent() {
             )}
           </div>
         ) : (
-          visibleProducts.map(({ product, idx, isNew }, visibleIdx) => {
+          visibleProducts.map(({ product, idx, isNew }) => {
             const k = productKey(product.sku, product.batch);
             const isItemCounted = Boolean(counted[k]);
             const qty = quantities[k] ?? 0;
             const formula = formulas[k] || "";
-            const batchEditId = `${isNew ? "new" : "exist"}-${product.sku}-${product.batch}`;
-            const isEditingBatch = editingBatchKey === batchEditId;
             const isExpanded = expandedRowKey === k;
+            const isBatchModalOpenForRow =
+              batchModalTarget?.sku === product.sku &&
+              batchModalTarget?.batch === product.batch &&
+              batchModalTarget?.isNew === isNew;
 
             // Status visual sesuai palet High Contrast Light Mode:
             // - Belum dihitung: bg-white + border-l-4 #CBD5E1
@@ -1351,13 +1332,22 @@ function InputPageContent() {
                 {/* Main Compact Row (~58px) */}
                 <div className="px-3 py-2 flex items-center justify-between gap-2 min-h-[58px]">
                   {/* Sisi Kiri: Info Barang */}
-                  <div className="min-w-0 flex-1 pr-1.5">
+                  <div
+                    className={`min-w-0 flex-1 pr-1.5 ${
+                      !isItemCounted && !isExpanded ? "cursor-pointer" : ""
+                    }`}
+                    onClick={() => {
+                      if (!isItemCounted && !isExpanded) {
+                        handleOpenRowBatchPicker(product, isNew);
+                      }
+                    }}
+                  >
                     {/* Baris 1: Nama Produk Utama di Atas */}
                     <h3 className="text-sm font-semibold text-[#0F172A] leading-tight break-words">
                       {product.productName}
                     </h3>
 
-                    {/* Baris 2: Titik Status + SKU + Model Chip Batch (seperti Edit History) + Rumus jika ada */}
+                    {/* Baris 2: Titik Status + SKU + Model Chip Batch + Rumus jika ada */}
                     <div className="flex items-center gap-1.5 mt-1 text-xs text-[#475569] leading-none flex-wrap">
                       <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
                       <span className="font-mono text-xs text-[#475569] tabular-nums tnum">
@@ -1365,19 +1355,16 @@ function InputPageContent() {
                       </span>
                       <span className="text-slate-300">•</span>
 
-                      {/* Chip Batch/Lot Model Edit History */}
+                      {/* Chip Batch/Lot — Membuka Pop-up Pilih Batch */}
                       <button
                         type="button"
-                        onClick={() => {
-                          if (isEditingBatch) {
-                            setEditingBatchKey(null);
-                          } else {
-                            handleBatchEdit(batchEditId, product.batch, product.sku);
-                          }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenRowBatchPicker(product, isNew);
                         }}
-                        title="Klik untuk ubah Batch / Lot"
+                        title="Klik untuk pilih / ubah Batch"
                         className={`h-5 px-1.5 rounded font-mono text-[11px] font-semibold border transition flex items-center gap-1 ${
-                          isEditingBatch
+                          isBatchModalOpenForRow
                             ? "bg-[#0D5C63] text-white border-[#0D5C63]"
                             : "bg-[#E6F3F4] text-[#0D5C63] border-[#A8D3D6] hover:bg-[#D0EBED]"
                         }`}
@@ -1412,7 +1399,16 @@ function InputPageContent() {
                   <div className="flex items-center shrink-0">
                     <button
                       type="button"
-                      onClick={() => setExpandedRowKey(isExpanded ? null : k)}
+                      onClick={() => {
+                        if (isExpanded) {
+                          setExpandedRowKey(null);
+                        } else if (!isItemCounted) {
+                          // Belum dihitung: munculkan Pop-up Pilih Batch (Chip) terlebih dahulu sebelum input Qty
+                          handleOpenRowBatchPicker(product, isNew);
+                        } else {
+                          setExpandedRowKey(k);
+                        }
+                      }}
                       className={`h-8 px-2.5 rounded font-mono text-xs font-bold border transition flex items-center justify-center gap-1 tabular-nums tnum shadow-sm active:scale-95 touch-manipulation ${
                         isItemCounted
                           ? "bg-[#E6F3F4] text-[#0D5C63] border-[#A8D3D6] hover:bg-[#D0EBED]"
@@ -1421,7 +1417,7 @@ function InputPageContent() {
                       title={
                         isItemCounted
                           ? `Kuantitas: ${qty} Pcs. Klik untuk buka kalkulator/opsi.`
-                          : "Klik untuk hitung"
+                          : "Klik untuk pilih batch lalu input qty"
                       }
                     >
                       <span>{isItemCounted ? `${qty} Pcs` : "Hitung"}</span>
@@ -1434,67 +1430,6 @@ function InputPageContent() {
                   </div>
                 </div>
 
-                {/* Inline Batch Selector (Model Chip seperti di Edit History) */}
-                {isEditingBatch && (
-                  <div
-                    ref={inlineBatchDropdownRef}
-                    className="px-3 py-2 bg-slate-100/95 border-t border-slate-200 space-y-1.5"
-                  >
-                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                      <span>Pilih Batch / Lot untuk SKU {product.sku}:</span>
-                      <button
-                        type="button"
-                        onClick={() => setEditingBatchKey(null)}
-                        className="text-xs text-slate-500 hover:text-slate-800"
-                      >
-                        Tutup
-                      </button>
-                    </div>
-
-                    {/* Model Chip Batch seperti di Edit History */}
-                    {inlineBatchesForSku.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {inlineBatchesForSku.map((b) => (
-                          <button
-                            key={b}
-                            type="button"
-                            onClick={() => handleBatchSave(product.sku, product.batch, isNew, b)}
-                            className={`h-6 px-2 rounded font-mono text-[11px] font-semibold border transition active:scale-95 ${
-                              product.batch === b
-                                ? "bg-[#0D5C63] text-white border-[#0D5C63]"
-                                : "bg-[#E6F3F4] text-[#0D5C63] border-[#A8D3D6] hover:bg-[#D0EBED]"
-                            }`}
-                          >
-                            {b}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Input manual batch jika batch baru belum ada di daftar chip */}
-                    <div className="flex items-center gap-1.5 pt-1">
-                      <input
-                        type="text"
-                        value={editingBatchValue}
-                        onChange={(e) => setEditingBatchValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleBatchSave(product.sku, product.batch, isNew);
-                          if (e.key === "Escape") setEditingBatchKey(null);
-                        }}
-                        placeholder="Ketik batch baru…"
-                        className="h-7 px-2 flex-1 bg-white border border-slate-300 rounded font-mono text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0D5C63]"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleBatchSave(product.sku, product.batch, isNew)}
-                        className="h-7 px-2.5 bg-[#0D5C63] hover:bg-[#14727A] text-white rounded text-xs font-semibold"
-                      >
-                        OK
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {/* Inline Mini Drawer: Kalkulator Rumus + Tandai 0 + Reset + Hapus */}
                 {isExpanded && (
                   <div className="px-3 py-2 bg-slate-100/90 border-t border-slate-200 space-y-2">
@@ -1504,7 +1439,7 @@ function InputPageContent() {
                       unfilled={!isItemCounted}
                       onChange={(v) => handleQuantityChange(k, v)}
                       onExprCommit={(expr) => handleExprCommit(k, expr)}
-                      onCommit={() => handleNextProduct(visibleIdx)}
+                      onCommit={handleFinishRowQty}
                       ariaLabel={`Kalkulator kuantitas ${product.productName}`}
                     />
                     <div className="flex items-center justify-between gap-1.5 pt-1">
@@ -1513,7 +1448,7 @@ function InputPageContent() {
                           type="button"
                           onClick={() => {
                             handleQuantityChange(k, 0);
-                            handleNextProduct(visibleIdx);
+                            handleFinishRowQty();
                           }}
                           className="h-7 px-2.5 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-700 hover:bg-slate-50"
                         >
@@ -1666,7 +1601,7 @@ function InputPageContent() {
               <>
                 <p className="font-semibold text-slate-900 text-sm">{p.productName}</p>
                 <p className="font-mono text-xs text-slate-500">
-                  SKU: {p.sku} | Batch: {p.batch}
+                  SKU: {p.sku}
                 </p>
               </>
             )}
@@ -1677,7 +1612,7 @@ function InputPageContent() {
             emptyText="Produk tidak ditemukan — isi manual"
           />
 
-          {/* SKU & Batch */}
+          {/* SKU & Nomor Batch (Pop-up Chip) */}
           <div className="grid grid-cols-2 gap-2.5">
             <Field id="add-sku" label="SKU" required>
               <input
@@ -1692,57 +1627,22 @@ function InputPageContent() {
               />
             </Field>
 
-            <Field id="add-batch" label="Batch">
-              <div className="relative" ref={batchDropdownRef}>
-                <input
-                  id="add-batch"
-                  type="text"
-                  value={newProductForm.batch}
-                  onChange={(e) => {
-                    setNewProductForm({ ...newProductForm, batch: e.target.value });
-                    setShowBatchDropdown(true);
-                  }}
-                  onFocus={() => {
-                    if (newProductForm.sku.trim()) setShowBatchDropdown(true);
-                  }}
-                  className="w-full h-10 pl-3 pr-8 bg-slate-50 border border-slate-300 rounded font-mono text-sm font-semibold text-slate-900"
-                  placeholder="Batch…"
-                />
-                {batchesForSku.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowBatchDropdown(!showBatchDropdown)}
-                    className="absolute right-0.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-500"
-                    aria-label="Tampilkan pilihan batch"
-                  >
-                    <ChevronDownIcon className="w-4 h-4" />
-                  </button>
-                )}
-
-                {showBatchDropdown && newProductForm.sku.trim() && (
-                  <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-300 rounded shadow-md max-h-36 overflow-y-auto divide-y divide-slate-100">
-                    {filteredBatches.length > 0 ? (
-                      filteredBatches.map((batch) => (
-                        <button
-                          key={batch}
-                          type="button"
-                          onClick={() => {
-                            setNewProductForm({ ...newProductForm, batch });
-                            setShowBatchDropdown(false);
-                          }}
-                          className="w-full text-left px-3 py-2 font-mono text-xs hover:bg-slate-100"
-                        >
-                          {batch}
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-3 py-2 text-xs text-slate-500">
-                        Batch baru: “{newProductForm.batch.trim()}”
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+            <Field id="add-batch" label="Nomor Batch" required>
+              <button
+                id="add-batch"
+                type="button"
+                onClick={() => setShowAddFormBatchModal(true)}
+                className={`w-full h-10 px-3 rounded border flex items-center justify-between gap-1.5 text-left transition ${
+                  newProductForm.batch.trim()
+                    ? "bg-[#E6F3F4] border-[#0D5C63] text-[#0D5C63] font-mono text-sm font-bold"
+                    : "bg-slate-50 border-slate-300 text-slate-500 text-xs font-medium hover:bg-slate-100"
+                }`}
+              >
+                <span className="truncate">
+                  {newProductForm.batch.trim() || "Pilih Batch..."}
+                </span>
+                <ChevronDownIcon className="w-4 h-4 shrink-0 opacity-75" />
+              </button>
             </Field>
           </div>
 
@@ -1775,13 +1675,11 @@ function InputPageContent() {
                   toast.error("Nama Produk dan SKU harus diisi");
                   return;
                 }
-                let batchValue = newProductForm.batch.trim();
+                const batchValue = newProductForm.batch.trim();
                 if (!batchValue) {
-                  if (batchesForSku.length === 1) batchValue = batchesForSku[0];
-                  else if (batchesForSku.length > 1) {
-                    toast.error("Produk ini punya beberapa batch di master — pilih salah satu");
-                    return;
-                  }
+                  toast.error("Pilih nomor batch terlebih dahulu");
+                  setShowAddFormBatchModal(true);
+                  return;
                 }
                 const targetSku = newProductForm.sku.trim().toLowerCase();
                 const targetBatch = batchValue.trim().toLowerCase();
@@ -1852,6 +1750,47 @@ function InputPageContent() {
           </div>
         </div>
       </Dialog>
+
+      {/* Pop-up Pilih Batch (Model Chip) — untuk baris produk di lokasi */}
+      <BatchPickerModal
+        isOpen={Boolean(batchModalTarget)}
+        onClose={() => setBatchModalTarget(null)}
+        productName={batchModalTarget?.productName || ""}
+        sku={batchModalTarget?.sku || ""}
+        currentBatch={batchModalTarget?.batch || ""}
+        batches={inlineBatchesForSku}
+        onSelectBatch={(selectedBatch) => {
+          if (!batchModalTarget) return;
+          handleBatchSave(
+            batchModalTarget.sku,
+            batchModalTarget.batch,
+            batchModalTarget.isNew,
+            selectedBatch
+          );
+        }}
+      />
+
+      {/* Pop-up Pilih Batch (Model Chip) — untuk form Tambah Produk Baru */}
+      <BatchPickerModal
+        isOpen={showAddFormBatchModal}
+        onClose={() => setShowAddFormBatchModal(false)}
+        productName={newProductForm.productName || "Produk Baru"}
+        sku={newProductForm.sku}
+        currentBatch={newProductForm.batch}
+        batches={batchesForSku}
+        onSelectBatch={(selectedBatch) => {
+          setNewProductForm((prev) => ({ ...prev, batch: selectedBatch }));
+          setShowAddFormBatchModal(false);
+          setTimeout(() => {
+            addFormQtyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            const qtyInput = addFormQtyRef.current?.querySelector(
+              'input[type="text"]'
+            ) as HTMLInputElement | null;
+            qtyInput?.focus();
+            qtyInput?.select();
+          }, 120);
+        }}
+      />
 
       {/* Konfirmasi keluar tanpa menyimpan */}
       <ConfirmModal
