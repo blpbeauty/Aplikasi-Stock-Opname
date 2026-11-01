@@ -46,3 +46,4 @@ hist_head_tmp.tsx
 
 .kilo/
 brag-output/
+.env*
