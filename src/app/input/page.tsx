@@ -1030,219 +1030,235 @@ function InputPageContent() {
   return (
     <div className="max-w-md mx-auto min-h-dvh flex flex-col bg-[#F8FAFC] text-[#0F172A] font-sans antialiased select-none border-x border-slate-200">
       {/* ============================================================== */}
-      {/* 1. COMPACT TOP HEADER (Tinggi ~46px, Sticky - Deep Teal)       */}
+      {/* 1. TOP HEADER & SEARCH PINNED (Sticky)                         */}
       {/* ============================================================== */}
-      <header className="h-11 min-h-[46px] sticky top-0 bg-[#0D5C63] text-white border-b border-[#083B40] px-2.5 flex items-center justify-between gap-2 shrink-0 z-30">
-        {/* Kiri: Back + Kode Lokasi Aktif */}
-        <div className="flex items-center gap-1.5 min-w-0">
-          <button
-            type="button"
-            onClick={handleBackClick}
-            className="w-8 h-8 flex items-center justify-center rounded text-white/90 hover:bg-white/10 active:bg-white/20 transition-colors shrink-0"
-            aria-label="Kembali ke halaman scan"
-            title="Kembali"
-          >
-            <ChevronLeftIcon className="w-5 h-5" />
-          </button>
+      <div className="sticky top-0 z-30 shrink-0 shadow-sm">
+        <header className="bg-[#0D5C63] text-white border-b border-[#083B40]">
+          {/* Baris 1: Navigasi, Status Item & Menu Aksi (~40px) */}
+          <div className="h-10 px-2.5 flex items-center justify-between gap-2 border-b border-white/10">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleBackClick}
+                className="w-7 h-7 flex items-center justify-center rounded text-white/90 hover:bg-white/10 active:bg-white/20 transition-colors shrink-0"
+                aria-label="Kembali ke halaman scan"
+                title="Kembali"
+              >
+                <ChevronLeftIcon className="w-5 h-5" />
+              </button>
+              <span className="font-mono text-xs font-bold text-white tracking-wider uppercase">
+                SO CENTRAL
+              </span>
+            </div>
 
-          <span
-            className="font-mono text-xs font-bold bg-white/15 border border-white/25 text-white px-2 py-0.5 rounded tracking-wide truncate tnum"
-            title={`Lokasi Aktif: ${location}`}
-          >
-            {location}
-          </span>
-        </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="font-mono text-xs font-bold text-teal-100 tabular-nums tnum">
+                <strong className="text-white">{countedCount}</strong>/{allProducts.length}{" "}
+                <span className="font-sans text-[11px] font-medium text-teal-200/80">Item</span>
+              </div>
 
-        {/* Kanan: Progress Counter + Status Jaringan + Menu Tindakan */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="font-mono text-xs font-bold text-white tabular-nums tnum">
-            {countedCount}/{allProducts.length}{" "}
-            <span className="font-sans text-[11px] font-medium text-teal-100/80">Item</span>
+              <span className="text-white/25">|</span>
+
+              <div
+                className="flex items-center gap-1 text-[11px] font-medium text-teal-100/90"
+                title={
+                  draftError
+                    ? draftError
+                    : hasUnsavedChanges
+                    ? "Draft tersimpan lokal di perangkat"
+                    : online
+                    ? "Online"
+                    : "Offline"
+                }
+              >
+                <span
+                  className={`w-2 h-2 rounded-full shrink-0 ${
+                    draftError
+                      ? "bg-red-400"
+                      : online
+                      ? "bg-[#4ADE80]"
+                      : "bg-[#FBBF24]"
+                  }`}
+                />
+                <span className="hidden sm:inline">
+                  {hasUnsavedChanges ? "Tersimpan" : online ? "Online" : "Offline"}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowAddForm(true)}
+                className="h-7 px-2 bg-white/15 hover:bg-white/25 active:bg-white/30 border border-white/25 rounded text-[11px] font-semibold text-white flex items-center gap-1 transition-colors"
+                title="Tambah Produk Baru ke Rak Ini"
+              >
+                <PlusIcon className="w-3.5 h-3.5" />
+                <span>Produk</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowActions(!showActions)}
+                aria-expanded={showActions}
+                aria-label="Menu tindakan lokasi"
+                className="w-7 h-7 bg-white/15 hover:bg-white/25 active:bg-white/30 border border-white/25 rounded text-xs font-bold text-white flex items-center justify-center transition-colors"
+              >
+                ⋯
+              </button>
+            </div>
           </div>
 
-          <span className="text-white/25">|</span>
+          {/* Baris 2: Banner Kode Rak / Lokasi (DEDIKASI PENUH, TIDAK AKAN PERNAH TERPOTONG) */}
+          <div className="px-3 py-1.5 bg-[#083B40] flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              <span className="w-1.5 h-3.5 bg-[#4ADE80] rounded-xs shrink-0" />
+              <span className="text-[10px] font-bold text-teal-200 uppercase tracking-wider shrink-0">
+                LOKASI:
+              </span>
+              <span className="font-mono text-xs sm:text-sm font-bold text-white tracking-wide break-words tnum">
+                {location}
+              </span>
+            </div>
 
+            <div className="text-[11px] font-mono text-teal-200/90 shrink-0">
+              Total: <strong className="text-white font-bold">{totalItems}</strong> Pcs
+            </div>
+          </div>
+        </header>
+
+        {/* Dropdown Tindakan Cepat Lokasi */}
+        {showActions && (
+          <div className="bg-white border-b border-slate-300 px-3 py-2 space-y-1.5 text-xs">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 pb-1 border-b border-slate-100">
+              <span>
+                Total Kuantitas:{" "}
+                <strong className="font-mono font-bold text-slate-900 tnum">{totalItems} Pcs</strong>
+              </span>
+              <span>Operator: {user?.name?.split(" ")[0] || "—"}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+              <button
+                type="button"
+                disabled={hasUnsavedChanges || !products.length}
+                onClick={() => {
+                  setShowMoveModal(true);
+                  setShowActions(false);
+                }}
+                className="h-8 px-2.5 rounded border border-slate-300 bg-slate-50 font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-40 text-left truncate"
+              >
+                ⇄ Pindah ke Rak Lain
+              </button>
+              <button
+                type="button"
+                disabled={!allProducts.length}
+                onClick={() => {
+                  setShowZeroConfirm(true);
+                  setShowActions(false);
+                }}
+                className="h-8 px-2.5 rounded border border-red-200 bg-red-50 font-semibold text-red-700 hover:bg-red-100 disabled:opacity-40 text-left truncate"
+              >
+                ⊘ Set Semua Stok 0
+              </button>
+            </div>
+            {hasUnsavedChanges && (
+              <p className="text-[11px] text-amber-700">
+                * Simpan hitungan terlebih dahulu sebelum memindahkan produk.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Banner Error Draft (Hanya tampil jika ada kendala storage) */}
+        {draftError && (
           <div
-            className="flex items-center gap-1 text-[11px] font-medium text-teal-100/90"
-            title={
-              draftError
-                ? draftError
-                : hasUnsavedChanges
-                ? "Draft tersimpan lokal di perangkat"
-                : online
-                ? "Online"
-                : "Offline"
-            }
+            role="alert"
+            className="bg-red-50 border-b border-red-200 px-3 py-1 text-[11px] font-medium text-red-700"
           >
-            <span
-              className={`w-2 h-2 rounded-full shrink-0 ${
-                draftError
-                  ? "bg-red-400"
-                  : online
-                  ? "bg-[#4ADE80]"
-                  : "bg-[#FBBF24]"
-              }`}
+            {draftError}
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* 2. SEARCH & FILTER BAR PADAT                                   */}
+        {/* ============================================================== */}
+        <div className="bg-white border-b border-slate-200 px-3 py-2 space-y-1.5">
+          {/* Baris 1: Input pencarian tipis (h-9 text-sm) + tombol kamera di dalamnya */}
+          <div className="relative flex items-center">
+            <SearchIcon className="w-4 h-4 text-slate-400 absolute left-2.5 pointer-events-none" />
+            <input
+              ref={searchInputRef}
+              id="input-filter"
+              type="text"
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.target.value)}
+              placeholder="Cari nama / scan SKU..."
+              autoComplete="off"
+              className="w-full h-9 pl-8 pr-16 bg-slate-50 border border-slate-300 rounded text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-900 transition-colors"
             />
-            <span className="hidden xs:inline truncate max-w-[70px]">
-              {hasUnsavedChanges ? "Tersimpan" : online ? "Online" : "Offline"}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowAddForm(true)}
-            className="h-7 px-2 bg-white/15 hover:bg-white/25 active:bg-white/30 border border-white/25 rounded text-[11px] font-semibold text-white flex items-center gap-1 transition-colors"
-            title="Tambah Produk Baru ke Rak Ini"
-          >
-            <PlusIcon className="w-3.5 h-3.5" />
-            <span>Produk</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowActions(!showActions)}
-            aria-expanded={showActions}
-            aria-label="Menu tindakan lokasi"
-            className="w-7 h-7 bg-white/15 hover:bg-white/25 active:bg-white/30 border border-white/25 rounded text-xs font-bold text-white flex items-center justify-center transition-colors"
-          >
-            ⋯
-          </button>
-        </div>
-      </header>
-
-      {/* Dropdown Tindakan Cepat Lokasi */}
-      {showActions && (
-        <div className="bg-white border-b border-slate-300 px-3 py-2 space-y-1.5 shrink-0 z-30 text-xs">
-          <div className="flex items-center justify-between text-[11px] text-slate-500 pb-1 border-b border-slate-100">
-            <span>
-              Total Kuantitas:{" "}
-              <strong className="font-mono font-bold text-slate-900 tnum">{totalItems} Pcs</strong>
-            </span>
-            <span>Operator: {user?.name?.split(" ")[0] || "—"}</span>
-          </div>
-          <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+            {filterQuery && (
+              <button
+                type="button"
+                onClick={() => setFilterQuery("")}
+                className="absolute right-9 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-700 text-xs font-mono"
+                aria-label="Bersihkan pencarian"
+              >
+                ✕
+              </button>
+            )}
             <button
               type="button"
-              disabled={hasUnsavedChanges || !products.length}
               onClick={() => {
-                setShowMoveModal(true);
-                setShowActions(false);
+                setScannerMode("quick");
+                setShowBarcodeScanner(true);
               }}
-              className="h-8 px-2.5 rounded border border-slate-300 bg-slate-50 font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-40 text-left truncate"
+              className="absolute right-1.5 w-7 h-7 flex items-center justify-center rounded bg-slate-200/80 hover:bg-slate-300 text-slate-700 active:bg-slate-400 transition-colors"
+              title="Scan Barcode"
+              aria-label="Scan barcode dengan kamera"
             >
-              ⇄ Pindah ke Rak Lain
-            </button>
-            <button
-              type="button"
-              disabled={!allProducts.length}
-              onClick={() => {
-                setShowZeroConfirm(true);
-                setShowActions(false);
-              }}
-              className="h-8 px-2.5 rounded border border-red-200 bg-red-50 font-semibold text-red-700 hover:bg-red-100 disabled:opacity-40 text-left truncate"
-            >
-              ⊘ Set Semua Stok 0
+              <CameraIcon className="w-4 h-4" />
             </button>
           </div>
-          {hasUnsavedChanges && (
-            <p className="text-[11px] text-amber-700">
-              * Simpan hitungan terlebih dahulu sebelum memindahkan produk.
-            </p>
-          )}
-        </div>
-      )}
 
-      {/* Banner Error Draft (Hanya tampil jika ada kendala storage) */}
-      {draftError && (
-        <div
-          role="alert"
-          className="bg-red-50 border-b border-red-200 px-3 py-1 text-[11px] font-medium text-red-700 shrink-0"
-        >
-          {draftError}
-        </div>
-      )}
-
-      {/* ============================================================== */}
-      {/* 2. SEARCH & FILTER BAR PADAT (Tinggi ~80px, Sticky)            */}
-      {/* ============================================================== */}
-      <div className="bg-white border-b border-slate-200 px-3 py-2 space-y-1.5 shrink-0 z-20 sticky top-11">
-        {/* Baris 1: Input pencarian tipis (h-9 text-sm) + tombol kamera di dalamnya */}
-        <div className="relative flex items-center">
-          <SearchIcon className="w-4 h-4 text-slate-400 absolute left-2.5 pointer-events-none" />
-          <input
-            ref={searchInputRef}
-            id="input-filter"
-            type="text"
-            value={filterQuery}
-            onChange={(e) => setFilterQuery(e.target.value)}
-            placeholder="Cari nama / scan SKU..."
-            autoComplete="off"
-            className="w-full h-9 pl-8 pr-16 bg-slate-50 border border-slate-300 rounded text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-900 transition-colors"
-          />
-          {filterQuery && (
+          {/* Baris 2: Segmented filter tabs ukuran compact (h-7 text-xs font-medium - 3 Kolom) */}
+          <div className="grid grid-cols-3 gap-1 p-0.5 bg-slate-100 rounded h-7 items-center text-xs font-medium">
             <button
               type="button"
-              onClick={() => setFilterQuery("")}
-              className="absolute right-9 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-700 text-xs font-mono"
-              aria-label="Bersihkan pencarian"
+              onClick={() => setActiveTab("all")}
+              className={`h-6 rounded flex items-center justify-center gap-1 transition-colors ${
+                activeTab === "all"
+                  ? "bg-white text-slate-900 font-semibold shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
             >
-              ✕
+              <span>Semua</span>
+              <span className="font-mono text-[11px] tabular-nums tnum">({allProducts.length})</span>
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              setScannerMode("quick");
-              setShowBarcodeScanner(true);
-            }}
-            className="absolute right-1.5 w-7 h-7 flex items-center justify-center rounded bg-slate-200/80 hover:bg-slate-300 text-slate-700 active:bg-slate-400 transition-colors"
-            title="Scan Barcode"
-            aria-label="Scan barcode dengan kamera"
-          >
-            <CameraIcon className="w-4 h-4" />
-          </button>
-        </div>
 
-        {/* Baris 2: Segmented filter tabs ukuran compact (h-7 text-xs font-medium - 3 Kolom) */}
-        <div className="grid grid-cols-3 gap-1 p-0.5 bg-slate-100 rounded h-7 items-center text-xs font-medium">
-          <button
-            type="button"
-            onClick={() => setActiveTab("all")}
-            className={`h-6 rounded flex items-center justify-center gap-1 transition-colors ${
-              activeTab === "all"
-                ? "bg-white text-slate-900 font-semibold shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <span>Semua</span>
-            <span className="font-mono text-[11px] tabular-nums tnum">({allProducts.length})</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("pending")}
+              className={`h-6 rounded flex items-center justify-center gap-1 transition-colors ${
+                activeTab === "pending"
+                  ? "bg-white text-slate-900 font-semibold shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <span>Belum</span>
+              <span className="font-mono text-[11px] tabular-nums tnum">({pendingCount})</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab("pending")}
-            className={`h-6 rounded flex items-center justify-center gap-1 transition-colors ${
-              activeTab === "pending"
-                ? "bg-white text-slate-900 font-semibold shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <span>Belum</span>
-            <span className="font-mono text-[11px] tabular-nums tnum">({pendingCount})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("completed")}
-            className={`h-6 rounded flex items-center justify-center gap-1 transition-colors ${
-              activeTab === "completed"
-                ? "bg-white text-[#16A34A] font-semibold shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <span>Selesai</span>
-            <span className="font-mono text-[11px] tabular-nums tnum">({countedCount})</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("completed")}
+              className={`h-6 rounded flex items-center justify-center gap-1 transition-colors ${
+                activeTab === "completed"
+                  ? "bg-white text-[#16A34A] font-semibold shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <span>Selesai</span>
+              <span className="font-mono text-[11px] tabular-nums tnum">({countedCount})</span>
+            </button>
+          </div>
         </div>
       </div>
 

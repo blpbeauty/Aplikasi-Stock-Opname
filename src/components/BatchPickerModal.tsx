@@ -84,7 +84,7 @@ export default function BatchPickerModal({
 
   return (
     <div
-      className="fixed inset-0 z-[80] bg-slate-900/50 flex items-end sm:items-center sm:p-3 justify-center animate-fadeIn"
+      className="fixed inset-0 z-[80] bg-slate-900/60 flex items-center justify-center p-3 sm:p-4 animate-fadeIn"
       onClick={onClose}
     >
       <div
@@ -95,7 +95,7 @@ export default function BatchPickerModal({
         aria-describedby={descId}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-slate-200 shadow-sheet outline-none flex flex-col max-h-[85dvh] overflow-hidden animate-slideUp"
+        className="bg-white w-full max-w-sm sm:max-w-md rounded-2xl border border-slate-200 shadow-2xl outline-none flex flex-col max-h-[85dvh] overflow-hidden animate-fadeIn"
       >
         {/* Header Pop-up */}
         <div className="px-4 pt-4 pb-3 border-b border-slate-100 flex items-start justify-between gap-3 shrink-0">
@@ -124,7 +124,7 @@ export default function BatchPickerModal({
         </div>
 
         {/* Body */}
-        <div className="p-4 space-y-3.5 overflow-y-auto flex-1 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        <div className="p-4 space-y-3.5 overflow-y-auto flex-1">
           {/* Tab Switcher: Batch Produk (N) vs + Buat Batch Baru */}
           <div className="grid grid-cols-2 gap-2">
             <button

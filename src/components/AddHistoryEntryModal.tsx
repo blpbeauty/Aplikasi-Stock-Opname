@@ -223,7 +223,7 @@ export default function AddHistoryEntryModal({
     <>
       <Dialog
         isOpen={isOpen}
-        onClose={submitting || scanningBarcode ? () => {} : onClose}
+        onClose={submitting || scanningBarcode ? () => { } : onClose}
         title={`Tambah Produk — ${location || "Lokasi"}`}
         description="Catat produk baru ke riwayat opname rak ini."
         footer={
@@ -371,11 +371,10 @@ export default function AddHistoryEntryModal({
                 id="add-entry-batch"
                 type="button"
                 onClick={() => setShowBatchModal(true)}
-                className={`w-full h-9 px-2.5 rounded border flex items-center justify-between gap-1.5 text-left transition ${
-                  batch.trim()
-                    ? "bg-[#E6F3F4] border-[#0D5C63] text-[#0D5C63] font-mono text-xs font-bold"
-                    : "bg-slate-50 border-slate-300 text-slate-500 text-xs font-medium hover:bg-slate-100"
-                }`}
+                className={`w-full h-9 px-2.5 rounded border flex items-center justify-between gap-1.5 text-left transition ${batch.trim()
+                  ? "bg-[#E6F3F4] border-[#0D5C63] text-[#0D5C63] font-mono text-xs font-bold"
+                  : "bg-slate-50 border-slate-300 text-slate-500 text-xs font-medium hover:bg-slate-100"
+                  }`}
               >
                 <span className="truncate">{batch.trim() || "Pilih Batch..."}</span>
                 <ChevronDownIcon className="w-3.5 h-3.5 shrink-0 opacity-75" />
