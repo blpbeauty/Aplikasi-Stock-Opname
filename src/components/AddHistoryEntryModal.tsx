@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Product, HistoryEntry } from "@/lib/types";
 import {
   lookupBarcodeApi,
@@ -83,7 +83,7 @@ export default function AddHistoryEntryModal({
     return Array.from(batchSet).sort();
   }, [sku, allProducts]);
 
-  const resolveProductNames = async (query: string): Promise<Product[]> => {
+  const resolveProductNames = useCallback(async (query: string): Promise<Product[]> => {
     const dedupBySku = (items: Product[]) => {
       const seen = new Set<string>();
       const out: Product[] = [];
@@ -105,16 +105,16 @@ export default function AddHistoryEntryModal({
     } catch {
       return [];
     }
-  };
+  }, []);
 
-  const handleSelectProduct = (product: Product) => {
+  const handleSelectProduct = useCallback((product: Product) => {
     setProductName(product.productName);
     setSku(product.sku);
     setBatch("");
     if (product.barcode) setBarcode(product.barcode);
     setErrors({});
     setShowBatchModal(true);
-  };
+  }, []);
 
   const handleBarcodeScan = async (barcodeValue: string) => {
     const normalized = String(barcodeValue || "").trim();

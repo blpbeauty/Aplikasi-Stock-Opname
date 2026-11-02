@@ -62,6 +62,8 @@ export default function Autocomplete<T>({
   const listId = `${id}-listbox`;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seqRef = useRef(0);
+  const resolveRef = useRef(resolve);
+  resolveRef.current = resolve;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -78,14 +80,17 @@ export default function Autocomplete<T>({
       const seq = ++seqRef.current;
       setLoading(true);
       try {
-        const result = await resolve(query);
+        const result = await resolveRef.current(query);
         if (seq !== seqRef.current) return;
         setItems(result);
         setOpen(true);
         setActiveIdx(-1);
-        requestAnimationFrame(() => {
-          containerRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
-        });
+        // Jangan scroll container jika input sedang aktif diketik agar keyboard / fokus tidak hilang di mobile
+        if (!containerRef.current?.contains(document.activeElement)) {
+          requestAnimationFrame(() => {
+            containerRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+          });
+        }
       } catch {
         if (seq === seqRef.current) {
           setItems([]);
@@ -94,7 +99,7 @@ export default function Autocomplete<T>({
         if (seq === seqRef.current) setLoading(false);
       }
     },
-    [resolve]
+    []
   );
 
   const handleChange = (v: string) => {

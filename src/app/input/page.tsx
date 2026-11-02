@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, Suspense } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDataSync } from "@/components/DataSyncProvider";
 import { InputDraft, getDraft, saveDraft, removeDraft } from "@/lib/drafts";
@@ -405,7 +405,9 @@ function InputPageContent() {
     );
   };
 
-  const resolveProductNames = async (query: string): Promise<Product[]> => {
+  const handleCloseAddForm = useCallback(() => setShowAddForm(false), []);
+
+  const resolveProductNames = useCallback(async (query: string): Promise<Product[]> => {
     const q = query.trim().toLowerCase();
     const dedupBySku = (items: Product[]) => {
       const seen = new Set<string>();
@@ -436,9 +438,9 @@ function InputPageContent() {
     } catch {
       return [];
     }
-  };
+  }, []);
 
-  const handleSelectSuggestion = (product: Product) => {
+  const handleSelectSuggestion = useCallback((product: Product) => {
     setNewProductForm((prev) => ({
       ...prev,
       productName: product.productName,
@@ -448,7 +450,7 @@ function InputPageContent() {
     }));
     // Munculkan pop-up pilih batch (model chip) terlebih dahulu sebelum fokus ke input Qty
     setShowAddFormBatchModal(true);
-  };
+  }, []);
 
   const handleOpenRowBatchPicker = (product: Product, isNew: boolean) => {
     setBatchModalTarget({
@@ -1543,7 +1545,7 @@ function InputPageContent() {
       {/* ============================================================== */}
       <Dialog
         isOpen={showAddForm}
-        onClose={() => setShowAddForm(false)}
+        onClose={handleCloseAddForm}
         title={`Tambah Produk — ${location}`}
       >
         <div className="space-y-3">

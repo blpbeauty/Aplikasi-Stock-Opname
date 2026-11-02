@@ -36,6 +36,8 @@ export function Dialog({
   const restoreFocusRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
   const descId = useId();
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -44,6 +46,20 @@ export function Dialog({
     const focusFirst = () => {
       const panel = panelRef.current;
       if (!panel) return;
+      // Jangan rebut fokus jika user atau browser sudah memfokuskan elemen di dalam dialog
+      if (panel.contains(document.activeElement)) return;
+      const autoFocusEl = panel.querySelector<HTMLElement>("[autofocus]");
+      if (autoFocusEl) {
+        autoFocusEl.focus();
+        return;
+      }
+      const firstInput = panel.querySelector<HTMLElement>(
+        'input:not([disabled]), textarea:not([disabled]), select:not([disabled])'
+      );
+      if (firstInput) {
+        firstInput.focus();
+        return;
+      }
       const first = panel.querySelector<HTMLElement>(FOCUSABLE);
       (first || panel).focus();
     };
@@ -52,7 +68,7 @@ export function Dialog({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key === "Tab" && panelRef.current) {
@@ -82,7 +98,7 @@ export function Dialog({
       document.body.style.overflow = prevOverflow;
       restoreFocusRef.current?.focus?.();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
