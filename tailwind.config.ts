@@ -71,20 +71,20 @@ const config: Config = {
         base2: ["0.875rem", { lineHeight: "1.4" }],
       },
       boxShadow: {
-        card: "none",
-        subtle: "none",
-        bar: "none",
-        sheet: "0 -4px 20px rgba(15, 23, 42, 0.15)",
+        card: "0 8px 24px -6px rgba(14, 131, 140, 0.12)",
+        subtle: "0 2px 12px -3px rgba(14, 131, 140, 0.09)",
+        bar: "0 -4px 20px -4px rgba(14, 131, 140, 0.10)",
+        sheet: "0 -10px 30px -6px rgba(11, 102, 110, 0.16)",
       },
       borderRadius: {
-        input: "0.25rem", /* 4px */
-        card: "0.375rem", /* 6px */
-        sheet: "0.5rem", /* 8px */
-        label: "0.25rem", /* 4px */
+        input: "0.75rem", /* 12px */
+        card: "1rem", /* 16px */
+        sheet: "1.25rem", /* 20px */
+        label: "0.5rem", /* 8px */
       },
       minHeight: {
-        touch: "2.25rem", /* 36px (h-9 compact) */
-        touchLg: "2.5rem", /* 40px (h-10) */
+        touch: "2.75rem", /* 44px mobile touch minimum */
+        touchLg: "3rem", /* 48px */
       },
     },
   },

@@ -69,8 +69,8 @@ export default function BatchPickerModal({
   const formattedSubtitle = cleanProductName.startsWith(`[${cleanSku}]`)
     ? `${cleanProductName} · ${cleanSku}`
     : cleanSku
-    ? `[${cleanSku}] ${cleanProductName} · ${cleanSku}`
-    : cleanProductName;
+      ? `[${cleanSku}] ${cleanProductName} · ${cleanSku}`
+      : cleanProductName;
 
   const handleConfirmNewBatch = () => {
     const val = newBatchInput.trim().toUpperCase();
@@ -84,7 +84,7 @@ export default function BatchPickerModal({
 
   return (
     <div
-      className="fixed inset-0 z-[80] bg-slate-900/60 flex items-center justify-center p-3 sm:p-4 animate-fadeIn"
+      className="fixed inset-0 z-[80] bg-[#0B393E]/45 backdrop-blur-[2px] flex items-center justify-center p-4 animate-fadeIn"
       onClick={onClose}
     >
       <div
@@ -95,20 +95,20 @@ export default function BatchPickerModal({
         aria-describedby={descId}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-sm sm:max-w-md rounded-2xl border border-slate-200 shadow-2xl outline-none flex flex-col max-h-[85dvh] overflow-hidden animate-fadeIn"
+        className="bg-white w-full max-w-sm rounded-2xl border border-[#8ADBD9]/80 shadow-[0_14px_40px_-8px_rgba(14,131,140,0.24)] outline-none flex flex-col max-h-[85dvh] overflow-hidden animate-fadeIn"
       >
-        {/* Header Pop-up */}
-        <div className="px-4 pt-4 pb-3 border-b border-slate-100 flex items-start justify-between gap-3 shrink-0">
-          <div className="min-w-0">
+        {/* Header Pop-up (Tetap muncul di tengah layar sesuai preferensi operator) */}
+        <div className="px-4 pt-3.5 pb-3 bg-gradient-to-r from-[#DCF6F5] to-[#EEFBFB] border-b border-[#BCEBEB]/80 flex items-start justify-between gap-2 shrink-0">
+          <div className="min-w-0 pt-0.5">
             <h2
               id={titleId}
-              className="text-base font-extrabold text-slate-900 tracking-wide uppercase leading-tight"
+              className="text-base font-extrabold text-[#0D3B40] tracking-wide uppercase leading-tight"
             >
               PILIH BATCH
             </h2>
             <p
               id={descId}
-              className="text-xs text-slate-500 mt-0.5 font-medium break-words leading-snug"
+              className="text-xs text-[#487277] mt-0.5 font-medium break-words leading-snug"
             >
               {formattedSubtitle}
             </p>
@@ -116,7 +116,7 @@ export default function BatchPickerModal({
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 w-8 h-8 rounded-full hover:bg-slate-100 active:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 transition"
+            className="shrink-0 w-11 h-11 -mr-1.5 -mt-1 rounded-full bg-white/90 border border-[#9CE0DF]/60 hover:bg-white active:scale-[0.96] flex items-center justify-center text-[#487277] hover:text-[#0D3B40] transition"
             aria-label="Tutup pilih batch"
           >
             <XIcon className="w-4 h-4" />
@@ -130,24 +130,22 @@ export default function BatchPickerModal({
             <button
               type="button"
               onClick={() => setActiveTab("list")}
-              className={`h-10 px-3 rounded-full text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                activeTab === "list"
-                  ? "bg-[#0F172A] text-white shadow-xs"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-              }`}
+              className={`min-h-[44px] px-3 rounded-full text-xs font-bold transition active:scale-[0.98] flex items-center justify-center gap-1.5 ${activeTab === "list"
+                  ? "bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white shadow-subtle"
+                  : "bg-[#E5F7F7] text-[#487277] border border-[#9CE0DF]/60 hover:text-[#0D3B40]"
+                }`}
             >
               <span>Batch Produk ({batches.length})</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("new")}
-              className={`h-10 px-3 rounded-full text-xs font-bold transition flex items-center justify-center gap-1 ${
-                activeTab === "new"
-                  ? "bg-[#0F172A] text-white shadow-xs"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-              }`}
+              className={`min-h-[44px] px-3 rounded-full text-xs font-bold transition active:scale-[0.98] flex items-center justify-center gap-1 ${activeTab === "new"
+                  ? "bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white shadow-subtle"
+                  : "bg-[#E5F7F7] text-[#487277] border border-[#9CE0DF]/60 hover:text-[#0D3B40]"
+                }`}
             >
-              <PlusIcon className="w-3.5 h-3.5" />
+              <PlusIcon className="w-4 h-4" />
               <span>Buat Batch Baru</span>
             </button>
           </div>
@@ -155,7 +153,7 @@ export default function BatchPickerModal({
           {/* Tab 1: Daftar Chip Batch */}
           {activeTab === "list" ? (
             batches.length > 0 ? (
-              <div className="grid grid-cols-3 gap-2 max-h-[48dvh] overflow-y-auto pt-0.5">
+              <div className="grid grid-cols-3 gap-2 max-h-[46dvh] overflow-y-auto pt-0.5">
                 {batches.map((b) => {
                   const isSelected =
                     String(currentBatch || "").trim().toLowerCase() ===
@@ -165,11 +163,10 @@ export default function BatchPickerModal({
                       key={b}
                       type="button"
                       onClick={() => onSelectBatch(b)}
-                      className={`min-h-[48px] px-2.5 py-2.5 rounded-xl border font-mono text-xs sm:text-sm font-bold tracking-wide text-center flex items-center justify-center break-all transition active:scale-95 touch-manipulation ${
-                        isSelected
-                          ? "bg-[#E6F3F4] border-[#0D5C63] text-[#0D5C63] ring-1 ring-[#0D5C63]"
-                          : "bg-white border-slate-200 text-slate-900 hover:border-[#0D5C63] hover:bg-slate-50"
-                      }`}
+                      className={`min-h-[48px] px-2.5 py-2.5 rounded-xl border font-mono text-xs font-bold tracking-wide text-center flex items-center justify-center break-all transition active:scale-[0.97] touch-manipulation ${isSelected
+                          ? "bg-[#D5F4F3] border-[#0E838C] text-[#0B666E] ring-1 ring-[#0E838C]"
+                          : "bg-white border-[#9CE0DF]/75 text-[#0D3B40] hover:border-[#0E838C] hover:bg-[#EEFBFB]"
+                        }`}
                     >
                       {b}
                     </button>
@@ -177,17 +174,17 @@ export default function BatchPickerModal({
                 })}
               </div>
             ) : (
-              <div className="py-6 px-3 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200 space-y-2">
-                <p className="text-xs font-medium text-slate-600">
+              <div className="py-5 px-3 text-center bg-[#EFFAFA] rounded-xl border border-dashed border-[#8ADBD9] space-y-2.5">
+                <p className="text-xs font-medium text-[#487277] leading-relaxed">
                   Belum ada daftar batch di Master Data untuk SKU{" "}
-                  <strong className="font-mono text-slate-900">{cleanSku || "ini"}</strong>.
+                  <strong className="font-mono text-[#0D3B40]">{cleanSku || "ini"}</strong>.
                 </p>
                 <button
                   type="button"
                   onClick={() => setActiveTab("new")}
-                  className="h-8 px-3 bg-[#0D5C63] hover:bg-[#14727A] text-white rounded-lg text-xs font-semibold transition inline-flex items-center gap-1"
+                  className="min-h-[44px] px-4 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] active:scale-[0.98] text-white rounded-xl text-xs font-semibold transition inline-flex items-center gap-1.5"
                 >
-                  <PlusIcon className="w-3.5 h-3.5" />
+                  <PlusIcon className="w-4 h-4" />
                   <span>Buat Batch Baru</span>
                 </button>
               </div>
@@ -198,7 +195,7 @@ export default function BatchPickerModal({
               <div>
                 <label
                   htmlFor="new-batch-modal-input"
-                  className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5"
+                  className="block text-xs font-bold uppercase tracking-wider text-[#487277] mb-1.5"
                 >
                   Nomor Batch Baru
                 </label>
@@ -216,7 +213,7 @@ export default function BatchPickerModal({
                   }}
                   placeholder="Ketik nomor batch fisik (mis. CAG0701)…"
                   autoComplete="off"
-                  className="w-full h-11 px-3 bg-slate-50 border border-slate-300 rounded-xl font-mono text-sm font-bold text-slate-900 uppercase placeholder:font-sans placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#0D5C63]"
+                  className="w-full min-h-[44px] px-3.5 bg-[#EEFBFB] border border-[#9CE0DF]/80 rounded-xl font-mono text-sm font-bold text-[#0D3B40] uppercase placeholder:font-sans placeholder:font-normal placeholder:text-[#6B9498] focus:bg-white focus:outline-none focus:border-[#0E838C]"
                 />
               </div>
 
@@ -224,7 +221,7 @@ export default function BatchPickerModal({
                 type="button"
                 onClick={handleConfirmNewBatch}
                 disabled={!newBatchInput.trim()}
-                className="w-full h-10 bg-[#0D5C63] hover:bg-[#14727A] active:bg-[#083B40] disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition"
+                className="w-full min-h-[44px] bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] active:scale-[0.98] disabled:from-[#D5EDED] disabled:to-[#D5EDED] disabled:text-[#5B8E92] text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-subtle"
               >
                 <CheckIcon className="w-4 h-4" />
                 <span>Pakai Batch Ini &amp; Lanjut Input Qty</span>

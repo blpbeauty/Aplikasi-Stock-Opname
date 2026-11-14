@@ -205,25 +205,25 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
     <DataSyncContext.Provider value={{ isReady, syncProgress, forceSync, lastSyncTime, pendingWrites, queueReady, offline, testingOffline, toggleOfflineTest }}>
       {/* Sync Loading Overlay — only shown during first-time sync when no local data */}
       {user && !isReady && syncProgress.status === "syncing" && (
-        <div className="fixed inset-0 z-[80] bg-ivory flex items-center justify-center px-6">
-          <div className="w-full max-w-sm text-center">
-            <div className="location-band text-left mb-6" aria-hidden="true">
+        <div className="fixed inset-0 z-[80] bg-gradient-to-b from-[#D7F4F4] via-[#ECF9F9] to-[#F4FCFC] flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl border border-[#8ADBD9]/80 shadow-card p-5 text-center">
+            <div className="location-band text-left mb-4" aria-hidden="true">
               <p className="location-band-code">STOCK OPNAME</p>
               <p className="location-band-sub">Menyiapkan data gudang</p>
             </div>
 
-            <h2 className="text-lg font-bold text-text-primary mb-1.5">
+            <h2 className="text-base font-bold text-[#0D3B40] mb-1">
               Mengunduh data
             </h2>
-            <p className="text-meta text-text-secondary mb-5">
+            <p className="text-xs text-[#487277] mb-4">
               {syncProgress.step}
             </p>
 
-            <ol className="space-y-2 text-left" aria-label="Tahap unduhan">
+            <ol className="space-y-2 text-left text-xs" aria-label="Tahap unduhan">
               {([['products', 'Mengunduh produk'], ['history', 'Mengunduh riwayat'], ['storage', 'Menyimpan di perangkat']] as const).map(([stage, label], index) => {
                 const current = ['products', 'history', 'storage', 'complete'].indexOf(syncProgress.stage || 'products');
                 const done = current > index;
-                return <li key={stage} className={`flex justify-between gap-2 rounded-input px-3 py-2 border ${current === index ? 'border-primary bg-primary-pale font-bold' : 'border-border'}`}>
+                return <li key={stage} className={`flex justify-between gap-2 rounded-xl px-3.5 py-2.5 border ${current === index ? 'border-[#82D6D5] bg-[#D8F5F4] text-[#0B666E] font-semibold' : 'border-[#CBEFED] bg-[#EFFAFA] text-[#487277]'}`}>
                   <span>{label}</span><span>{done ? 'Selesai' : current === index ? 'Diproses' : 'Menunggu'}</span>
                 </li>;
               })}
@@ -234,12 +234,12 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
 
       {/* Error overlay — only when no local data and sync failed */}
       {user && !isReady && syncProgress.status === "error" && (
-        <div className="fixed inset-0 z-[80] bg-ivory flex items-center justify-center px-6">
-          <div className="w-full max-w-sm text-center">
-            <div className="border border-danger/30 bg-danger-bg rounded-input px-4 py-3 text-left mb-5">
-              <h2 className="text-lg font-bold text-danger">Gagal mengunduh data</h2>
-              <p className="text-meta text-text-secondary mt-1">{syncProgress.step}</p>
-              {syncProgress.error && <p className="text-sm text-danger mt-2 break-words">{syncProgress.error}</p>}
+        <div className="fixed inset-0 z-[80] bg-gradient-to-b from-[#D7F4F4] via-[#ECF9F9] to-[#F4FCFC] flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl border border-[#8ADBD9]/80 shadow-card p-5 text-center space-y-4">
+            <div className="border border-[#DC2626]/20 bg-[#FEF2F2] rounded-2xl px-4 py-3 text-left">
+              <h2 className="text-base font-bold text-[#DC2626]">Gagal mengunduh data</h2>
+              <p className="text-xs text-[#487277] mt-1">{syncProgress.step}</p>
+              {syncProgress.error && <p className="text-xs text-[#DC2626] mt-2 break-words">{syncProgress.error}</p>}
             </div>
             <button
               onClick={() => {
@@ -250,7 +250,7 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
                 }
                 void doSync(false);
               }}
-              className="w-full min-h-touch bg-primary text-ivory font-bold rounded-input transition active:scale-[0.98]"
+              className="w-full min-h-[48px] bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white text-sm font-semibold rounded-xl shadow-subtle transition-transform duration-150 active:scale-[0.98]"
             >
               {testingOffline ? "Akhiri uji offline dan unduh" : "Coba Lagi"}
             </button>
@@ -260,28 +260,28 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
 
       {user && (
         <div
-          className={`mobile-sync-status border-b px-3 h-6 flex items-center justify-between text-[11px] transition-colors ${
+          className={`mobile-sync-status max-w-md mx-auto w-full border-b px-3.5 py-1.5 flex items-center justify-between text-xs transition-colors sm:border-x sm:border-[#8ADBD9]/65 ${
             queueError || syncProgress.status === "error"
-              ? "bg-amber-50 border-amber-200 text-amber-800"
-              : "bg-slate-100/90 border-slate-200 text-slate-600"
+              ? "bg-[#FFFBEB] border-[#F59E0B]/30 text-[#B45309]"
+              : "bg-[#DDF5F5] border-[#96DEDD] text-[#0B5A60]"
           }`}
           role="status"
           aria-live="polite"
         >
-          <div className="mx-auto max-w-md w-full flex items-center justify-between gap-2 min-w-0">
+          <div className="w-full flex items-center justify-between gap-2 min-w-0">
             <div className="flex items-center gap-1.5 min-w-0 truncate">
               <span
-                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                className={`w-2 h-2 rounded-full shrink-0 ${
                   queueError || syncProgress.status === "error"
                     ? "bg-[#DC2626]"
                     : pending || offline || testingOffline
                     ? "bg-[#D97706]"
                     : syncProgress.status === "syncing"
-                    ? "bg-blue-600 animate-pulse"
+                    ? "bg-[#0E838C] animate-pulse"
                     : "bg-[#16A34A]"
                 }`}
               />
-              <span className="font-semibold truncate">
+              <span className="font-semibold text-[#0D3B40] truncate">
                 {!queueReady
                   ? "Cek status…"
                   : queueError
@@ -298,15 +298,15 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
                   ? "Tersimpan di HP"
                   : "Tersinkron"}
               </span>
-              <span className="text-slate-400">·</span>
-              <span className="text-slate-500 truncate">
+              <span className="text-[#487277]/60">·</span>
+              <span className="text-[#487277] truncate">
                 {offline ? "Offline" : "Online"}
                 {testingOffline ? " (uji)" : ""}
               </span>
               {lastSyncTime && (
                 <>
-                  <span className="text-slate-300">·</span>
-                  <span className="font-mono text-[10px] text-slate-500 tabular-nums tnum">
+                  <span className="text-[#487277]/60">·</span>
+                  <span className="font-mono text-xs text-[#487277] tabular-nums tnum">
                     {new Date(lastSyncTime).toLocaleTimeString("id-ID", {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -316,26 +316,28 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
               )}
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
-              {pending > 0 && !offline && (
-                <button
-                  type="button"
-                  className="h-5 px-1.5 bg-[#0D5C63] hover:bg-[#14727A] text-white rounded text-[10px] font-semibold transition"
-                  onClick={() => void flushPendingWrites()}
-                >
-                  Kirim ({pending})
-                </button>
-              )}
-              {syncProgress.status === "error" && !offline && (
-                <button
-                  type="button"
-                  className="h-5 px-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded text-[10px] font-semibold transition"
-                  onClick={() => void forceSync()}
-                >
-                  Coba lagi
-                </button>
-              )}
-            </div>
+            {(pending > 0 || syncProgress.status === "error") && !offline && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                {pending > 0 && (
+                  <button
+                    type="button"
+                    className="min-h-[44px] px-3 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white rounded-xl text-xs font-semibold active:scale-[0.98] transition-transform"
+                    onClick={() => void flushPendingWrites()}
+                  >
+                    Kirim ({pending})
+                  </button>
+                )}
+                {syncProgress.status === "error" && (
+                  <button
+                    type="button"
+                    className="min-h-[44px] px-3 bg-[#FFFBEB] hover:bg-amber-100 text-[#B45309] border border-[#F59E0B]/30 rounded-xl text-xs font-semibold active:scale-[0.98] transition-transform"
+                    onClick={() => void forceSync()}
+                  >
+                    Coba lagi
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

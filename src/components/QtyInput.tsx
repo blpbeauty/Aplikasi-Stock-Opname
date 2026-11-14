@@ -192,16 +192,16 @@ export default function QtyInput({
   };
 
   const defaultCls = wide
-    ? "w-full h-9 text-center bg-white border border-slate-300 focus:border-[#0D5C63] rounded font-mono text-base font-bold text-slate-900 tabular-nums tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition"
-    : "w-16 h-9 text-center bg-white border border-slate-300 focus:border-[#0D5C63] rounded font-mono text-sm font-bold text-slate-900 tabular-nums tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition";
+    ? "w-full min-h-[44px] text-center bg-[#EEFBFB] focus:bg-white border border-[#9CE0DF]/80 focus:border-[#0E838C] rounded-xl font-mono text-base font-bold text-[#0D3B40] tabular-nums tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition"
+    : "w-20 min-h-[44px] text-center bg-[#EEFBFB] focus:bg-white border border-[#9CE0DF]/80 focus:border-[#0E838C] rounded-xl font-mono text-sm font-bold text-[#0D3B40] tabular-nums tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition";
 
   const opBtnCls = wide
-    ? "flex-1 h-8 rounded bg-slate-100 border border-slate-300 text-slate-800 font-mono text-sm font-bold hover:bg-[#E6F3F4] active:bg-[#0D5C63] active:text-white transition select-none flex items-center justify-center"
-    : "w-8 h-8 rounded bg-slate-100 border border-slate-300 text-slate-800 font-mono text-sm font-bold hover:bg-[#E6F3F4] active:bg-[#0D5C63] active:text-white transition select-none flex items-center justify-center";
+    ? "flex-1 min-h-[44px] rounded-xl bg-white border border-[#9CE0DF]/80 text-[#0D3B40] font-mono text-sm font-bold hover:bg-[#D8F5F4] active:scale-[0.97] active:bg-[#0E838C] active:text-white transition select-none flex items-center justify-center shadow-subtle"
+    : "w-11 min-h-[44px] rounded-xl bg-white border border-[#9CE0DF]/80 text-[#0D3B40] font-mono text-sm font-bold hover:bg-[#D8F5F4] active:scale-[0.97] active:bg-[#0E838C] active:text-white transition select-none flex items-center justify-center";
 
   return (
-    <div className={`relative inline-flex flex-col items-center gap-1 ${wide ? "w-full" : ""}`}>
-      <div className={`flex items-center gap-1.5 ${wide ? "w-full" : ""}`}>
+    <div className={`relative inline-flex flex-col items-center gap-1.5 ${wide ? "w-full" : ""}`}>
+      <div className={`flex items-center gap-2 ${wide ? "w-full" : ""}`}>
         <input
           ref={inputRef}
           type="text"
@@ -234,7 +234,7 @@ export default function QtyInput({
               commit(true);
             }}
             onClick={() => commit(true)}
-            className="h-9 px-3.5 rounded bg-[#0D5C63] hover:bg-[#14727A] text-white font-mono text-base font-bold whitespace-nowrap active:bg-[#083B40] transition select-none flex items-center justify-center shrink-0 shadow-sm"
+            className="min-h-[44px] px-4 rounded-xl bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white font-mono text-base font-bold whitespace-nowrap active:scale-[0.97] transition select-none flex items-center justify-center shrink-0 shadow-subtle"
             aria-label="Hitung rumus dan selesai"
             title="Selesai & lanjut ke produk berikutnya"
           >
@@ -244,7 +244,7 @@ export default function QtyInput({
       </div>
 
       {wide && (
-        <div className="flex gap-1 w-full items-center">
+        <div className="flex gap-1.5 w-full items-center">
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
@@ -282,7 +282,7 @@ export default function QtyInput({
             title={textMode ? "Keypad angka" : "Keyboard penuh (bisa ketik +−×)"}
             aria-label={textMode ? "Ganti ke keypad angka" : "Ganti ke keyboard penuh"}
             aria-pressed={textMode}
-            className={`${opBtnCls} ${textMode ? "!bg-[#0D5C63] !text-white !border-[#0D5C63]" : ""}`}
+            className={`${opBtnCls} ${textMode ? "!bg-[#0E838C] !text-white !border-[#0E838C]" : ""}`}
           >
             {textMode ? "123" : "abc"}
           </button>
@@ -291,7 +291,7 @@ export default function QtyInput({
 
       {isExpr && preview !== null && (
         <span
-          className="font-mono text-xs font-bold text-[#0D5C63] bg-[#E6F3F4] border border-[#A8D3D6] px-2 py-0.5 rounded tnum"
+          className="font-mono text-xs font-bold text-[#0B666E] bg-[#D8F5F4] border border-[#82D6D5] px-2.5 py-1 rounded-full tnum"
           role="status"
         >
           = {preview}

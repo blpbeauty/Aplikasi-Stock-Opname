@@ -145,12 +145,12 @@ export default function Autocomplete<T>({
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       {label && (
-        <label htmlFor={id} className="block text-xs font-semibold text-slate-700 mb-1">
+        <label htmlFor={id} className="block text-xs font-semibold text-[#0D3B40] mb-1.5">
           {label}
         </label>
       )}
       <div className="relative flex items-center">
-        <SearchIcon className="absolute left-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+        <SearchIcon className="absolute left-3.5 w-4 h-4 text-[#0E838C] pointer-events-none" />
         <input
           id={id}
           type="text"
@@ -170,8 +170,8 @@ export default function Autocomplete<T>({
           autoFocus={autoFocus}
           disabled={disabled}
           aria-invalid={!!error}
-          className={`w-full h-9 pl-8 pr-8 bg-slate-50 border rounded focus:bg-white focus:outline-none focus:border-[#0D5C63] text-sm font-medium text-slate-900 placeholder:font-normal placeholder:text-slate-400 transition-colors ${
-            error ? "border-[#DC2626]" : "border-slate-300"
+          className={`w-full min-h-[44px] pl-10 ${value && !disabled ? "pr-11" : "pr-3.5"} bg-[#EEFBFB] border rounded-xl focus:bg-white focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20 text-sm font-medium text-[#0D3B40] placeholder:font-normal placeholder:text-[#6B9498] transition-colors ${
+            error ? "border-[#DC2626]" : "border-[#9CE0DF]/80"
           } ${uppercase ? "uppercase font-mono" : ""}`}
         />
         {value && !disabled && (
@@ -183,16 +183,16 @@ export default function Autocomplete<T>({
               setItems([]);
               setOpen(false);
             }}
-            className="absolute right-1 w-7 h-7 rounded flex items-center justify-center text-slate-400 hover:text-slate-700"
+            className="absolute right-0 w-11 h-11 rounded-xl flex items-center justify-center text-[#487277] hover:text-[#0D3B40]"
             aria-label="Bersihkan isian"
           >
-            <XIcon className="w-3.5 h-3.5" />
+            <XIcon className="w-4 h-4" />
           </button>
         )}
       </div>
-      {hint && !error && <p className="text-[11px] text-slate-500 mt-0.5">{hint}</p>}
+      {hint && !error && <p className="text-xs text-[#487277] mt-1 leading-snug">{hint}</p>}
       {error && (
-        <p role="alert" className="text-[11px] font-semibold text-[#DC2626] mt-0.5">
+        <p role="alert" className="text-xs font-semibold text-[#DC2626] mt-1 leading-snug">
           {error}
         </p>
       )}
@@ -201,10 +201,10 @@ export default function Autocomplete<T>({
         <div
           id={listId}
           role="listbox"
-          className="absolute z-[100] left-0 right-0 mt-1 bg-white border border-slate-300 rounded shadow-md overflow-hidden max-h-52 overflow-y-auto divide-y divide-slate-100"
+          className="absolute z-[100] left-0 right-0 mt-1.5 bg-white border border-[#8ADBD9]/80 rounded-2xl shadow-[0_10px_28px_-4px_rgba(14,131,140,0.18)] overflow-hidden max-h-56 overflow-y-auto divide-y divide-[#E5F7F7]"
         >
           {loading && (
-            <p className="px-3 py-2 text-xs text-slate-500">Mencari…</p>
+            <p className="px-3.5 py-2.5 text-xs font-medium text-[#487277]">Mencari…</p>
           )}
           {items.map((item, idx) => (
             <button
@@ -214,15 +214,15 @@ export default function Autocomplete<T>({
               aria-selected={idx === activeIdx}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => select(item)}
-              className={`w-full text-left px-3 py-2 text-xs transition overflow-hidden ${
-                idx === activeIdx ? "bg-[#E6F3F4]" : "hover:bg-slate-50"
+              className={`w-full min-h-[44px] text-left px-3.5 py-2.5 text-xs transition overflow-hidden ${
+                idx === activeIdx ? "bg-[#D8F5F4]" : "hover:bg-[#EEFBFB] active:bg-[#D8F5F4]"
               }`}
             >
               {renderItem(item)}
             </button>
           ))}
           {showEmptyState && (
-            <p className="px-3 py-2.5 text-xs text-slate-500">{emptyText}</p>
+            <p className="px-3.5 py-3 text-xs text-[#487277]">{emptyText}</p>
           )}
         </div>
       )}

@@ -90,24 +90,23 @@ export default function InstallPrompt() {
       role="dialog"
       aria-label="Pasang aplikasi"
     >
-      <div className="w-full max-w-md mx-4 mb-4 bg-paper rounded-sheet shadow-sheet border border-border overflow-hidden animate-slideUp">
+      <div className="w-full max-w-md mx-3 mb-3 bg-white rounded-2xl shadow-sheet border border-[#9BE0DF]/75 overflow-hidden animate-slideUp pb-safe">
         {/* Header */}
-        <div className="px-5 pt-4 pb-3 flex items-center gap-3 border-b border-border-subtle">
-          <div className="w-11 h-11 rounded-card flex items-center justify-center text-ivory font-bold"
-               style={{ backgroundColor: "var(--espresso)" }}>
-            <BrandBLP compact className="text-ivory text-sm" />
+        <div className="px-4 pt-3.5 pb-3 flex items-center gap-3 bg-gradient-to-r from-[#DCF6F5] to-[#EEFBFB] border-b border-[#9BE0DF]/60">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#0E838C] to-[#14B8A6] text-white font-bold shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)]">
+            <BrandBLP compact className="text-white text-sm" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-text-primary text-base2">
+            <h2 className="font-semibold text-[#0D3B40] text-sm">
               Pasang BLP Stock
             </h2>
-            <p className="text-meta text-text-secondary">
+            <p className="text-xs text-[#487277] mt-0.5">
               Tambahkan ke layar utama
             </p>
           </div>
           <button
             onClick={handleDismiss}
-            className="tap w-11 h-11 -mr-2 flex items-center justify-center rounded-full text-text-secondary hover:bg-surface-warm"
+            className="w-11 h-11 -mr-1.5 flex items-center justify-center rounded-xl text-[#487277] hover:bg-white/80 active:scale-[0.96] transition-transform"
             aria-label="Tutup prompt instalasi"
           >
             <XIcon className="w-5 h-5" />
@@ -115,25 +114,25 @@ export default function InstallPrompt() {
         </div>
 
         {/* Content */}
-        <div className="px-5 pb-4 pt-3">
+        <div className="px-4 pb-4 pt-3.5">
           {isIOS ? (
             // iOS instructions
-            <ol className="space-y-2.5">
-              <li className="flex items-start gap-3 bg-surface-warm rounded-input p-3 text-meta text-text-primary">
-                <span className="tnum shrink-0 w-7 h-7 rounded-full bg-primary text-ivory flex items-center justify-center text-meta font-bold">1</span>
-                <span className="pt-0.5">
+            <ol className="space-y-2">
+              <li className="flex items-start gap-3 bg-[#EEFBFB] border border-[#9CE0DF]/75 rounded-xl p-3 text-xs text-[#0D3B40]">
+                <span className="tnum shrink-0 w-6 h-6 rounded-full bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white flex items-center justify-center text-xs font-semibold">1</span>
+                <span className="pt-0.5 leading-relaxed">
                   Ketuk ikon <strong>Share</strong> di bagian bawah Safari
                 </span>
               </li>
-              <li className="flex items-start gap-3 bg-surface-warm rounded-input p-3 text-meta text-text-primary">
-                <span className="tnum shrink-0 w-7 h-7 rounded-full bg-primary text-ivory flex items-center justify-center text-meta font-bold">2</span>
-                <span className="pt-0.5">
+              <li className="flex items-start gap-3 bg-[#EEFBFB] border border-[#9CE0DF]/75 rounded-xl p-3 text-xs text-[#0D3B40]">
+                <span className="tnum shrink-0 w-6 h-6 rounded-full bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white flex items-center justify-center text-xs font-semibold">2</span>
+                <span className="pt-0.5 leading-relaxed">
                   Gulir ke bawah dan pilih <strong>&quot;Add to Home Screen&quot;</strong>
                 </span>
               </li>
-              <li className="flex items-start gap-3 bg-surface-warm rounded-input p-3 text-meta text-text-primary">
-                <span className="tnum shrink-0 w-7 h-7 rounded-full bg-primary text-ivory flex items-center justify-center text-meta font-bold">3</span>
-                <span className="pt-0.5">
+              <li className="flex items-start gap-3 bg-[#EEFBFB] border border-[#9CE0DF]/75 rounded-xl p-3 text-xs text-[#0D3B40]">
+                <span className="tnum shrink-0 w-6 h-6 rounded-full bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white flex items-center justify-center text-xs font-semibold">3</span>
+                <span className="pt-0.5 leading-relaxed">
                   Ketuk <strong>&quot;Add&quot;</strong> untuk memasang
                 </span>
               </li>
@@ -141,19 +140,19 @@ export default function InstallPrompt() {
           ) : (
             // Android / Chrome
             <div className="space-y-3">
-              <p className="text-meta text-text-secondary">
+              <p className="text-xs text-[#487277] leading-relaxed">
                 Pasang aplikasi ini untuk akses cepat dari layar utama HP Anda.
               </p>
-              <div className="flex gap-3">
+              <div className="flex gap-2.5">
                 <button
                   onClick={handleInstall}
-                  className="flex-1 min-h-touch rounded-input bg-primary text-ivory font-bold text-meta transition active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] rounded-xl bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white font-semibold text-sm shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] transition-all duration-150 active:scale-[0.98]"
                 >
                   Pasang Sekarang
                 </button>
                 <button
                   onClick={handleDismiss}
-                  className="min-h-touch px-5 rounded-input text-text-secondary font-semibold text-meta border border-border hover:bg-surface-warm transition"
+                  className="min-h-[44px] px-5 rounded-xl bg-[#EEFBFB] text-[#487277] font-semibold text-sm border border-[#9CE0DF]/80 hover:text-[#0D3B40] hover:bg-[#D5F4F3] transition-all duration-150 active:scale-[0.98]"
                 >
                   Nanti
                 </button>

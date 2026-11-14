@@ -5,14 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useDataSync } from "@/components/DataSyncProvider";
 import { InputDraft, getDraft, saveDraft, removeDraft } from "@/lib/drafts";
 import { useAuth } from "@/components/AuthProvider";
-import LoadingSpinner from "@/components/LoadingSpinner";
 import ScannerModal from "@/components/ScannerModal";
 import MoveSheet from "@/components/MoveSheet";
 import QtyInput, { calcExpr } from "@/components/QtyInput";
 import ConfirmModal from "@/components/ConfirmModal";
 import DuplicateWarningModal from "@/components/DuplicateWarningModal";
 import BatchPickerModal from "@/components/BatchPickerModal";
-import { Dialog, EmptyState, Field } from "@/components/ui";
+import { Dialog, EmptyState, Field, PageSkeleton } from "@/components/ui";
 import Autocomplete from "@/components/Autocomplete";
 import {
   getProductsApi,
@@ -42,6 +41,7 @@ import {
   PlusIcon,
   CheckIcon,
   XIcon,
+  MoreHorizontalIcon,
 } from "@/components/icons";
 import toast from "react-hot-toast";
 
@@ -1022,47 +1022,36 @@ function InputPageContent() {
   };
 
   if (loading) {
-    return (
-      <div className="max-w-md mx-auto h-dvh flex items-center justify-center bg-[#F8FAFC]">
-        <LoadingSpinner />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   return (
-    <div className="max-w-md mx-auto min-h-dvh flex flex-col bg-[#F8FAFC] text-[#0F172A] font-sans antialiased select-none border-x border-slate-200">
+    <div className="max-w-md mx-auto min-h-dvh flex flex-col bg-gradient-to-b from-[#D7F4F4] via-[#ECF9F9] to-[#F4FCFC] text-[#0D3B40] font-sans antialiased select-none pb-28 sm:border-x sm:border-[#8ADBD9]/65">
       {/* ============================================================== */}
       {/* 1. TOP HEADER & SEARCH PINNED (Sticky)                         */}
       {/* ============================================================== */}
-      <div className="sticky top-0 z-30 shrink-0 shadow-sm">
-        <header className="bg-[#0D5C63] text-white border-b border-[#083B40]">
-          {/* Baris 1: Navigasi, Status Item & Menu Aksi (~40px) */}
-          <div className="h-10 px-2.5 flex items-center justify-between gap-2 border-b border-white/10">
-            <div className="flex items-center gap-1.5 shrink-0">
+      <div className="sticky top-0 z-30 shrink-0 shadow-subtle">
+        <header>
+          {/* Baris 1: Navigasi, Status Item & Menu Aksi (Frosted Aqua Pastel) */}
+          <div className="min-h-[52px] px-2 py-1.5 bg-gradient-to-r from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md border-b border-[#8ADBD9]/65 flex items-center justify-between gap-1.5">
+            <div className="flex items-center gap-1 min-w-0">
               <button
                 type="button"
                 onClick={handleBackClick}
-                className="w-7 h-7 flex items-center justify-center rounded text-white/90 hover:bg-white/10 active:bg-white/20 transition-colors shrink-0"
+                className="w-11 h-11 flex items-center justify-center rounded-xl text-[#0D3B40] hover:bg-white/75 active:scale-[0.96] transition-transform shrink-0"
                 aria-label="Kembali ke halaman scan"
                 title="Kembali"
               >
                 <ChevronLeftIcon className="w-5 h-5" />
               </button>
-              <span className="font-mono text-xs font-bold text-white tracking-wider uppercase">
-                SO CENTRAL
+              <span className="text-sm font-bold text-[#0D3B40] tracking-tight truncate">
+                SO Central
               </span>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="font-mono text-xs font-bold text-teal-100 tabular-nums tnum">
-                <strong className="text-white">{countedCount}</strong>/{allProducts.length}{" "}
-                <span className="font-sans text-[11px] font-medium text-teal-200/80">Item</span>
-              </div>
-
-              <span className="text-white/25">|</span>
-
+            <div className="flex items-center gap-1.5 shrink-0">
               <div
-                className="flex items-center gap-1 text-[11px] font-medium text-teal-100/90"
+                className="flex items-center gap-1.5 bg-white/85 border border-[#8ADBD9]/75 px-2.5 py-1.5 rounded-full font-mono text-xs font-semibold text-[#0D3B40] tabular-nums tnum"
                 title={
                   draftError
                     ? draftError
@@ -1076,203 +1065,160 @@ function InputPageContent() {
                 <span
                   className={`w-2 h-2 rounded-full shrink-0 ${
                     draftError
-                      ? "bg-red-400"
+                      ? "bg-[#DC2626]"
                       : online
-                      ? "bg-[#4ADE80]"
-                      : "bg-[#FBBF24]"
+                      ? "bg-[#16A34A]"
+                      : "bg-[#F59E0B]"
                   }`}
                 />
-                <span className="hidden sm:inline">
-                  {hasUnsavedChanges ? "Tersimpan" : online ? "Online" : "Offline"}
+                <span>
+                  {countedCount}/{allProducts.length}
                 </span>
               </div>
 
               <button
                 type="button"
                 onClick={() => setShowAddForm(true)}
-                className="h-7 px-2 bg-white/15 hover:bg-white/25 active:bg-white/30 border border-white/25 rounded text-[11px] font-semibold text-white flex items-center gap-1 transition-colors"
+                className="min-h-[44px] px-3 bg-[#C7EEED] hover:bg-[#B4E6E5] border border-[#7AD3D2]/85 rounded-xl text-xs font-semibold text-[#0B666E] flex items-center gap-1 active:scale-[0.97] transition-all"
                 title="Tambah Produk Baru ke Rak Ini"
               >
-                <PlusIcon className="w-3.5 h-3.5" />
+                <PlusIcon className="w-4 h-4" />
                 <span>Produk</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => setShowActions(!showActions)}
+                onClick={() => setShowActions(true)}
                 aria-expanded={showActions}
                 aria-label="Menu tindakan lokasi"
-                className="w-7 h-7 bg-white/15 hover:bg-white/25 active:bg-white/30 border border-white/25 rounded text-xs font-bold text-white flex items-center justify-center transition-colors"
+                className="w-11 h-11 bg-white/85 border border-[#8ADBD9]/75 hover:bg-white rounded-xl text-[#0D3B40] flex items-center justify-center active:scale-[0.96] transition-transform"
               >
-                ⋯
+                <MoreHorizontalIcon className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          {/* Baris 2: Banner Kode Rak / Lokasi (DEDIKASI PENUH, TIDAK AKAN PERNAH TERPOTONG) */}
-          <div className="px-3 py-1.5 bg-[#083B40] flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-              <span className="w-1.5 h-3.5 bg-[#4ADE80] rounded-xs shrink-0" />
-              <span className="text-[10px] font-bold text-teal-200 uppercase tracking-wider shrink-0">
+          {/* Baris 2: Banner Kode Rak / Lokasi (Gradient Teal, Tanpa Truncate) */}
+          <div className="px-3.5 py-2 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <span className="w-2 h-2 rounded-full bg-[#A7F3D0] shrink-0" />
+              <span className="text-xs font-semibold text-[#DCF7F6] uppercase tracking-wider shrink-0">
                 LOKASI:
               </span>
-              <span className="font-mono text-xs sm:text-sm font-bold text-white tracking-wide break-words tnum">
+              <span className="font-mono text-sm font-bold text-white tracking-wide break-words tnum">
                 {location}
               </span>
             </div>
 
-            <div className="text-[11px] font-mono text-teal-200/90 shrink-0">
+            <div className="text-xs font-mono text-[#DCF7F6] shrink-0 tnum">
               Total: <strong className="text-white font-bold">{totalItems}</strong> Pcs
             </div>
           </div>
         </header>
 
-        {/* Dropdown Tindakan Cepat Lokasi */}
-        {showActions && (
-          <div className="bg-white border-b border-slate-300 px-3 py-2 space-y-1.5 text-xs">
-            <div className="flex items-center justify-between text-[11px] text-slate-500 pb-1 border-b border-slate-100">
-              <span>
-                Total Kuantitas:{" "}
-                <strong className="font-mono font-bold text-slate-900 tnum">{totalItems} Pcs</strong>
-              </span>
-              <span>Operator: {user?.name?.split(" ")[0] || "—"}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-              <button
-                type="button"
-                disabled={hasUnsavedChanges || !products.length}
-                onClick={() => {
-                  setShowMoveModal(true);
-                  setShowActions(false);
-                }}
-                className="h-8 px-2.5 rounded border border-slate-300 bg-slate-50 font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-40 text-left truncate"
-              >
-                ⇄ Pindah ke Rak Lain
-              </button>
-              <button
-                type="button"
-                disabled={!allProducts.length}
-                onClick={() => {
-                  setShowZeroConfirm(true);
-                  setShowActions(false);
-                }}
-                className="h-8 px-2.5 rounded border border-red-200 bg-red-50 font-semibold text-red-700 hover:bg-red-100 disabled:opacity-40 text-left truncate"
-              >
-                ⊘ Set Semua Stok 0
-              </button>
-            </div>
-            {hasUnsavedChanges && (
-              <p className="text-[11px] text-amber-700">
-                * Simpan hitungan terlebih dahulu sebelum memindahkan produk.
-              </p>
-            )}
-          </div>
-        )}
-
         {/* Banner Error Draft (Hanya tampil jika ada kendala storage) */}
         {draftError && (
           <div
             role="alert"
-            className="bg-red-50 border-b border-red-200 px-3 py-1 text-[11px] font-medium text-red-700"
+            className="bg-[#FEF2F2] border-b border-[#DC2626]/20 px-3.5 py-1.5 text-xs font-medium text-[#DC2626]"
           >
             {draftError}
           </div>
         )}
 
         {/* ============================================================== */}
-        {/* 2. SEARCH & FILTER BAR PADAT                                   */}
+        {/* 2. SEARCH & FILTER BAR                                         */}
         {/* ============================================================== */}
-        <div className="bg-white border-b border-slate-200 px-3 py-2 space-y-1.5">
-          {/* Baris 1: Input pencarian tipis (h-9 text-sm) + tombol kamera di dalamnya */}
-          <div className="relative flex items-center">
-            <SearchIcon className="w-4 h-4 text-slate-400 absolute left-2.5 pointer-events-none" />
-            <input
-              ref={searchInputRef}
-              id="input-filter"
-              type="text"
-              value={filterQuery}
-              onChange={(e) => setFilterQuery(e.target.value)}
-              placeholder="Cari nama / scan SKU..."
-              autoComplete="off"
-              className="w-full h-9 pl-8 pr-16 bg-slate-50 border border-slate-300 rounded text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-900 transition-colors"
-            />
-            {filterQuery && (
-              <button
-                type="button"
-                onClick={() => setFilterQuery("")}
-                className="absolute right-9 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-700 text-xs font-mono"
-                aria-label="Bersihkan pencarian"
-              >
-                ✕
-              </button>
-            )}
+        <div className="bg-[#EEFBFB]/95 backdrop-blur-md border-b border-[#9BE0DF]/70 px-3 py-2 space-y-2">
+          {/* Baris 1: Input pencarian + tombol kamera 44x44px */}
+          <div className="flex items-center gap-1.5">
+            <div className="relative flex-1 min-w-0 flex items-center">
+              <SearchIcon className="w-4 h-4 text-[#487277] absolute left-3.5 pointer-events-none" />
+              <input
+                ref={searchInputRef}
+                id="input-filter"
+                type="text"
+                value={filterQuery}
+                onChange={(e) => setFilterQuery(e.target.value)}
+                placeholder="Cari nama / scan SKU…"
+                autoComplete="off"
+                className="w-full min-h-[44px] pl-10 pr-11 bg-white border border-[#9CE0DF]/85 rounded-xl text-sm text-[#0D3B40] placeholder:text-[#6B9498] focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20 transition-colors"
+              />
+              {filterQuery && (
+                <button
+                  type="button"
+                  onClick={() => setFilterQuery("")}
+                  className="absolute right-0.5 w-10 h-10 flex items-center justify-center rounded-lg text-[#487277] hover:text-[#0D3B40]"
+                  aria-label="Bersihkan pencarian"
+                >
+                  <XIcon className="w-4 h-4" />
+                </button>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => {
                 setScannerMode("quick");
                 setShowBarcodeScanner(true);
               }}
-              className="absolute right-1.5 w-7 h-7 flex items-center justify-center rounded bg-slate-200/80 hover:bg-slate-300 text-slate-700 active:bg-slate-400 transition-colors"
+              className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl bg-[#D5F4F3] border border-[#82D6D5]/80 hover:bg-[#C2ECEB] text-[#0B666E] active:scale-[0.97] transition-all"
               title="Scan Barcode"
               aria-label="Scan barcode dengan kamera"
             >
-              <CameraIcon className="w-4 h-4" />
+              <CameraIcon className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Baris 2: Segmented filter tabs ukuran compact (h-7 text-xs font-medium - 3 Kolom) */}
-          <div className="grid grid-cols-3 gap-1 p-0.5 bg-slate-100 rounded h-7 items-center text-xs font-medium">
+          {/* Baris 2: Segmented filter tabs (44px touch target) */}
+          <div className="grid grid-cols-3 gap-1 p-1 bg-[#D8F3F2] border border-[#9BE0DF]/65 rounded-xl text-xs font-medium">
             <button
               type="button"
               onClick={() => setActiveTab("all")}
-              className={`h-6 rounded flex items-center justify-center gap-1 transition-colors ${
+              className={`min-h-[44px] rounded-lg flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
                 activeTab === "all"
-                  ? "bg-white text-slate-900 font-semibold shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-white text-[#0D3B40] font-semibold shadow-subtle"
+                  : "text-[#487277] hover:text-[#0D3B40]"
               }`}
             >
               <span>Semua</span>
-              <span className="font-mono text-[11px] tabular-nums tnum">({allProducts.length})</span>
+              <span className="font-mono text-xs tabular-nums tnum">({allProducts.length})</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab("pending")}
-              className={`h-6 rounded flex items-center justify-center gap-1 transition-colors ${
+              className={`min-h-[44px] rounded-lg flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
                 activeTab === "pending"
-                  ? "bg-white text-slate-900 font-semibold shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-white text-[#0D3B40] font-semibold shadow-subtle"
+                  : "text-[#487277] hover:text-[#0D3B40]"
               }`}
             >
               <span>Belum</span>
-              <span className="font-mono text-[11px] tabular-nums tnum">({pendingCount})</span>
+              <span className="font-mono text-xs tabular-nums tnum">({pendingCount})</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab("completed")}
-              className={`h-6 rounded flex items-center justify-center gap-1 transition-colors ${
+              className={`min-h-[44px] rounded-lg flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
                 activeTab === "completed"
-                  ? "bg-white text-[#16A34A] font-semibold shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-white text-[#16A34A] font-semibold shadow-subtle"
+                  : "text-[#487277] hover:text-[#0D3B40]"
               }`}
             >
               <span>Selesai</span>
-              <span className="font-mono text-[11px] tabular-nums tnum">({countedCount})</span>
+              <span className="font-mono text-xs tabular-nums tnum">({countedCount})</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* ============================================================== */}
-      {/* 3. DENSE ITEM LIST (Flexible Height - Follows Items)           */}
+      {/* 3. PRODUCT LIST (Aqua Pastel Grouped Card for Compact HP)      */}
       {/* ============================================================== */}
-      <div
-        ref={productListRef}
-        className="divide-y divide-slate-200 bg-[#F8FAFC]"
-      >
+      <div ref={productListRef} className="flex-1 px-2.5 pt-2.5">
         {allProducts.length === 0 ? (
-          <div className="p-6">
+          <div className="p-2">
             <EmptyState
               icon={<BoxIcon className="w-6 h-6" />}
               title="Belum ada produk di lokasi ini"
@@ -1281,7 +1227,7 @@ function InputPageContent() {
                 <button
                   type="button"
                   onClick={() => setShowAddForm(true)}
-                  className="h-9 px-4 bg-[#0D5C63] hover:bg-[#14727A] text-white rounded font-semibold text-xs"
+                  className="min-h-[44px] px-5 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white rounded-xl font-semibold text-xs shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] active:scale-[0.98] transition-all"
                 >
                   + Tambah Produk
                 </button>
@@ -1289,9 +1235,9 @@ function InputPageContent() {
             />
           </div>
         ) : visibleProducts.length === 0 ? (
-          <div className="py-16 px-4 text-center">
-            <p className="text-sm font-semibold text-slate-700">Tidak ada barang yang cocok</p>
-            <p className="text-xs text-slate-500 mt-1">
+          <div className="py-12 px-5 bg-white rounded-2xl border border-[#9BE0DF]/75 shadow-subtle text-center">
+            <p className="text-sm font-semibold text-[#0D3B40]">Tidak ada barang yang cocok</p>
+            <p className="text-xs text-[#487277] mt-1 leading-relaxed">
               Ubah kata kunci pencarian atau pilih tab filter lainnya.
             </p>
             {(filterQuery || activeTab !== "all") && (
@@ -1301,244 +1247,291 @@ function InputPageContent() {
                   setFilterQuery("");
                   setActiveTab("all");
                 }}
-                className="mt-3 h-8 px-3 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-700"
+                className="mt-3 min-h-[44px] px-4 bg-[#EEFBFB] border border-[#9CE0DF]/80 hover:bg-[#D5F4F3] rounded-xl text-xs font-semibold text-[#0D3B40] active:scale-[0.98] transition-all"
               >
                 Reset Filter
               </button>
             )}
           </div>
         ) : (
-          visibleProducts.map(({ product, idx, isNew }) => {
-            const k = productKey(product.sku, product.batch);
-            const isItemCounted = Boolean(counted[k]);
-            const qty = quantities[k] ?? 0;
-            const formula = formulas[k] || "";
-            const isExpanded = expandedRowKey === k;
-            const isBatchModalOpenForRow =
-              batchModalTarget?.sku === product.sku &&
-              batchModalTarget?.batch === product.batch &&
-              batchModalTarget?.isNew === isNew;
+          <div className="rounded-2xl bg-white border border-[#9BE0DF]/75 shadow-subtle overflow-hidden divide-y divide-[#9BE0DF]/40">
+            {visibleProducts.map(({ product, idx, isNew }) => {
+              const k = productKey(product.sku, product.batch);
+              const isItemCounted = Boolean(counted[k]);
+              const qty = quantities[k] ?? 0;
+              const formula = formulas[k] || "";
+              const isExpanded = expandedRowKey === k;
+              const isBatchModalOpenForRow =
+                batchModalTarget?.sku === product.sku &&
+                batchModalTarget?.batch === product.batch &&
+                batchModalTarget?.isNew === isNew;
 
-            // Status visual sesuai palet High Contrast Light Mode:
-            // - Belum dihitung: bg-white + border-l-4 #CBD5E1
-            // - Sudah dihitung (>0): bg-slate-100/70 + border-l-4 #16A34A
-            // - Selisih / Stok 0 / Baru: bg-slate-100/70 + border-l-4 #D97706 / #DC2626
-            const rowBorderAndBg = !isItemCounted
-              ? "bg-white border-l-4 border-l-[#CBD5E1]"
-              : qty === 0
-              ? "bg-slate-100/70 border-l-4 border-l-[#DC2626]"
-              : isNew
-              ? "bg-slate-100/70 border-l-4 border-l-[#D97706]"
-              : "bg-slate-100/70 border-l-4 border-l-[#16A34A]";
+              const rowBorderAndBg = !isItemCounted
+                ? "bg-white border-l-4 border-l-[#9BE0DF]"
+                : qty === 0
+                ? "bg-[#FEF2F2]/40 border-l-4 border-l-[#DC2626]"
+                : isNew
+                ? "bg-[#FFFBEB]/45 border-l-4 border-l-[#D97706]"
+                : "bg-[#ECFAF9]/75 border-l-4 border-l-[#16A34A]";
 
-            const dotColor = !isItemCounted
-              ? "bg-[#CBD5E1]"
-              : qty === 0
-              ? "bg-[#DC2626]"
-              : isNew
-              ? "bg-[#D97706]"
-              : "bg-[#16A34A]";
+              const dotColor = !isItemCounted
+                ? "bg-[#9BE0DF]"
+                : qty === 0
+                ? "bg-[#DC2626]"
+                : isNew
+                ? "bg-[#D97706]"
+                : "bg-[#16A34A]";
 
-            return (
-              <div
-                key={`${product.sku}-${product.batch}-${idx}`}
-                data-product-idx={idx}
-                data-product-key={k}
-                data-count-status={isItemCounted ? "counted" : "uncounted"}
-                className={`${rowBorderAndBg} transition-colors`}
-              >
-                {/* Main Compact Row (~58px) */}
-                <div className="px-3 py-2 flex items-center justify-between gap-2 min-h-[58px]">
-                  {/* Sisi Kiri: Info Barang */}
-                  <div
-                    className={`min-w-0 flex-1 pr-1.5 ${
-                      !isItemCounted && !isExpanded ? "cursor-pointer" : ""
-                    }`}
-                    onClick={() => {
-                      if (!isItemCounted && !isExpanded) {
-                        handleOpenRowBatchPicker(product, isNew);
-                      }
-                    }}
-                  >
-                    {/* Baris 1: Nama Produk Utama di Atas */}
-                    <h3 className="text-sm font-semibold text-[#0F172A] leading-tight break-words">
-                      {product.productName}
-                    </h3>
-
-                    {/* Baris 2: Titik Status + SKU + Model Chip Batch + Rumus jika ada */}
-                    <div className="flex items-center gap-1.5 mt-1 text-xs text-[#475569] leading-none flex-wrap">
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
-                      <span className="font-mono text-xs text-[#475569] tabular-nums tnum">
-                        {product.sku}
-                      </span>
-                      <span className="text-slate-300">•</span>
-
-                      {/* Chip Batch/Lot — Membuka Pop-up Pilih Batch */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenRowBatchPicker(product, isNew);
-                        }}
-                        title="Klik untuk pilih / ubah Batch"
-                        className={`h-5 px-1.5 rounded font-mono text-[11px] font-semibold border transition flex items-center gap-1 ${
-                          isBatchModalOpenForRow
-                            ? "bg-[#0D5C63] text-white border-[#0D5C63]"
-                            : "bg-[#E6F3F4] text-[#0D5C63] border-[#A8D3D6] hover:bg-[#D0EBED]"
-                        }`}
-                      >
-                        <span>{product.batch || "NO-BATCH"}</span>
-                        <ChevronDownIcon className="w-3 h-3 opacity-70" />
-                      </button>
-
-                      {formula ? (
-                        <>
-                          <span className="text-slate-300">•</span>
-                          <span className="font-mono text-[11px] text-slate-600 font-semibold tnum">
-                            ={formula}
-                          </span>
-                        </>
-                      ) : null}
-
-                      {isItemCounted && qty === 0 && (
-                        <span className="font-mono text-[10px] font-bold bg-red-100 text-[#DC2626] px-1 py-0.5 rounded tnum">
-                          STOK 0
-                        </span>
-                      )}
-                      {isNew && (
-                        <span className="font-mono text-[10px] font-bold bg-amber-100 text-[#D97706] px-1 py-0.5 rounded">
-                          BARU
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Sisi Kanan: Kuantitas / Tombol Buka Hitung */}
-                  <div className="flex items-center shrink-0">
-                    <button
-                      type="button"
+              return (
+                <div
+                  key={`${product.sku}-${product.batch}-${idx}`}
+                  data-product-idx={idx}
+                  data-product-key={k}
+                  data-count-status={isItemCounted ? "counted" : "uncounted"}
+                  className={`${rowBorderAndBg} transition-colors`}
+                >
+                  {/* Main Compact HP Row */}
+                  <div className="px-3.5 py-2.5 flex items-center justify-between gap-2 min-h-[60px]">
+                    {/* Sisi Kiri: Info Barang */}
+                    <div
+                      className={`min-w-0 flex-1 pr-1 ${
+                        !isItemCounted && !isExpanded ? "cursor-pointer" : ""
+                      }`}
                       onClick={() => {
-                        if (isExpanded) {
-                          setExpandedRowKey(null);
-                        } else if (!isItemCounted) {
-                          // Belum dihitung: munculkan Pop-up Pilih Batch (Chip) terlebih dahulu sebelum input Qty
+                        if (!isItemCounted && !isExpanded) {
                           handleOpenRowBatchPicker(product, isNew);
-                        } else {
-                          setExpandedRowKey(k);
                         }
                       }}
-                      className={`h-8 px-2.5 rounded font-mono text-xs font-bold border transition flex items-center justify-center gap-1 tabular-nums tnum shadow-sm active:scale-95 touch-manipulation ${
-                        isItemCounted
-                          ? "bg-[#E6F3F4] text-[#0D5C63] border-[#A8D3D6] hover:bg-[#D0EBED]"
-                          : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
-                      }`}
-                      title={
-                        isItemCounted
-                          ? `Kuantitas: ${qty} Pcs. Klik untuk buka kalkulator/opsi.`
-                          : "Klik untuk pilih batch lalu input qty"
-                      }
                     >
-                      <span>{isItemCounted ? `${qty} Pcs` : "Hitung"}</span>
-                      <ChevronDownIcon
-                        className={`w-3.5 h-3.5 text-current opacity-70 transition-transform ${
-                          isExpanded ? "rotate-180" : ""
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
+                      {/* Baris 1: Nama Produk */}
+                      <h3 className="text-sm font-semibold text-[#0D3B40] leading-snug break-words">
+                        {product.productName}
+                      </h3>
 
-                {/* Inline Mini Drawer: Kalkulator Rumus + Tandai 0 + Reset + Hapus */}
-                {isExpanded && (
-                  <div className="px-3 py-2 bg-slate-100/90 border-t border-slate-200 space-y-2">
-                    <QtyInput
-                      wide
-                      value={qty}
-                      unfilled={!isItemCounted}
-                      onChange={(v) => handleQuantityChange(k, v)}
-                      onExprCommit={(expr) => handleExprCommit(k, expr)}
-                      onCommit={handleFinishRowQty}
-                      ariaLabel={`Kalkulator kuantitas ${product.productName}`}
-                    />
-                    <div className="flex items-center justify-between gap-1.5 pt-1">
-                      <div className="flex items-center gap-1.5">
+                      {/* Baris 2: Titik Status + SKU + Chip Batch + Rumus/Badge */}
+                      <div className="flex items-center gap-1.5 mt-1.5 text-xs text-[#487277] leading-normal flex-wrap">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
+                        <span className="font-mono text-xs text-[#487277] tabular-nums tnum">
+                          {product.sku}
+                        </span>
+                        <span className="text-[#487277]/45">•</span>
+
+                        {/* Chip Batch/Lot — Membuka Pop-up Pilih Batch */}
                         <button
                           type="button"
-                          onClick={() => {
-                            handleQuantityChange(k, 0);
-                            handleFinishRowQty();
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenRowBatchPicker(product, isNew);
                           }}
-                          className="h-7 px-2.5 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          title="Klik untuk pilih / ubah Batch"
+                          className={`min-h-[44px] px-2.5 rounded-xl font-mono text-xs font-semibold border transition-all active:scale-[0.97] flex items-center gap-1 ${
+                            isBatchModalOpenForRow
+                              ? "bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white border-[#0E838C]"
+                              : "bg-[#D5F4F3] text-[#0B666E] border-[#82D6D5]/75 hover:bg-[#C2ECEB]"
+                          }`}
                         >
-                          Stok 0
+                          <span>{product.batch || "NO-BATCH"}</span>
+                          <ChevronDownIcon className="w-3.5 h-3.5 opacity-75" />
                         </button>
-                        {isItemCounted && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCounted((prev) => {
-                                const next = { ...prev };
-                                delete next[k];
-                                return next;
-                              });
-                              setQuantities((prev) => ({ ...prev, [k]: 0 }));
-                              setFormulas((prev) => ({ ...prev, [k]: "" }));
-                            }}
-                            className="h-7 px-2.5 bg-white border border-slate-300 rounded text-xs font-medium text-slate-600 hover:bg-slate-50"
-                          >
-                            Reset Belum
-                          </button>
+
+                        {formula ? (
+                          <>
+                            <span className="text-[#487277]/45">•</span>
+                            <span className="font-mono text-xs text-[#487277] font-semibold tnum">
+                              ={formula}
+                            </span>
+                          </>
+                        ) : null}
+
+                        {isItemCounted && qty === 0 && (
+                          <span className="font-mono text-xs font-semibold bg-[#FEF2F2] text-[#DC2626] px-2 py-0.5 rounded-lg tnum">
+                            STOK 0
+                          </span>
+                        )}
+                        {isNew && (
+                          <span className="font-mono text-xs font-semibold bg-[#FFFBEB] text-[#B45309] px-2 py-0.5 rounded-lg">
+                            BARU
+                          </span>
                         )}
                       </div>
+                    </div>
 
+                    {/* Sisi Kanan: Kuantitas / Tombol Buka Hitung */}
+                    <div className="flex items-center shrink-0">
                       <button
                         type="button"
                         onClick={() => {
-                          setExpandedRowKey(null);
-                          handleDeleteProduct(product, isNew);
+                          if (isExpanded) {
+                            setExpandedRowKey(null);
+                          } else if (!isItemCounted) {
+                            handleOpenRowBatchPicker(product, isNew);
+                          } else {
+                            setExpandedRowKey(k);
+                          }
                         }}
-                        className="h-7 px-2.5 bg-red-50 border border-red-200 rounded text-xs font-semibold text-red-700 hover:bg-red-100 flex items-center gap-1"
+                        className={`min-h-[44px] px-3 rounded-xl font-mono text-xs font-bold border transition-all flex items-center justify-center gap-1 tabular-nums tnum shadow-subtle active:scale-[0.97] touch-manipulation ${
+                          isItemCounted
+                            ? "bg-[#D5F4F3] text-[#0B666E] border-[#7CD4D3]/85 hover:bg-[#C2ECEB]"
+                            : "bg-[#EEFBFB] text-[#0D3B40] border-[#9CE0DF]/85 hover:bg-[#DCF6F5]"
+                        }`}
+                        title={
+                          isItemCounted
+                            ? `Kuantitas: ${qty} Pcs. Klik untuk buka kalkulator/opsi.`
+                            : "Klik untuk pilih batch lalu input qty"
+                        }
                       >
-                        <TrashIcon className="w-3.5 h-3.5" />
-                        <span>Hapus</span>
+                        <span>{isItemCounted ? `${qty} Pcs` : "Hitung"}</span>
+                        <ChevronDownIcon
+                          className={`w-4 h-4 text-current opacity-70 transition-transform duration-150 ${
+                            isExpanded ? "rotate-180" : ""
+                          }`}
+                        />
                       </button>
                     </div>
                   </div>
-                )}
-              </div>
-            );
-          })
+
+                  {/* Inline Mini Drawer: Kalkulator Rumus + Tandai 0 + Reset + Hapus */}
+                  {isExpanded && (
+                    <div className="px-3.5 py-3 bg-[#EEFBFB] border-t border-[#9BE0DF]/55 space-y-2.5">
+                      <QtyInput
+                        wide
+                        value={qty}
+                        unfilled={!isItemCounted}
+                        onChange={(v) => handleQuantityChange(k, v)}
+                        onExprCommit={(expr) => handleExprCommit(k, expr)}
+                        onCommit={handleFinishRowQty}
+                        ariaLabel={`Kalkulator kuantitas ${product.productName}`}
+                      />
+                      <div className="flex items-center justify-between gap-2 pt-0.5">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleQuantityChange(k, 0);
+                              handleFinishRowQty();
+                            }}
+                            className="min-h-[44px] px-3 bg-white border border-[#9CE0DF]/80 rounded-xl text-xs font-semibold text-[#0D3B40] hover:bg-[#D5F4F3]/60 active:scale-[0.98] transition-all"
+                          >
+                            Stok 0
+                          </button>
+                          {isItemCounted && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCounted((prev) => {
+                                  const next = { ...prev };
+                                  delete next[k];
+                                  return next;
+                                });
+                                setQuantities((prev) => ({ ...prev, [k]: 0 }));
+                                setFormulas((prev) => ({ ...prev, [k]: "" }));
+                              }}
+                              className="min-h-[44px] px-3 bg-white border border-[#9CE0DF]/80 rounded-xl text-xs font-semibold text-[#487277] hover:text-[#0D3B40] active:scale-[0.98] transition-all"
+                            >
+                              Reset Belum
+                            </button>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setExpandedRowKey(null);
+                            handleDeleteProduct(product, isNew);
+                          }}
+                          className="min-h-[44px] px-3 bg-[#FEF2F2] border border-[#DC2626]/20 rounded-xl text-xs font-semibold text-[#DC2626] hover:bg-red-100/70 flex items-center gap-1.5 active:scale-[0.98] transition-transform"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                          <span>Hapus</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 
       {/* ============================================================== */}
-      {/* 4. BOTTOM ACTION DOCK (Flexible directly under product items)  */}
+      {/* 4. FIXED THUMB-ZONE BOTTOM ACTION DOCK                         */}
       {/* ============================================================== */}
-      <footer className="mt-3 mb-8 bg-white border-y border-slate-200 px-3 py-2 flex items-center gap-2 shrink-0 z-30 shadow-sm">
-        {/* Tombol Utama (70% lebar): [ 📷 SCAN BARCODE ] */}
+      <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-30 bg-gradient-to-t from-[#DAF4F4] via-[#E8F9F9]/95 to-[#F4FCFC]/95 backdrop-blur-md border-t border-[#8ADBD9]/75 shadow-bar px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] flex items-center gap-2">
         <button
           type="button"
           onClick={() => {
             setScannerMode("quick");
             setShowBarcodeScanner(true);
           }}
-          className="w-[70%] h-10 bg-[#0D5C63] hover:bg-[#14727A] active:bg-[#083B40] text-white font-semibold text-sm rounded flex items-center justify-center gap-2 transition-colors touch-manipulation"
+          className="flex-[7] min-h-[48px] bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white font-semibold text-sm rounded-xl shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] flex items-center justify-center gap-2 active:scale-[0.98] transition-all duration-150 touch-manipulation"
         >
-          <CameraIcon className="w-4 h-4" />
+          <CameraIcon className="w-5 h-5" />
           <span>SCAN BARCODE</span>
         </button>
 
-        {/* Tombol Sekunder (30% lebar): [ ✓ Submit ] */}
         <button
           type="button"
           onClick={handleSaveClick}
           disabled={saving || countedCount === 0}
-          className="w-[30%] h-10 bg-[#16A34A] hover:bg-[#15803D] active:bg-[#166534] disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold text-sm rounded flex items-center justify-center gap-1.5 transition-colors touch-manipulation"
+          className="flex-[3] min-h-[48px] bg-[#16A34A] hover:bg-[#15803D] disabled:bg-[#D5EDED] disabled:text-[#5B8E92] disabled:shadow-none text-white font-semibold text-sm rounded-xl shadow-subtle flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all duration-150 touch-manipulation"
         >
-          <CheckIcon className="w-4 h-4" />
-          <span>{saving ? "..." : "Submit"}</span>
+          <CheckIcon className="w-5 h-5" />
+          <span>{saving ? "…" : "Submit"}</span>
         </button>
       </footer>
+
+      {/* ============================================================== */}
+      {/* ACTION SHEET MENU TINDAKAN LOKASI (Centered Modal)             */}
+      {/* ============================================================== */}
+      <Dialog
+        isOpen={showActions}
+        onClose={() => setShowActions(false)}
+        title="Tindakan Lokasi"
+        description={location}
+        size="md"
+      >
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between text-xs text-[#487277] bg-[#EEFBFB] border border-[#9CE0DF]/75 rounded-2xl px-3.5 py-2.5">
+            <span>
+              Total Kuantitas:{" "}
+              <strong className="font-mono font-bold text-[#0D3B40] tnum">{totalItems} Pcs</strong>
+            </span>
+            <span>Operator: {user?.name?.split(" ")[0] || "—"}</span>
+          </div>
+
+          <button
+            type="button"
+            disabled={hasUnsavedChanges || !products.length}
+            onClick={() => {
+              setShowMoveModal(true);
+              setShowActions(false);
+            }}
+            className="w-full min-h-[48px] px-4 rounded-xl border border-[#9CE0DF]/80 bg-white hover:bg-[#EEFBFB] text-sm font-semibold text-[#0D3B40] flex items-center justify-between active:scale-[0.98] transition-all disabled:opacity-40"
+          >
+            <span>⇄ Pindah ke Rak Lain</span>
+            <ChevronDownIcon className="w-4 h-4 -rotate-90 text-[#487277]" />
+          </button>
+
+          <button
+            type="button"
+            disabled={!allProducts.length}
+            onClick={() => {
+              setShowZeroConfirm(true);
+              setShowActions(false);
+            }}
+            className="w-full min-h-[48px] px-4 rounded-xl border border-[#DC2626]/20 bg-[#FEF2F2] hover:bg-red-100/70 text-sm font-semibold text-[#DC2626] flex items-center justify-between active:scale-[0.98] transition-all disabled:opacity-40"
+          >
+            <span>⊘ Set Semua Stok 0</span>
+          </button>
+
+          {hasUnsavedChanges && (
+            <p className="text-xs text-[#B45309] bg-[#FFFBEB] border border-[#F59E0B]/25 rounded-xl px-3.5 py-2 leading-relaxed">
+              * Simpan hitungan terlebih dahulu sebelum memindahkan produk.
+            </p>
+          )}
+        </div>
+      </Dialog>
 
       {/* ============================================================== */}
       {/* DIALOG TAMBAH PRODUK BARU KE LOKASI INI                        */}
@@ -1555,7 +1548,7 @@ function InputPageContent() {
             label="Barcode (opsional)"
             hint="Pindai atau ketik lalu tekan Enter."
           >
-            <div className="relative flex items-center">
+            <div className="flex items-center gap-1.5">
               <input
                 id="add-barcode"
                 type="text"
@@ -1571,39 +1564,37 @@ function InputPageContent() {
                     handleBarcodeScan(b);
                   }
                 }}
-                className="w-full h-10 pl-3 pr-20 bg-slate-50 border border-slate-300 rounded font-mono text-sm text-slate-900"
+                className="flex-1 min-w-0 min-h-[44px] px-3.5 bg-[#EEFBFB] border border-[#9CE0DF]/80 rounded-xl font-mono text-sm text-[#0D3B40] placeholder:text-[#6B9498] focus:bg-white focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20"
                 placeholder="Scan / ketik barcode…"
                 autoComplete="off"
               />
-              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const b = String(newProductForm.barcode || "").trim();
-                    if (b) {
-                      setScannerMode("addForm");
-                      handleBarcodeScan(b);
-                    }
-                  }}
-                  disabled={!String(newProductForm.barcode || "").trim() || scanningBarcode}
-                  className="w-8 h-8 rounded bg-white border border-slate-300 flex items-center justify-center text-slate-700 disabled:opacity-40"
-                  aria-label="Cari barcode"
-                >
-                  <SearchIcon className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
+              <button
+                type="button"
+                onClick={() => {
+                  const b = String(newProductForm.barcode || "").trim();
+                  if (b) {
                     setScannerMode("addForm");
-                    setShowBarcodeScanner(true);
-                  }}
-                  disabled={scanningBarcode}
-                  className="w-8 h-8 rounded bg-[#0D5C63] hover:bg-[#14727A] text-white flex items-center justify-center disabled:opacity-40"
-                  aria-label="Pindai barcode dengan kamera"
-                >
-                  <CameraIcon className="w-4 h-4" />
-                </button>
-              </div>
+                    handleBarcodeScan(b);
+                  }
+                }}
+                disabled={!String(newProductForm.barcode || "").trim() || scanningBarcode}
+                className="w-11 h-11 shrink-0 rounded-xl bg-white border border-[#9CE0DF]/80 hover:bg-[#EEFBFB] flex items-center justify-center text-[#0D3B40] disabled:opacity-40 active:scale-[0.97] transition-all"
+                aria-label="Cari barcode"
+              >
+                <SearchIcon className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setScannerMode("addForm");
+                  setShowBarcodeScanner(true);
+                }}
+                disabled={scanningBarcode}
+                className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white flex items-center justify-center disabled:opacity-40 active:scale-[0.97] transition-all"
+                aria-label="Pindai barcode dengan kamera"
+              >
+                <CameraIcon className="w-4 h-4" />
+              </button>
             </div>
           </Field>
 
@@ -1617,8 +1608,8 @@ function InputPageContent() {
             getKey={(p, i) => `${p.sku}-${i}`}
             renderItem={(p) => (
               <>
-                <p className="font-semibold text-slate-900 text-sm">{p.productName}</p>
-                <p className="font-mono text-xs text-slate-500">
+                <p className="font-semibold text-[#0D3B40] text-sm leading-snug">{p.productName}</p>
+                <p className="font-mono text-xs text-[#487277] mt-0.5">
                   SKU: {p.sku}
                 </p>
               </>
@@ -1640,7 +1631,7 @@ function InputPageContent() {
                 onChange={(e) =>
                   setNewProductForm({ ...newProductForm, sku: e.target.value })
                 }
-                className="w-full h-10 px-3 bg-slate-50 border border-slate-300 rounded font-mono text-sm font-semibold text-slate-900"
+                className="w-full min-h-[44px] px-3 bg-[#EEFBFB] border border-[#9CE0DF]/80 rounded-xl font-mono text-sm font-semibold text-[#0D3B40] placeholder:text-[#6B9498] focus:bg-white focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20"
                 placeholder="SKU…"
               />
             </Field>
@@ -1650,10 +1641,10 @@ function InputPageContent() {
                 id="add-batch"
                 type="button"
                 onClick={() => setShowAddFormBatchModal(true)}
-                className={`w-full h-10 px-3 rounded border flex items-center justify-between gap-1.5 text-left transition ${
+                className={`w-full min-h-[44px] px-3 rounded-xl border flex items-center justify-between gap-1.5 text-left transition-colors active:scale-[0.98] ${
                   newProductForm.batch.trim()
-                    ? "bg-[#E6F3F4] border-[#0D5C63] text-[#0D5C63] font-mono text-sm font-bold"
-                    : "bg-slate-50 border-slate-300 text-slate-500 text-xs font-medium hover:bg-slate-100"
+                    ? "bg-[#D5F4F3] border-[#7CD4D3] text-[#0B666E] font-mono text-xs font-semibold"
+                    : "bg-[#EEFBFB] border-[#9CE0DF]/80 text-[#487277] text-xs font-medium hover:bg-white"
                 }`}
               >
                 <span className="truncate">
@@ -1680,7 +1671,7 @@ function InputPageContent() {
             <button
               type="button"
               onClick={handleAddNewProduct}
-              className="w-full h-10 bg-[#0D5C63] hover:bg-[#14727A] text-white rounded font-semibold text-sm active:bg-[#083B40] transition-colors"
+              className="w-full min-h-[48px] bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white rounded-xl font-semibold text-sm shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] active:scale-[0.98] transition-all"
             >
               Masukkan ke Hitungan Opname
             </button>
@@ -1761,7 +1752,7 @@ function InputPageContent() {
                   setSavingMasterData(false);
                 }
               }}
-              className="w-full h-9 bg-slate-100 border border-slate-300 text-slate-800 rounded font-semibold text-xs hover:bg-slate-200 disabled:opacity-50"
+              className="w-full min-h-[44px] bg-[#EEFBFB] border border-[#9CE0DF]/80 text-[#0D3B40] rounded-xl font-semibold text-xs hover:bg-[#D5F4F3] active:scale-[0.98] transition-all disabled:opacity-50"
             >
               {savingMasterData ? "Menyimpan…" : "Simpan ke Master Data Saja (Tanpa Hitung)"}
             </button>
@@ -1875,13 +1866,7 @@ function InputPageContent() {
 
 export default function InputPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="max-w-md mx-auto h-dvh flex items-center justify-center bg-[#F8FAFC]">
-          <LoadingSpinner />
-        </div>
-      }
-    >
+    <Suspense fallback={<PageSkeleton />}>
       <InputPageContent />
     </Suspense>
   );

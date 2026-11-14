@@ -3,90 +3,88 @@
 @tailwind utilities;
 
 :root {
-  /* ── Deep Teal Theme (Industrial Utilitarian 2026) ──
-     Deep Teal (#0D5C63) = header, tombol primer, aksen utama.
-     Pale Teal Mist (#E6F3F4) = latar badge kode rak/batch yang lembut & jelas.
-     Cool Alabaster (#F8FAFC) = latar aplikasi bersih berkerapatan tinggi.
-     Paper (#FFFFFF) = permukaan baris/kartu/input/modal. */
-  --espresso: #0f172a;
-  --cocoa: #475569;
-  --ivory: #f8fafc;
+  /* ── Soft Modern Aqua Pastel + Teal Pastel Cerah ──
+     Canvas: Airy Aqua Pastel (#EBF9F9) + Pure Paper (#FFFFFF) + Aqua Recessed (#EEFBFB)
+     Accent: Bright Teal (#0E838C -> #14B8A6) */
+  --espresso: #0d3b40;
+  --cocoa: #487277;
+  --ivory: #ebf9f9;
   --paper: #ffffff;
-  --ochre: #0d5c63;
+  --ochre: #0e838c;
   --amber-text: #b45309;
 
-  /* Warna semantik */
+  /* Warna semantik lembut & terbaca */
   --success: #16a34a;
   --success-bg: #ecfdf5;
   --danger: #dc2626;
   --danger-bg: #fef2f2;
-  --info: #0d5c63;
-  --info-bg: #e6f3f4;
+  --info: #0e838c;
+  --info-bg: #d8f5f4;
   --warning: #fffbeb;
   --warning-text: #b45309;
 
-  /* Alias aplikasi (Deep Teal) */
-  --primary: #0d5c63;
-  --primary-light: #14727a;
-  --primary-dark: #083b40;
-  --primary-pale: #e6f3f4;
-  --primary-bg: #f8fafc;
+  /* Alias aplikasi (Aqua Pastel & Soft Teal Cerah) */
+  --primary: #0e838c;
+  --primary-light: #14b8a6;
+  --primary-dark: #0b666e;
+  --primary-pale: #d8f5f4;
+  --primary-bg: #ebf9f9;
   --surface: #ffffff;
-  --surface-warm: #f1f5f9;
+  --surface-warm: #eefbfb;
 
   --accent-yellow: #bae6fd;
   --accent-red: #dc2626;
   --accent-green: #16a34a;
   --error: #dc2626;
 
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --border: #e2e8f0;
-  --border-subtle: #f1f5f9;
-  --border-input: #cbd5e1;
+  --text-primary: #0d3b40;
+  --text-secondary: #487277;
+  --border: #cbeeed;
+  --border-subtle: #e5f7f7;
+  --border-input: #9ce0df;
 
   /* Token pendukung */
-  --on-dark: #f8fafc;
-  --on-dark-muted: #cbd5e1;
-  --surface-tint: #f1f5f9;
-  --surface-head: #f8fafc;
+  --on-dark: #f2fcfc;
+  --on-dark-muted: #cff5f4;
+  --surface-tint: #e8f8f8;
+  --surface-head: #dff5f5;
   --danger-tint-bg: #fef2f2;
   --danger-tint-border: #fecaca;
-  --page-outer: #e2e8f0;
+  --page-outer: #ddf3f3;
 
   /* Kanal RGB untuk kelas opacity Tailwind (rgb(var(--x-rgb) / a)) */
-  --espresso-rgb: 15 23 42;
-  --cocoa-rgb: 71 85 105;
-  --ivory-rgb: 248 250 252;
+  --espresso-rgb: 13 59 64;
+  --cocoa-rgb: 72 114 119;
+  --ivory-rgb: 235 249 249;
   --paper-rgb: 255 255 255;
-  --ochre-rgb: 13 92 99;
+  --ochre-rgb: 14 131 140;
   --amber-text-rgb: 180 83 9;
   --success-rgb: 22 163 74;
   --success-bg-rgb: 236 253 245;
   --danger-rgb: 220 38 38;
   --danger-bg-rgb: 254 242 242;
-  --info-rgb: 13 92 99;
-  --info-bg-rgb: 230 243 244;
+  --info-rgb: 14 131 140;
+  --info-bg-rgb: 216 245 244;
   --warning-rgb: 255 251 235;
   --warning-text-rgb: 180 83 9;
-  --primary-rgb: 13 92 99;
-  --primary-light-rgb: 20 114 122;
-  --primary-dark-rgb: 8 59 64;
-  --primary-pale-rgb: 230 243 244;
-  --primary-bg-rgb: 248 250 252;
+  --primary-rgb: 14 131 140;
+  --primary-light-rgb: 20 184 166;
+  --primary-dark-rgb: 11 102 110;
+  --primary-pale-rgb: 216 245 244;
+  --primary-bg-rgb: 235 249 249;
   --surface-rgb: 255 255 255;
-  --surface-warm-rgb: 241 245 249;
+  --surface-warm-rgb: 238 251 251;
   --accent-yellow-rgb: 186 230 253;
   --accent-red-rgb: 220 38 38;
   --accent-green-rgb: 22 163 74;
   --error-rgb: 220 38 38;
-  --text-primary-rgb: 15 23 42;
-  --text-secondary-rgb: 71 85 105;
-  --border-rgb: 226 232 240;
-  --border-subtle-rgb: 241 245 249;
-  --border-input-rgb: 203 213 225;
+  --text-primary-rgb: 13 59 64;
+  --text-secondary-rgb: 72 114 119;
+  --border-rgb: 203 238 237;
+  --border-subtle-rgb: 229 247 247;
+  --border-input-rgb: 156 224 223;
 
-  --focus-ring: 0 0 0 2px rgb(var(--ochre-rgb) / 0.35);
+  --focus-ring: 0 0 0 3px rgb(var(--primary-light-rgb) / 0.25);
 }
 
 /* Base styles */
@@ -111,7 +109,7 @@ html {
 @layer base {
   input::placeholder,
   textarea::placeholder {
-    color: #94a3b8;
+    color: #6b9498;
     opacity: 1;
   }
 }
@@ -151,13 +149,13 @@ textarea.border-border:not(:focus) {
 .location-band {
   background-color: var(--primary);
   color: var(--ivory);
-  border-radius: 6px;
-  padding: 10px 12px;
+  border-radius: 14px;
+  padding: 10px 14px;
 }
 .location-band .location-band-code {
   font-family: var(--font-jetbrains), Consolas, monospace;
-  font-size: 1.125rem;
-  line-height: 1.2;
+  font-size: 1.0625rem;
+  line-height: 1.25;
   font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
@@ -171,8 +169,8 @@ textarea.border-border:not(:focus) {
 }
 
 .tap {
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .hide-scrollbar::-webkit-scrollbar {
@@ -198,35 +196,35 @@ input, select, textarea { min-width: 0; }
 }
 
 .formula-breakdown {
-  margin-top: 6px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgb(var(--primary-rgb) / 0.14);
   border-left: 3px solid var(--ochre);
-  border-radius: 4px;
+  border-radius: 12px;
   background: var(--primary-pale);
 }
 .formula-caption {
   display: flex;
-  gap: 4px;
+  gap: 5px;
   align-items: center;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--primary);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
 }
 .formula-equation {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 3px 6px;
-  margin-top: 2px;
+  gap: 4px 8px;
+  margin-top: 3px;
   color: var(--espresso);
   font-variant-numeric: tabular-nums;
 }
 .formula-expression { font-family: var(--font-jetbrains), Consolas, monospace; font-size: 13px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
 .formula-result { font-family: var(--font-jetbrains), Consolas, monospace; font-size: 13px; font-weight: 800; line-height: 1.4; overflow-wrap: anywhere; }
-.formula-result > span { font-size: 11px; font-weight: 600; }
+.formula-result > span { font-size: 12px; font-weight: 600; }
 
 /* Focus ring & animations */
 a:focus-visible,
@@ -237,7 +235,7 @@ textarea:focus-visible,
 summary:focus-visible,
 [tabindex]:focus-visible {
   outline: 2px solid var(--ochre);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 @keyframes so-fadeIn {
@@ -245,14 +243,14 @@ summary:focus-visible,
   to { opacity: 1; }
 }
 @keyframes so-slideUp {
-  from { transform: translateY(12px); opacity: 0; }
+  from { transform: translateY(14px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 .animate-fadeIn {
-  animation: so-fadeIn 0.15s ease-out;
+  animation: so-fadeIn 0.16s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .animate-slideUp {
-  animation: so-slideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: so-slideUp 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {

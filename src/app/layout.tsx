@@ -26,7 +26,7 @@ const jetbrainsMono = localFont({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#0d5c63",
+  themeColor: "#0e838c",
   width: "device-width",
   initialScale: 1,
   userScalable: true,
@@ -58,12 +58,25 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body
-        className={`${inter.className} bg-[#F8FAFC] text-[#0F172A] text-sm antialiased`}
+        className={`${inter.className} bg-[#EBF9F9] text-[#0D3B40] text-sm antialiased`}
       >
         <AuthProvider>
           <DataSyncProvider>
             {children}
-            <Toaster position="top-center" />
+            <Toaster
+              position="top-center"
+              toastOptions={{
+                style: {
+                  borderRadius: "14px",
+                  background: "#0D3B40",
+                  color: "#F2FCFC",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  padding: "10px 14px",
+                  boxShadow: "0 8px 24px -4px rgba(15, 23, 42, 0.22)",
+                },
+              }}
+            />
           </DataSyncProvider>
         </AuthProvider>
         <ServiceWorkerRegister />

@@ -117,24 +117,24 @@ export default function ProfilePage() {
   const isSyncing = syncProgress.status === "syncing";
 
   return (
-    <div className="max-w-md mx-auto min-h-dvh bg-[#F8FAFC] text-[#0F172A] pb-24 border-x border-slate-200 font-sans antialiased">
+    <div className="max-w-md mx-auto min-h-dvh bg-gradient-to-b from-[#D7F4F4] via-[#ECF9F9] to-[#F4FCFC] text-[#0D3B40] pb-24 sm:border-x sm:border-[#8ADBD9]/65 font-sans antialiased">
       {/* ============================================================== */}
-      {/* 1. COMPACT TOP HEADER (~46px, Sticky - Deep Teal)             */}
+      {/* 1. AQUA PASTEL STICKY HEADER                                   */}
       {/* ============================================================== */}
-      <header className="sticky top-0 z-30 h-11 min-h-[46px] bg-[#0D5C63] text-white border-b border-[#083B40] px-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="font-mono text-xs font-bold bg-white/15 border border-white/25 text-white px-2 py-0.5 rounded tracking-wide">
-            PROFIL
-          </span>
-          <h1 className="text-sm font-bold text-white truncate">
-            Operator & Sistem
+      <header className="sticky top-0 z-30 min-h-[54px] bg-gradient-to-r from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md border-b border-[#8ADBD9]/65 px-3.5 py-2 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-sm font-bold text-[#0D3B40] tracking-tight truncate">
+            Profil Operator
           </h1>
+          <p className="text-xs text-[#487277] truncate">
+            Akun &amp; Sinkronisasi
+          </p>
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs font-medium text-teal-100 shrink-0">
+        <div className="flex items-center gap-1.5 bg-white/85 border border-[#8ADBD9]/75 px-2.5 py-1.5 rounded-full text-xs font-medium text-[#0D3B40] shrink-0">
           <span
             className={`w-2 h-2 rounded-full ${
-              offline || testingOffline ? "bg-[#FBBF24]" : "bg-[#4ADE80]"
+              offline || testingOffline ? "bg-[#F59E0B]" : "bg-[#16A34A]"
             }`}
           />
           <span>
@@ -143,61 +143,61 @@ export default function ProfilePage() {
         </div>
       </header>
 
-      <div className="p-3 space-y-3">
+      <div className="p-3 space-y-2.5">
         {/* ============================================================== */}
-        {/* 2. COMPACT OPERATOR IDENTITY PANEL                             */}
+        {/* 2. OPERATOR IDENTITY CARD (Aqua Hero Tint)                     */}
         {/* ============================================================== */}
         <section
           aria-label="Identitas operator"
-          className="bg-white border border-slate-200 rounded p-3 flex items-center justify-between gap-3"
+          className="bg-gradient-to-br from-[#CCF2F1] via-[#E1F8F8] to-[#FFFFFF] border border-[#7CD4D3]/80 shadow-card rounded-2xl p-3.5 flex items-center justify-between gap-3"
         >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-10 h-10 shrink-0 rounded bg-[#0D5C63] text-white font-mono font-bold text-base flex items-center justify-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-br from-[#0E838C] to-[#14B8A6] text-white font-mono font-bold text-base flex items-center justify-center shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)]">
               {initial}
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm font-bold text-slate-900 truncate leading-tight">
+              <h2 className="text-sm font-bold text-[#0D3B40] truncate leading-snug">
                 {user?.name || "Operator Gudang"}
               </h2>
-              <p className="font-mono text-xs text-slate-500 truncate mt-0.5">
+              <p className="font-mono text-xs text-[#487277] truncate mt-0.5">
                 {user?.email || "-"}
               </p>
             </div>
           </div>
 
-          <span className="font-mono text-[11px] font-bold bg-[#E6F3F4] text-[#0D5C63] border border-[#A8D3D6] px-2 py-0.5 rounded uppercase shrink-0">
+          <span className="font-mono text-xs font-semibold bg-[#D5F4F3] text-[#0B666E] border border-[#82D6D5]/75 px-2.5 py-1 rounded-lg uppercase shrink-0">
             {user?.role || "Staff"}
           </span>
         </section>
 
         {/* ============================================================== */}
-        {/* 3. TELEMETRY & KPI STRIP (3 Kolom Tabular)                     */}
+        {/* 3. KPI STRIP (3 Kolom Tabular)                                 */}
         {/* ============================================================== */}
         <section
           aria-label="Statistik pekerjaan"
-          className="bg-white border border-slate-200 rounded grid grid-cols-3 divide-x divide-slate-200 overflow-hidden"
+          className="bg-white border border-[#9BE0DF]/75 shadow-subtle rounded-2xl grid grid-cols-3 divide-x divide-[#9BE0DF]/40 overflow-hidden"
         >
-          <div className="py-2.5 px-2 text-center">
-            <p className="font-mono text-base font-bold text-slate-900 tabular-nums tnum">
+          <div className="py-3 px-2 text-center">
+            <p className="font-mono text-base font-bold text-[#0D3B40] tabular-nums tnum">
               {stats.discan}
             </p>
-            <p className="text-[11px] font-medium text-slate-500 mt-0.5">
-              Rak Dikerjakan
+            <p className="text-xs font-medium text-[#487277] mt-0.5">
+              Rak Selesai
             </p>
           </div>
-          <div className="py-2.5 px-2 text-center">
-            <p className="font-mono text-base font-bold text-slate-900 tabular-nums tnum">
+          <div className="py-3 px-2 text-center">
+            <p className="font-mono text-base font-bold text-[#0D3B40] tabular-nums tnum">
               {stats.entries.toLocaleString("id-ID")}
             </p>
-            <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+            <p className="text-xs font-medium text-[#487277] mt-0.5">
               SKU Diinput
             </p>
           </div>
-          <div className="py-2.5 px-2 text-center">
+          <div className="py-3 px-2 text-center">
             <p className="font-mono text-base font-bold text-[#16A34A] tabular-nums tnum">
               {stats.items.toLocaleString("id-ID")}
             </p>
-            <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+            <p className="text-xs font-medium text-[#487277] mt-0.5">
               Total Pcs
             </p>
           </div>
@@ -208,30 +208,30 @@ export default function ProfilePage() {
         {/* ============================================================== */}
         <section
           aria-label="Pengaturan sinkronisasi"
-          className="bg-white border border-slate-200 rounded p-3 space-y-2"
+          className="bg-white border border-[#9BE0DF]/75 shadow-subtle rounded-2xl p-3.5 space-y-2.5"
         >
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Data & Sinkronisasi Offline
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-[#0B666E]">
+              Data &amp; Sinkronisasi Offline
             </h2>
             {isSyncing && (
-              <span className="font-mono text-[11px] text-blue-600 font-semibold">
+              <span className="font-mono text-xs text-[#0E838C] font-semibold">
                 Menyinkronkan…
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-600 leading-snug">
+          <p className="text-xs text-[#487277] leading-relaxed">
             Mode uji offline memakai database lokal perangkat (IndexedDB) dan menahan antrean kirim hingga dimatikan.
           </p>
-          <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
             <button
               type="button"
               disabled={!isReady}
               onClick={toggleOfflineTest}
-              className={`h-9 px-3 rounded font-semibold text-xs transition-colors ${
+              className={`min-h-[44px] px-3 rounded-xl font-semibold text-xs shadow-subtle transition-all active:scale-[0.98] ${
                 testingOffline
                   ? "bg-[#D97706] text-white hover:bg-amber-700"
-                  : "bg-[#0D5C63] text-white hover:bg-[#14727A]"
+                  : "bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)]"
               } disabled:opacity-40`}
             >
               {testingOffline ? "Akhiri Uji Offline" : "Uji Mode Offline"}
@@ -241,32 +241,32 @@ export default function ProfilePage() {
               type="button"
               disabled={offline || isSyncing}
               onClick={() => void forceSync()}
-              className="h-9 px-3 rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-800 font-semibold text-xs flex items-center justify-center gap-1.5 disabled:opacity-40 transition-colors"
+              className="min-h-[44px] px-3 rounded-xl border border-[#8ADBD9]/80 bg-[#EEFBFB] hover:bg-[#D5F4F3] text-[#0B666E] font-semibold text-xs flex items-center justify-center gap-1.5 disabled:opacity-40 transition-all active:scale-[0.98]"
             >
-              <RefreshIcon className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+              <RefreshIcon className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
               <span>{isSyncing ? "Mengunduh…" : "Sync Data"}</span>
             </button>
           </div>
         </section>
 
         {/* ============================================================== */}
-        {/* 5. PROGRESS PER AREA GUDANG (Dense List)                       */}
+        {/* 5. PROGRESS PER AREA GUDANG                                    */}
         {/* ============================================================== */}
         {locationGroups.length > 0 && (
           <section
             aria-label="Progress per area gudang"
-            className="bg-white border border-slate-200 rounded overflow-hidden"
+            className="bg-white border border-[#9BE0DF]/75 shadow-subtle rounded-2xl overflow-hidden"
           >
-            <div className="px-3 py-2 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+            <div className="px-3.5 py-2.5 bg-gradient-to-r from-[#E4F8F8] to-[#F3FCFC] border-b border-[#9BE0DF]/50 flex items-center justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-[#0B666E]">
                 Cakupan per Area Gudang
               </h2>
-              <span className="font-mono text-[11px] text-slate-500 tnum">
+              <span className="font-mono text-xs text-[#487277] tnum">
                 {locationGroups.length} Area
               </span>
             </div>
 
-            <div className="divide-y divide-slate-200">
+            <div className="divide-y divide-[#9BE0DF]/40">
               {locationGroups.map((group) => {
                 const pct =
                   group.total > 0
@@ -276,17 +276,17 @@ export default function ProfilePage() {
                   pct === 100
                     ? "bg-[#16A34A]"
                     : pct > 0
-                    ? "bg-blue-600"
-                    : "bg-slate-300";
+                    ? "bg-gradient-to-r from-[#0E838C] via-[#14B8A6] to-[#2DD4BF]"
+                    : "bg-[#B8E6E5]";
 
                 return (
-                  <div key={group.name} className="px-3 py-2.5 space-y-1.5">
+                  <div key={group.name} className="px-3.5 py-3 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-mono text-xs font-bold bg-[#E6F3F4] text-[#0D5C63] border border-[#A8D3D6] px-1.5 py-0.5 rounded uppercase tnum">
-                          [{group.name}]
+                        <span className="font-mono text-xs font-semibold bg-[#D5F4F3] text-[#0B666E] border border-[#82D6D5]/75 px-2 py-0.5 rounded-lg uppercase tnum">
+                          {group.name}
                         </span>
-                        <span className="font-mono text-xs text-slate-600 tabular-nums tnum">
+                        <span className="font-mono text-xs text-[#487277] tabular-nums tnum">
                           {group.scanned}/{group.total} Rak
                         </span>
                       </div>
@@ -296,8 +296,8 @@ export default function ProfilePage() {
                           pct === 100
                             ? "text-[#16A34A]"
                             : pct > 0
-                            ? "text-slate-900"
-                            : "text-slate-400"
+                            ? "text-[#0D3B40]"
+                            : "text-[#6B9498]"
                         }`}
                       >
                         {pct}%
@@ -305,7 +305,7 @@ export default function ProfilePage() {
                     </div>
 
                     <div
-                      className="w-full h-1.5 bg-slate-100 rounded overflow-hidden"
+                      className="w-full h-2.5 bg-[#D4EFEF] border border-[#9BE0DF]/60 rounded-full overflow-hidden"
                       role="progressbar"
                       aria-valuenow={pct}
                       aria-valuemin={0}
@@ -313,18 +313,18 @@ export default function ProfilePage() {
                       aria-label={`Progress area ${group.name}: ${pct} persen`}
                     >
                       <div
-                        className={`h-full transition-all duration-300 ${barColor}`}
+                        className={`h-full rounded-full transition-all duration-300 ${barColor}`}
                         style={{ width: `${Math.max(pct, pct > 0 ? 4 : 0)}%` }}
                       />
                     </div>
 
-                    <div className="flex items-center justify-between font-mono text-[11px] text-slate-500 tabular-nums tnum">
+                    <div className="flex items-center justify-between font-mono text-xs text-[#487277] tabular-nums tnum">
                       <span>
-                        Entri: <strong className="text-slate-800">{group.inputCount}</strong>
+                        Entri: <strong className="text-[#0D3B40]">{group.inputCount}</strong>
                       </span>
                       <span>
                         Total:{" "}
-                        <strong className="text-slate-800">
+                        <strong className="text-[#0D3B40]">
                           {group.totalQty.toLocaleString("id-ID")} Pcs
                         </strong>
                       </span>
@@ -339,13 +339,13 @@ export default function ProfilePage() {
         {/* ============================================================== */}
         {/* 6. INFO SISTEM & LOGOUT                                        */}
         {/* ============================================================== */}
-        <div className="bg-white border border-slate-200 rounded px-3 py-2.5 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <InfoIcon className="w-4 h-4 text-slate-500 shrink-0" />
+        <div className="bg-white border border-[#9BE0DF]/75 shadow-subtle rounded-2xl px-3.5 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <InfoIcon className="w-5 h-5 text-[#0E838C] shrink-0" />
             <div className="min-w-0">
-              <p className="text-xs font-bold text-slate-900">BLP Stock Opname</p>
-              <p className="font-mono text-[11px] text-slate-500 truncate">
-                v2.5.0 · Industrial Compact UI
+              <p className="text-xs font-bold text-[#0D3B40]">BLP Stock Opname</p>
+              <p className="font-mono text-xs text-[#487277] truncate mt-0.5">
+                v2.5.0 · Compact HP View
               </p>
             </div>
           </div>
@@ -353,9 +353,9 @@ export default function ProfilePage() {
           <button
             type="button"
             onClick={() => setShowLogoutModal(true)}
-            className="h-8 px-3 bg-red-50 hover:bg-red-100 border border-red-200 text-[#DC2626] rounded font-semibold text-xs flex items-center gap-1.5 shrink-0 transition-colors"
+            className="min-h-[44px] px-4 bg-[#FEF2F2] hover:bg-red-100/70 border border-[#DC2626]/20 text-[#DC2626] rounded-xl font-semibold text-xs flex items-center gap-1.5 shrink-0 transition-all active:scale-[0.98]"
           >
-            <LogoutIcon className="w-3.5 h-3.5" aria-hidden="true" />
+            <LogoutIcon className="w-4 h-4" aria-hidden="true" />
             <span>Keluar</span>
           </button>
         </div>

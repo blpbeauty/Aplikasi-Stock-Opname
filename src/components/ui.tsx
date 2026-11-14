@@ -104,8 +104,8 @@ export function Dialog({
 
   return (
     <div
-      className={`fixed inset-0 z-[70] bg-slate-900/50 flex ${
-        size === "sm" ? "items-center p-3" : "items-end sm:items-center sm:p-3"
+      className={`fixed inset-0 z-[70] bg-[#0B393E]/40 backdrop-blur-[2px] flex ${
+        size === "sm" ? "items-center p-4" : "items-end"
       } justify-center animate-fadeIn`}
       onClick={onClose}
     >
@@ -117,20 +117,23 @@ export function Dialog({
         aria-describedby={description ? descId : undefined}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className={`bg-white w-full ${size === "sm" ? "max-w-sm" : "max-w-md"} ${
-          size === "sm"
-            ? "rounded-md"
-            : "rounded-t-md sm:rounded-md border-b-0 sm:border-b"
-        } border border-slate-300 shadow-sheet outline-none flex flex-col max-h-[90dvh] overflow-hidden animate-slideUp`}
+        className={`bg-white w-full ${size === "sm" ? "max-w-sm rounded-2xl shadow-[0_14px_38px_-8px_rgba(14,131,140,0.22)]" : "max-w-md rounded-t-2xl border-b-0 shadow-sheet"} border border-[#8ADBD9]/80 outline-none flex flex-col max-h-[90dvh] overflow-hidden animate-slideUp`}
       >
-        {/* Compact Teal Header Strip */}
-        <div className="px-3.5 py-2.5 bg-[#0D5C63] text-white border-b border-[#083B40] flex items-center justify-between gap-2 shrink-0">
-          <div className="min-w-0">
-            <h2 id={titleId} className="text-sm font-bold text-white leading-tight truncate">
+        {/* Drag Handle (Bottom Sheet Mobile) */}
+        {size !== "sm" && (
+          <div className="pt-2 pb-0.5 bg-[#DCF6F5]/80 flex justify-center shrink-0">
+            <span aria-hidden="true" className="w-10 h-1 rounded-full bg-[#8ADBD9]" />
+          </div>
+        )}
+
+        {/* Soft Aqua Pastel Header */}
+        <div className={`px-4 ${size === "sm" ? "pt-3.5 pb-2.5" : "pt-2 pb-2.5"} bg-gradient-to-r from-[#DCF6F5] to-[#EEFBFB] border-b border-[#BCEBEB]/80 flex items-start justify-between gap-2 shrink-0`}>
+          <div className="min-w-0 flex-1 pt-0.5">
+            <h2 id={titleId} className="text-[15px] font-bold text-[#0D3B40] leading-snug break-words">
               {title}
             </h2>
             {description && (
-              <p id={descId} className="text-xs text-[#D0EBED] mt-0.5 truncate">
+              <p id={descId} className="text-xs text-[#487277] mt-0.5 leading-relaxed break-words">
                 {description}
               </p>
             )}
@@ -138,7 +141,7 @@ export function Dialog({
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 w-7 h-7 rounded bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition"
+            className="shrink-0 w-11 h-11 -mr-1.5 -mt-1 rounded-full bg-white/90 border border-[#9CE0DF]/60 hover:bg-white flex items-center justify-center text-[#487277] hover:text-[#0D3B40] transition active:scale-[0.96]"
             aria-label="Tutup dialog"
           >
             <XIcon className="w-4 h-4" />
@@ -146,13 +149,13 @@ export function Dialog({
         </div>
 
         {children && (
-          <div className={`px-3.5 py-3 overflow-y-auto flex-1 ${footer ? "" : "pb-6"}`}>
+          <div className={`px-4 py-3 overflow-y-auto flex-1 ${footer ? "" : "pb-[max(1.25rem,env(safe-area-inset-bottom))]"}`}>
             {children}
           </div>
         )}
 
         {footer && (
-          <div className="px-3.5 py-2.5 bg-slate-50 border-t border-slate-200 pb-[max(0.625rem,env(safe-area-inset-bottom))] shrink-0">
+          <div className="px-4 py-3 bg-[#EFFAFA] border-t border-[#BCEBEB]/80 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0">
             {footer}
           </div>
         )}
@@ -182,13 +185,13 @@ export function IconButton({
   title,
   className = "",
 }: IconButtonProps) {
-  const sizeCls = size === "lg" ? "w-10 h-10" : "w-9 h-9";
+  const sizeCls = size === "lg" ? "w-12 h-12" : "w-11 h-11";
   const variantCls =
     variant === "primary"
-      ? "bg-[#0D5C63] text-white hover:bg-[#14727A]"
+      ? "bg-gradient-to-br from-[#0E838C] to-[#14B8A6] text-white hover:from-[#0B6F77] hover:to-[#0D9488]"
       : variant === "danger"
-      ? "bg-red-50 text-[#DC2626] border border-red-200 hover:bg-red-100"
-      : "bg-slate-100 text-slate-800 border border-slate-300 hover:bg-slate-200";
+      ? "bg-[#FEF2F2] text-[#DC2626] border border-red-200/70 hover:bg-red-100"
+      : "bg-[#E5F7F7] text-[#0D3B40] border border-[#9CE0DF]/70 hover:bg-[#D5F4F3]";
   return (
     <button
       type="button"
@@ -196,7 +199,7 @@ export function IconButton({
       disabled={disabled}
       title={title || label}
       aria-label={label}
-      className={`${sizeCls} ${variantCls} rounded flex items-center justify-center transition disabled:opacity-50 ${className}`}
+      className={`${sizeCls} ${variantCls} rounded-xl flex items-center justify-center transition active:scale-[0.98] disabled:opacity-50 ${className}`}
     >
       {children}
     </button>
@@ -219,22 +222,22 @@ export function PageHeader({
   right,
 }: PageHeaderProps) {
   return (
-    <header className="sticky top-0 z-30 h-11 min-h-[44px] bg-[#0D5C63] text-white px-3 border-b border-[#083B40] flex items-center justify-between gap-2">
-      <div className="flex items-center gap-2 min-w-0 flex-1">
+    <header className="sticky top-0 z-30 min-h-[52px] bg-gradient-to-r from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md text-[#0D3B40] px-3 py-1.5 border-b border-[#8ADBD9]/65 flex items-center justify-between gap-2">
+      <div className="flex items-center gap-1.5 min-w-0 flex-1">
         {onBack && (
           <button
             type="button"
             onClick={onBack}
-            className="w-7 h-7 rounded bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition shrink-0"
+            className="w-11 h-11 -ml-1.5 rounded-xl bg-white/75 hover:bg-white flex items-center justify-center text-[#0D3B40] transition active:scale-[0.97] shrink-0"
             aria-label={backLabel}
           >
-            <ChevronLeftIcon className="w-4 h-4" />
+            <ChevronLeftIcon className="w-5 h-5" />
           </button>
         )}
-        <div className="min-w-0 flex-1 flex items-center gap-2">
-          <h1 className="text-sm font-bold text-white leading-tight truncate">{title}</h1>
+        <div className="min-w-0 flex-1 flex flex-col justify-center">
+          <h1 className="text-[15px] font-bold text-[#0D3B40] leading-tight truncate">{title}</h1>
           {subtitle && (
-            <div className="text-xs text-[#D0EBED] truncate">{subtitle}</div>
+            <div className="text-xs text-[#487277] truncate">{subtitle}</div>
           )}
         </div>
       </div>
@@ -252,17 +255,17 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className="bg-white rounded border border-slate-200 px-4 py-8 text-center">
+    <div className="bg-white rounded-2xl border border-[#9BE0DF]/70 shadow-subtle px-5 py-7 text-center">
       {icon && (
-        <div className="w-9 h-9 rounded bg-[#E6F3F4] text-[#0D5C63] mx-auto flex items-center justify-center mb-2">
+        <div className="w-11 h-11 rounded-xl bg-[#D5F4F3] text-[#0E838C] mx-auto flex items-center justify-center mb-2.5">
           {icon}
         </div>
       )}
-      <p className="text-sm font-bold text-slate-900">{title}</p>
+      <p className="text-sm font-bold text-[#0D3B40]">{title}</p>
       {description && (
-        <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">{description}</p>
+        <p className="text-xs text-[#487277] mt-1 max-w-xs mx-auto leading-relaxed">{description}</p>
       )}
-      {action && <div className="mt-3 flex justify-center">{action}</div>}
+      {action && <div className="mt-3.5 flex justify-center">{action}</div>}
     </div>
   );
 }
@@ -288,7 +291,7 @@ export function Field({
 }: FieldProps) {
   return (
     <div className={className}>
-      <label htmlFor={id} className="block text-xs font-semibold text-slate-700 mb-1">
+      <label htmlFor={id} className="block text-xs font-semibold text-[#0D3B40] mb-1">
         {label}
         {required && (
           <span className="text-[#DC2626] ml-0.5" aria-hidden="true">
@@ -297,9 +300,9 @@ export function Field({
         )}
       </label>
       {children}
-      {hint && !error && <p className="text-[11px] text-slate-500 mt-0.5">{hint}</p>}
+      {hint && !error && <p className="text-xs text-[#487277] mt-1 leading-snug">{hint}</p>}
       {error && (
-        <p id={`${id}-error`} role="alert" className="text-[11px] font-semibold text-[#DC2626] mt-0.5">
+        <p id={`${id}-error`} role="alert" className="text-xs font-semibold text-[#DC2626] mt-1 leading-snug">
           {error}
         </p>
       )}
@@ -355,12 +358,12 @@ export function SyncStatusBadge() {
 
   const toneCls =
     tone === "ok"
-      ? "bg-emerald-50 text-[#16A34A] border-emerald-200"
+      ? "bg-emerald-50 text-[#16A34A] border-emerald-200/80"
       : tone === "warn"
-      ? "bg-amber-50 text-[#D97706] border-amber-200"
+      ? "bg-amber-50 text-[#B45309] border-amber-200/80"
       : tone === "busy"
-      ? "bg-[#E6F3F4] text-[#0D5C63] border-[#A8D3D6]"
-      : "bg-slate-100 text-slate-600 border-slate-200";
+      ? "bg-[#D8F5F4] text-[#0B666E] border-[#82D6D5]"
+      : "bg-[#EEFBFB] text-[#487277] border-[#9CE0DF]/70";
 
   return (
     <button
@@ -379,23 +382,63 @@ export function SyncStatusBadge() {
           : "Ketuk untuk sinkronisasi"
       }
       aria-label={`Status sinkronisasi: ${label}. Ketuk untuk sinkron ulang.`}
-      className={`h-7 px-2 inline-flex items-center gap-1 rounded border ${toneCls} text-[11px] font-semibold transition`}
+      className={`min-h-[44px] px-3 inline-flex items-center gap-1.5 rounded-xl border ${toneCls} text-xs font-semibold transition active:scale-[0.98]`}
     >
       {syncing ? (
-        <RefreshIcon className="w-3 h-3 animate-spin" />
+        <RefreshIcon className="w-3.5 h-3.5 animate-spin" />
       ) : (
         <span
           aria-hidden="true"
-          className={`w-1.5 h-1.5 rounded-full ${
+          className={`w-2 h-2 rounded-full ${
             tone === "ok"
               ? "bg-[#16A34A]"
               : tone === "warn"
               ? "bg-[#D97706]"
-              : "bg-[#0D5C63]"
+              : "bg-[#0E838C]"
           }`}
         />
       )}
       <span>{label}</span>
     </button>
+  );
+}
+
+export function ListSkeleton({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="bg-white rounded-2xl border border-[#9BE0DF]/70 shadow-subtle divide-y divide-[#E5F7F7] overflow-hidden animate-pulse">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="px-3.5 py-3 flex items-center justify-between gap-3">
+          <div className="flex-1 space-y-2 min-w-0">
+            <div className="h-4 bg-[#D8F3F2] rounded-lg w-3/4" />
+            <div className="flex items-center gap-2">
+              <div className="h-3.5 bg-[#E8F8F8] rounded-md w-16" />
+              <div className="h-5 bg-[#CCF2F1] rounded-lg w-20" />
+            </div>
+          </div>
+          <div className="h-11 w-20 bg-[#E8F8F8] rounded-xl shrink-0" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function PageSkeleton() {
+  return (
+    <div className="max-w-md mx-auto min-h-dvh bg-gradient-to-b from-[#D7F4F4] via-[#ECF9F9] to-[#F4FCFC] flex flex-col">
+      <div className="bg-[#DDF5F5] border-b border-[#8ADBD9]/65 px-3.5 py-3 space-y-2.5 animate-pulse">
+        <div className="flex items-center justify-between">
+          <div className="h-7 w-32 bg-[#BCEBEB] rounded-xl" />
+          <div className="flex gap-2">
+            <div className="h-9 w-20 bg-[#CCF2F1] rounded-xl" />
+            <div className="h-9 w-9 bg-[#CCF2F1] rounded-xl" />
+          </div>
+        </div>
+        <div className="h-10 w-full bg-[#0E838C]/20 rounded-xl" />
+        <div className="h-11 w-full bg-white/80 rounded-xl" />
+      </div>
+      <div className="p-3 space-y-3">
+        <ListSkeleton rows={6} />
+      </div>
+    </div>
   );
 }

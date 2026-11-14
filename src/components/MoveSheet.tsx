@@ -126,7 +126,7 @@ export default function MoveSheet({
             type="button"
             onClick={onClose}
             disabled={moving}
-            className="flex-1 min-h-touch bg-surface-warm rounded-input text-meta font-bold text-text-primary disabled:opacity-50"
+            className="flex-1 min-h-[44px] bg-[#EEFBFB] border border-[#9CE0DF]/80 hover:bg-[#D5F4F3] rounded-xl text-sm font-semibold text-[#0D3B40] disabled:opacity-50 active:scale-[0.98] transition-all duration-150"
           >
             Batal
           </button>
@@ -134,7 +134,7 @@ export default function MoveSheet({
             type="button"
             onClick={handleMove}
             disabled={!canSubmit}
-            className="flex-1 min-h-touch bg-primary text-ivory rounded-input text-meta font-bold disabled:opacity-50 flex items-center justify-center gap-1.5"
+            className="flex-1 min-h-[44px] bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white rounded-xl text-sm font-semibold shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] disabled:opacity-50 active:scale-[0.98] transition-all duration-150 flex items-center justify-center gap-1.5"
           >
             {moving ? (
               "Memindahkan…"
@@ -147,7 +147,7 @@ export default function MoveSheet({
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         <Autocomplete<LocationResult>
           id="move-target-location"
           label="Lokasi tujuan"
@@ -160,8 +160,8 @@ export default function MoveSheet({
           getKey={(l) => l.locationCode}
           renderItem={(l) => (
             <div className="flex items-center justify-between gap-2 w-full min-w-0">
-              <span className="font-bold text-text-primary uppercase break-all flex-1 min-w-0">{l.locationCode}</span>
-              <span className="text-meta text-text-secondary shrink-0 pl-2">{l.productCount} produk</span>
+              <span className="font-mono font-semibold text-[#0D3B40] uppercase break-all flex-1 min-w-0">{l.locationCode}</span>
+              <span className="text-xs text-[#487277] shrink-0 pl-2">{l.productCount} produk</span>
             </div>
           )}
           onSelect={(l) => {
@@ -181,16 +181,16 @@ export default function MoveSheet({
 
         {allowSelection && (
           <div>
-            <p className="text-meta font-bold text-text-primary mb-1.5">Produk yang dipindah</p>
-            <div className="flex gap-2" role="group" aria-label="Mode pemilihan produk">
+            <p className="text-xs font-semibold text-[#487277] mb-1.5">Produk yang dipindah</p>
+            <div className="p-1 bg-[#D8F3F2] border border-[#9BE0DF]/65 rounded-xl grid grid-cols-2 gap-1" role="group" aria-label="Mode pemilihan produk">
               <button
                 type="button"
                 onClick={() => setMode("all")}
                 aria-pressed={mode === "all"}
-                className={`flex-1 min-h-touch rounded-input text-meta font-bold border transition ${
+                className={`min-h-[44px] rounded-lg text-xs font-semibold transition-all active:scale-[0.98] ${
                   mode === "all"
-                    ? "bg-primary text-ivory border-primary"
-                    : "bg-surface-warm text-text-primary border-border"
+                    ? "bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white shadow-subtle"
+                    : "text-[#487277] hover:text-[#0D3B40]"
                 }`}
               >
                 Semua ({items.length})
@@ -199,10 +199,10 @@ export default function MoveSheet({
                 type="button"
                 onClick={() => setMode("select")}
                 aria-pressed={mode === "select"}
-                className={`flex-1 min-h-touch rounded-input text-meta font-bold border transition ${
+                className={`min-h-[44px] rounded-lg text-xs font-semibold transition-all active:scale-[0.98] ${
                   mode === "select"
-                    ? "bg-primary text-ivory border-primary"
-                    : "bg-surface-warm text-text-primary border-border"
+                    ? "bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white shadow-subtle"
+                    : "text-[#487277] hover:text-[#0D3B40]"
                 }`}
               >
                 Pilih produk
@@ -213,7 +213,7 @@ export default function MoveSheet({
 
         {allowSelection && mode === "select" && (
           <div
-            className="border border-border rounded-input overflow-hidden max-h-44 overflow-y-auto divide-y divide-border-subtle bg-paper"
+            className="border border-[#9BE0DF]/75 rounded-2xl overflow-hidden max-h-48 overflow-y-auto divide-y divide-[#9BE0DF]/40 bg-white"
             role="group"
             aria-label="Daftar produk untuk dipilih"
           >
@@ -233,11 +233,11 @@ export default function MoveSheet({
                     })
                   }
                   aria-pressed={isSelected}
-                  className={`w-full min-h-touch text-left px-3 py-2 flex items-center gap-2.5 transition ${
-                    isSelected ? "bg-primary-pale/50" : ""
+                  className={`w-full min-h-[48px] text-left px-3.5 py-2.5 flex items-center gap-2.5 transition-colors ${
+                    isSelected ? "bg-[#D5F4F3]/75" : "hover:bg-[#EEFBFB]"
                   }`}
                 >
-                  <span className={isSelected ? "text-primary" : "text-text-secondary/50"}>
+                  <span className={isSelected ? "text-[#0E838C]" : "text-[#487277]/50"}>
                     {isSelected ? (
                       <CheckSquareIcon className="w-5 h-5" />
                     ) : (
@@ -245,10 +245,10 @@ export default function MoveSheet({
                     )}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-meta font-bold text-text-primary leading-snug line-clamp-2">
+                    <span className="block text-xs font-semibold text-[#0D3B40] leading-snug line-clamp-2">
                       {p.productName}
                     </span>
-                    <span className="block text-meta text-text-secondary">
+                    <span className="block text-xs text-[#487277] mt-0.5">
                       {p.batch ? `SKU ${p.sku} · Batch ${p.batch}` : `SKU ${p.sku} · tanpa batch`}
                     </span>
                   </span>
@@ -258,7 +258,7 @@ export default function MoveSheet({
           </div>
         )}
 
-        <p className="text-meta text-text-secondary">
+        <p className="text-xs text-[#487277]">
           {selectedItems.length > 0
             ? `${selectedItems.length} produk akan dipindah ke ${targetConfirmed?.locationCode || "lokasi tujuan"}.`
             : "Pilih minimal 1 produk untuk dipindah."}

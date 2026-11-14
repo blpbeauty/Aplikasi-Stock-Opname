@@ -7,10 +7,9 @@ import { useDataSync } from "@/components/DataSyncProvider";
 import BottomNav from "@/components/BottomNav";
 import EditModal, { EditData } from "@/components/EditModal";
 import AddHistoryEntryModal from "@/components/AddHistoryEntryModal";
-import LoadingSpinner from "@/components/LoadingSpinner";
 import HistoryRecord from "@/components/HistoryRecord";
 import ConfirmModal from "@/components/ConfirmModal";
-import { EmptyState } from "@/components/ui";
+import { EmptyState, ListSkeleton } from "@/components/ui";
 import {
   getHistoryApi,
   updateEntryApi,
@@ -30,6 +29,7 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   PlusIcon,
+  XIcon,
 } from "@/components/icons";
 import toast from "react-hot-toast";
 
@@ -355,7 +355,7 @@ export default function HistoryPage() {
               setHistory(prev);
               setCache(ck, prev);
             }}
-            className="h-7 px-3 bg-[#0D5C63] hover:bg-[#14727A] text-white text-xs font-bold rounded whitespace-nowrap"
+            className="h-8 px-3 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white text-xs font-bold rounded-lg whitespace-nowrap"
           >
             Batalkan
           </button>
@@ -502,151 +502,145 @@ export default function HistoryPage() {
   );
 
   return (
-    <div className="max-w-md mx-auto min-h-dvh bg-[#F8FAFC] text-[#0F172A] pb-24 border-x border-slate-200 font-sans antialiased">
+    <div className="max-w-md mx-auto min-h-dvh bg-gradient-to-b from-[#D7F4F4] via-[#ECF9F9] to-[#F4FCFC] text-[#0D3B40] pb-24 sm:border-x sm:border-[#8ADBD9]/65 font-sans antialiased">
       {/* ============================================================== */}
-      {/* 1. COMPACT TOP HEADER (~46px, Sticky - Deep Teal)             */}
+      {/* 1. UNIFIED AQUA PASTEL STICKY HEADER & FILTERS                 */}
       {/* ============================================================== */}
-      <header className="sticky top-0 z-30 h-11 min-h-[46px] bg-[#0D5C63] text-white border-b border-[#083B40] px-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="font-mono text-xs font-bold bg-white/15 border border-white/25 text-white px-2 py-0.5 rounded tracking-wide">
-            RIWAYAT
-          </span>
-          <h1 className="text-sm font-bold text-white truncate">Hasil Opname</h1>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="font-mono text-xs text-teal-100 tabular-nums tnum">
-            <strong className="font-bold text-white">
-              {summary.totalQty.toLocaleString("id-ID")}
-            </strong>{" "}
-            <span className="font-sans text-[11px] text-teal-200/80">Pcs</span>
-            <span className="text-white/25 mx-1">·</span>
-            <strong className="font-bold text-white">{summary.locCount}</strong>{" "}
-            <span className="font-sans text-[11px] text-teal-200/80">Rak</span>
+      <div className="sticky top-0 z-30 bg-gradient-to-b from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md border-b border-[#8ADBD9]/65 shadow-subtle">
+        <header className="min-h-[52px] px-3.5 py-1.5 border-b border-[#8ADBD9]/45 flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <h1 className="text-sm font-bold text-[#0D3B40] tracking-tight truncate">
+              Riwayat Opname
+            </h1>
+            <p className="text-xs text-[#487277] truncate">
+              PARAS &amp; PAYU
+            </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => fetchHistory()}
-            disabled={loading}
-            className="w-7 h-7 flex items-center justify-center rounded border border-white/25 bg-white/15 hover:bg-white/25 active:bg-white/30 text-white disabled:opacity-40 transition-colors"
-            aria-label="Muat ulang riwayat"
-            title="Muat ulang"
-          >
-            <RefreshIcon className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-          </button>
-        </div>
-      </header>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="font-mono text-xs bg-[#C7EEED] border border-[#7ED4D3]/80 text-[#0B666E] px-2.5 py-1 rounded-full font-semibold tabular-nums tnum">
+              {summary.totalQty.toLocaleString("id-ID")} Pcs · {summary.locCount} Rak
+            </div>
 
-      {/* ============================================================== */}
-      {/* 2. DENSE SEARCH & FILTER BAR (~80px, Sticky)                   */}
-      {/* ============================================================== */}
-      <div className="sticky top-11 z-20 bg-white border-b border-slate-200 px-3 py-2 space-y-1.5">
-        {/* Baris 1: Slim Search Input (h-9 text-sm) */}
-        <div className="relative flex items-center">
-          <SearchIcon className="w-4 h-4 text-slate-400 absolute left-2.5 pointer-events-none" />
-          <label htmlFor="history-search" className="sr-only">
-            Cari riwayat
-          </label>
-          <input
-            id="history-search"
-            type="search"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Cari nama barang, SKU, batch, lokasi…"
-            autoComplete="off"
-            className="w-full h-9 pl-8 pr-8 bg-slate-50 border border-slate-300 rounded text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#0D5C63] transition-colors"
-          />
-          {searchQuery && (
             <button
               type="button"
-              onClick={() => setSearchQuery("")}
-              aria-label="Bersihkan pencarian"
-              className="absolute right-1.5 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-700 font-mono text-xs"
+              onClick={() => fetchHistory()}
+              disabled={loading}
+              className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/85 border border-[#8ADBD9]/75 hover:bg-white text-[#0D3B40] disabled:opacity-40 active:scale-[0.96] transition-transform"
+              aria-label="Muat ulang riwayat"
+              title="Muat ulang"
             >
-              ✕
-            </button>
-          )}
-        </div>
-
-        {/* Baris 2: Compact Period Tabs + Area Chips (h-7 text-xs) */}
-        <div className="flex items-center justify-between gap-1.5 overflow-x-auto hide-scrollbar">
-          {/* Segmented Period Filter */}
-          <div className="flex items-center p-0.5 bg-slate-100 rounded h-7 shrink-0 text-xs font-medium">
-            <button
-              type="button"
-              onClick={() => setTimeFilter("week")}
-              className={`h-6 px-2.5 rounded transition-colors ${
-                timeFilter === "week"
-                  ? "bg-white text-slate-900 font-semibold shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              7 Hari
-            </button>
-            <button
-              type="button"
-              onClick={() => setTimeFilter("month")}
-              className={`h-6 px-2.5 rounded transition-colors ${
-                timeFilter === "month"
-                  ? "bg-white text-slate-900 font-semibold shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              30 Hari
+              <RefreshIcon className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
             </button>
           </div>
+        </header>
 
-          {/* Area Gudang Filter Chips (CEN/PARAS & CEN/PAYU) */}
-          {activeAreas.length > 0 && (
-            <div
-              className="flex items-center gap-1 shrink-0"
-              role="group"
-              aria-label="Filter area gudang"
-            >
-              {activeAreas.map((group) => {
-                const isSelected = selectedLocations.has(group.name);
-                return (
-                  <button
-                    key={group.name}
-                    type="button"
-                    onClick={() => toggleLocation(group.name)}
-                    className={`h-7 px-2 rounded border text-xs font-semibold flex items-center gap-1 transition-colors whitespace-nowrap ${
-                      isSelected
-                        ? "bg-[#0D5C63] text-white border-[#0D5C63]"
-                        : "bg-[#E6F3F4] text-[#0D5C63] border-[#A8D3D6] hover:bg-[#D0EBED]"
-                    }`}
-                  >
-                    <span className="font-mono text-[11px]">{group.name}</span>
-                    <span
-                      className={`font-mono text-[10px] px-1 rounded tabular-nums tnum ${
+        {/* Search & Filter Controls */}
+        <div className="px-3 py-2 space-y-2">
+          <div className="relative flex items-center">
+            <SearchIcon className="w-4 h-4 text-[#487277] absolute left-3.5 pointer-events-none" />
+            <label htmlFor="history-search" className="sr-only">
+              Cari riwayat
+            </label>
+            <input
+              id="history-search"
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Cari nama barang, SKU, batch, lokasi…"
+              autoComplete="off"
+              className="w-full min-h-[44px] pl-10 pr-11 bg-white border border-[#9CE0DF]/85 rounded-xl text-sm text-[#0D3B40] placeholder:text-[#6B9498] focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20 transition-colors"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                aria-label="Bersihkan pencarian"
+                className="absolute right-0.5 w-10 h-10 flex items-center justify-center rounded-lg text-[#487277] hover:text-[#0D3B40]"
+              >
+                <XIcon className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar">
+            {/* Segmented Period Filter */}
+            <div className="flex items-center p-1 bg-[#D8F3F2] border border-[#9BE0DF]/65 rounded-xl shrink-0 text-xs font-medium gap-1">
+              <button
+                type="button"
+                onClick={() => setTimeFilter("week")}
+                className={`min-h-[44px] px-3 rounded-lg transition-all active:scale-[0.98] ${
+                  timeFilter === "week"
+                    ? "bg-white text-[#0D3B40] font-semibold shadow-subtle"
+                    : "text-[#487277] hover:text-[#0D3B40]"
+                }`}
+              >
+                7 Hari
+              </button>
+              <button
+                type="button"
+                onClick={() => setTimeFilter("month")}
+                className={`min-h-[44px] px-3 rounded-lg transition-all active:scale-[0.98] ${
+                  timeFilter === "month"
+                    ? "bg-white text-[#0D3B40] font-semibold shadow-subtle"
+                    : "text-[#487277] hover:text-[#0D3B40]"
+                }`}
+              >
+                30 Hari
+              </button>
+            </div>
+
+            {/* Area Gudang Filter Chips (CEN/PARAS & CEN/PAYU) */}
+            {activeAreas.length > 0 && (
+              <div
+                className="flex items-center gap-1.5 shrink-0"
+                role="group"
+                aria-label="Filter area gudang"
+              >
+                {activeAreas.map((group) => {
+                  const isSelected = selectedLocations.has(group.name);
+                  return (
+                    <button
+                      key={group.name}
+                      type="button"
+                      onClick={() => toggleLocation(group.name)}
+                      className={`min-h-[44px] px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap active:scale-[0.98] ${
                         isSelected
-                          ? "bg-[#14727A] text-white"
-                          : "bg-white/80 text-[#0D5C63]"
+                          ? "bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white border-[#0E838C] shadow-subtle"
+                          : "bg-[#D5F4F3] text-[#0B666E] border-[#82D6D5]/75 hover:bg-[#C2ECEB]"
                       }`}
                     >
-                      {group.count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+                      <span className="font-mono text-xs">{group.name}</span>
+                      <span
+                        className={`font-mono text-xs px-1.5 py-0.5 rounded-md tabular-nums tnum ${
+                          isSelected
+                            ? "bg-white/20 text-white"
+                            : "bg-white text-[#0B666E]"
+                        }`}
+                      >
+                        {group.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* ============================================================== */}
-      {/* 3. DENSE GROUPED HISTORY LIST                                  */}
+      {/* 2. GROUPED HISTORY LIST                                        */}
       {/* ============================================================== */}
       <main className="p-3 space-y-2.5">
-        <div className="flex items-center justify-between text-xs text-slate-500 px-0.5">
+        <div className="flex items-center justify-between text-xs text-[#487277] px-1">
           <span>
             Menampilkan{" "}
-            <strong className="font-mono font-bold text-slate-800 tnum">
+            <strong className="font-mono font-bold text-[#0D3B40] tnum">
               {summary.count.toLocaleString("id-ID")}
             </strong>{" "}
             entri di{" "}
-            <strong className="font-mono font-bold text-slate-800 tnum">
+            <strong className="font-mono font-bold text-[#0D3B40] tnum">
               {summary.locCount}
             </strong>{" "}
             lokasi
@@ -658,7 +652,7 @@ export default function HistoryPage() {
                 setSearchQuery("");
                 setSelectedLocations(new Set());
               }}
-              className="font-semibold text-blue-600 hover:underline"
+              className="min-h-[44px] px-2 -mr-2 rounded-xl font-semibold text-xs text-[#0B666E] hover:bg-[#D5F4F3]/70 transition-colors"
             >
               Reset Filter
             </button>
@@ -666,9 +660,7 @@ export default function HistoryPage() {
         </div>
 
         {loading && history.length === 0 ? (
-          <div className="flex justify-center py-12">
-            <LoadingSpinner />
-          </div>
+          <ListSkeleton rows={5} />
         ) : groupedHistory.length === 0 ? (
           <EmptyState
             icon={<ClipboardIcon className="w-6 h-6" />}
@@ -692,42 +684,42 @@ export default function HistoryPage() {
               <section
                 key={loc}
                 data-location={loc}
-                className="bg-white border border-slate-200 rounded overflow-hidden"
+                className="bg-white border border-[#9BE0DF]/75 shadow-subtle rounded-2xl overflow-hidden"
               >
-                {/* Compact Location Group Header (~40px) */}
+                {/* Compact Location Group Header */}
                 <button
                   type="button"
                   onClick={() => toggleGroup(loc)}
                   aria-expanded={expanded}
                   aria-label={`${expanded ? "Tutup" : "Buka"} grup ${loc}`}
-                  className="w-full px-3 py-2 bg-slate-100/80 hover:bg-slate-100 flex items-center justify-between gap-2 text-left transition-colors"
+                  className="w-full min-h-[54px] px-3.5 py-2.5 bg-gradient-to-r from-[#E4F8F8] to-[#F3FCFC] hover:from-[#D5F4F3] hover:to-[#E8F9F9] flex items-center justify-between gap-2 text-left transition-colors"
                 >
                   <div className="min-w-0 flex-1 pr-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-mono text-xs font-bold bg-[#E6F3F4] text-[#0D5C63] border border-[#A8D3D6] px-1.5 py-0.5 rounded uppercase tnum">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs font-semibold bg-[#D5F4F3] text-[#0B666E] border border-[#82D6D5]/75 px-2 py-0.5 rounded-lg uppercase tnum">
                         {loc}
                       </span>
-                      <span className="font-mono text-xs text-slate-600 tabular-nums tnum">
+                      <span className="font-mono text-xs text-[#487277] tabular-nums tnum">
                         {entries.length} SKU ·{" "}
-                        <strong className="font-bold text-slate-900">
+                        <strong className="font-bold text-[#0D3B40]">
                           {totalQty.toLocaleString("id-ID")} Pcs
                         </strong>
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     <DeliveryBadge rowIds={entries.map((entry) => entry.rowId)} />
                     {expanded ? (
-                      <ChevronDownIcon className="w-4 h-4 text-slate-500" />
+                      <ChevronDownIcon className="w-4 h-4 text-[#487277]" />
                     ) : (
-                      <ChevronRightIcon className="w-4 h-4 text-slate-500" />
+                      <ChevronRightIcon className="w-4 h-4 text-[#487277]" />
                     )}
                   </div>
                 </button>
 
                 {expanded && (
-                  <div className="border-t border-slate-200 divide-y divide-slate-200">
+                  <div className="border-t border-[#9BE0DF]/50 divide-y divide-[#9BE0DF]/40">
                     {visibleEntries.map((entry) => (
                       <HistoryRecord
                         key={entry.rowId}
@@ -743,7 +735,7 @@ export default function HistoryPage() {
                       <button
                         type="button"
                         onClick={() => setFullGroups((prev) => new Set(prev).add(loc))}
-                        className="w-full h-9 px-3 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-blue-600 flex items-center justify-center transition-colors"
+                        className="w-full min-h-[44px] px-3.5 bg-[#EEFBFB] hover:bg-[#D5F4F3]/70 text-xs font-semibold text-[#0B666E] flex items-center justify-center transition-colors"
                       >
                         Tampilkan semua {entries.length.toLocaleString("id-ID")} entri
                       </button>
@@ -753,9 +745,9 @@ export default function HistoryPage() {
                       type="button"
                       onClick={() => setAddModal({ isOpen: true, location: loc })}
                       aria-label={`Tambah produk di ${loc}`}
-                      className="w-full h-9 px-3 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 transition-colors"
+                      className="w-full min-h-[44px] px-3.5 bg-[#EEFBFB] hover:bg-[#D5F4F3]/70 text-xs font-semibold text-[#0D3B40] flex items-center justify-center gap-1.5 transition-colors"
                     >
-                      <PlusIcon className="w-3.5 h-3.5" />
+                      <PlusIcon className="w-4 h-4 text-[#0E838C]" />
                       <span>Tambah Produk di Rak {loc}</span>
                     </button>
                   </div>
