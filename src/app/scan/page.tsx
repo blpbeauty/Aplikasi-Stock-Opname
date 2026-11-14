@@ -229,7 +229,7 @@ export default function ScanDashboard() {
   return (
     <div className="max-w-md mx-auto min-h-dvh bg-gradient-to-b from-[#D7F4F4] via-[#ECF9F9] to-[#F4FCFC] text-[#0D3B40] pb-20 sm:border-x sm:border-[#8ADBD9]/65 font-sans antialiased">
       {/* ── 1. Aqua Pastel Sticky Header ── */}
-      <header className="sticky top-0 z-30 min-h-[44px] bg-gradient-to-r from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md border-b border-[#8ADBD9]/65 px-3 py-1.5 flex items-center justify-between gap-2">
+      <header className="sticky top-0 z-30 min-h-[44px] bg-gradient-to-r from-[#D5F4F3] via-[#E4F8F8] to-[#EEFAFA] border-b border-[#8ADBD9]/65 px-3 py-1.5 flex items-center justify-between gap-2">
         <div className="min-w-0 flex flex-col justify-center leading-tight">
           <h1 className="text-[13px] font-bold text-[#0D3B40] tracking-tight truncate">
             BLP Stock Opname

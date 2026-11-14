@@ -42,7 +42,7 @@ export default function BottomNav({ activePage }: BottomNavProps) {
   return (
     <nav
       aria-label="Navigasi utama"
-      className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#8ADBD9]/50 shadow-bar"
+      className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#8ADBD9]/50 shadow-bar"
     >
       <div className="flex justify-around items-center gap-1 max-w-md mx-auto px-2 py-1 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
         {tabs.map((tab) => {
@@ -52,7 +52,7 @@ export default function BottomNav({ activePage }: BottomNavProps) {
               key={tab.key}
               href={tab.href}
               aria-current={isActive ? "page" : undefined}
-              className={`flex-1 min-h-[42px] px-2 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-all duration-150 active:scale-[0.97] ${
+              className={`flex-1 min-h-[42px] px-2 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-colors duration-100 active:scale-[0.97] ${
                 isActive
                   ? "bg-gradient-to-r from-[#D3F5F4] to-[#E3F9F8] text-[#0B666E] border border-[#8ADBD9]/75 font-bold shadow-subtle"
                   : "text-[#487277] hover:text-[#0D3B40] hover:bg-[#EEFBFB] font-medium border border-transparent"

@@ -15,6 +15,7 @@ import QtyInput from "@/components/QtyInput";
 import { Dialog, Field } from "@/components/ui";
 import Autocomplete from "@/components/Autocomplete";
 import { scrollElementCenter } from "@/lib/scroll";
+import { getSkuBatchInfo } from "@/lib/batch";
 import { CalculatorIcon, CameraIcon, SearchIcon, ChevronDownIcon } from "@/components/icons";
 import toast from "react-hot-toast";
 
@@ -45,8 +46,11 @@ export default function AddHistoryEntryModal({
   const [scanningBarcode, setScanningBarcode] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [showBatchModal, setShowBatchModal] = useState(false);
+  const [noBatchConfirmed, setNoBatchConfirmed] = useState(false);
+  const [searchTick, setSearchTick] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const qtyWrapperRef = useRef<HTMLDivElement>(null);
+  const searchedProductsRef = useRef<Product[]>([]);
   const [errors, setErrors] = useState<{
     location?: string;
     name?: string;
@@ -67,55 +71,95 @@ export default function AddHistoryEntryModal({
       setErrors({});
       setShowBarcodeScanner(false);
       setShowBatchModal(false);
+      setNoBatchConfirmed(false);
       setScanningBarcode(false);
       setSubmitting(false);
     }
   }, [isOpen, initialLocation]);
 
-  const batchesForSku = useMemo(() => {
-    const skuVal = String(sku || "").trim().toLowerCase();
-    if (!skuVal || !allProducts) return [];
-    const batchSet = new Set<string>();
-    allProducts.forEach((p) => {
-      if (p && String(p.sku || "").trim().toLowerCase() === skuVal && p.batch) {
-        batchSet.add(String(p.batch));
-      }
-    });
-    return Array.from(batchSet).sort();
-  }, [sku, allProducts]);
+  const skuBatchInfo = useMemo(
+    () => getSkuBatchInfo(sku, allProducts, searchedProductsRef.current),
+    [sku, allProducts, searchTick]
+  );
+  const batchesForSku = skuBatchInfo.batches;
+  const allowEmptyBatch = skuBatchInfo.allowEmptyBatch;
+  const canAutoEmpty = allowEmptyBatch && batchesForSku.length === 0;
 
-  const resolveProductNames = useCallback(async (query: string): Promise<Product[]> => {
-    const dedupBySku = (items: Product[]) => {
-      const seen = new Set<string>();
-      const out: Product[] = [];
-      for (const p of items) {
-        const key =
-          String(p.sku || "").trim().toLowerCase() ||
-          String(p.productName || "").trim().toLowerCase();
-        if (!seen.has(key)) {
-          seen.add(key);
-          out.push(p);
+  const resolveProductNames = useCallback(
+    async (query: string): Promise<Product[]> => {
+      const q = query.trim().toLowerCase();
+      const dedupBySku = (items: Product[]) => {
+        const seen = new Set<string>();
+        const out: Product[] = [];
+        for (const p of items) {
+          const key =
+            String(p.sku || "").trim().toLowerCase() ||
+            String(p.productName || "").trim().toLowerCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            out.push(p);
+          }
+          if (out.length >= 10) break;
         }
-        if (out.length >= 10) break;
+        return out;
+      };
+      if (allProducts && allProducts.length > 0 && q) {
+        const localMatches = dedupBySku(
+          allProducts.filter(
+            (p) =>
+              String(p.productName || "").toLowerCase().includes(q) ||
+              String(p.sku || "").toLowerCase().includes(q)
+          )
+        );
+        if (localMatches.length > 0) return localMatches;
       }
-      return out;
-    };
-    try {
-      const result = await searchProductsApi(query.trim());
-      return result.success && result.products ? dedupBySku(result.products) : [];
-    } catch {
-      return [];
-    }
-  }, []);
+      try {
+        const result = await searchProductsApi(query.trim());
+        if (result.success && result.products) {
+          searchedProductsRef.current = result.products;
+          setSearchTick((t) => t + 1);
+          return dedupBySku(result.products);
+        }
+        return [];
+      } catch {
+        return [];
+      }
+    },
+    [allProducts]
+  );
 
-  const handleSelectProduct = useCallback((product: Product) => {
-    setProductName(product.productName);
-    setSku(product.sku);
-    setBatch("");
-    if (product.barcode) setBarcode(product.barcode);
-    setErrors({});
-    setShowBatchModal(true);
-  }, []);
+  const applySelectedProduct = useCallback(
+    (product: Product, scannedBarcode?: string) => {
+      const info = getSkuBatchInfo(product.sku, allProducts, searchedProductsRef.current, [
+        product,
+      ]);
+      const autoNoBatch = info.allowEmptyBatch && info.batches.length === 0;
+      setProductName(product.productName);
+      setSku(product.sku);
+      setBatch("");
+      if (scannedBarcode || product.barcode) {
+        setBarcode(scannedBarcode || product.barcode || "");
+      }
+      setErrors({});
+      setNoBatchConfirmed(autoNoBatch);
+      if (autoNoBatch) {
+        setShowBatchModal(false);
+        setTimeout(() => {
+          scrollElementCenter(qtyWrapperRef.current, { focusInput: true, select: true });
+        }, 90);
+      } else {
+        setShowBatchModal(true);
+      }
+    },
+    [allProducts]
+  );
+
+  const handleSelectProduct = useCallback(
+    (product: Product) => {
+      applySelectedProduct(product);
+    },
+    [applySelectedProduct]
+  );
 
   const handleBarcodeScan = async (barcodeValue: string) => {
     const normalized = String(barcodeValue || "").trim();
@@ -127,10 +171,9 @@ export default function AddHistoryEntryModal({
     try {
       const result = await lookupBarcodeApi(normalized);
       if (result.success && result.product) {
-        setProductName(result.product.productName);
-        setSku(result.product.sku);
-        setBatch("");
-        setShowBatchModal(true);
+        searchedProductsRef.current = [result.product, ...searchedProductsRef.current];
+        setSearchTick((t) => t + 1);
+        applySelectedProduct(result.product, normalized);
       } else {
         toast.error(result.message || "Barcode tidak ditemukan");
       }
@@ -147,17 +190,19 @@ export default function AddHistoryEntryModal({
     const targetName = String(productName || "").trim();
     const targetSku = String(sku || "").trim();
     const targetBatch = String(batch || "").trim();
+    const emptyBatchAllowed =
+      !targetBatch && allowEmptyBatch && (noBatchConfirmed || batchesForSku.length === 0);
 
     const nextErrors: typeof errors = {};
     if (!targetLoc) nextErrors.location = "Lokasi wajib diisi";
     if (!targetName) nextErrors.name = "Nama produk wajib diisi";
     if (!targetSku) nextErrors.sku = "SKU wajib diisi";
-    if (!targetBatch) nextErrors.batch = "Pilih batch terlebih dahulu";
+    if (!targetBatch && !emptyBatchAllowed) nextErrors.batch = "Pilih batch terlebih dahulu";
     if (quantity <= 0) nextErrors.qty = "Quantity harus lebih dari 0";
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
-      if (!targetBatch && targetName && targetSku) {
+      if (!targetBatch && !emptyBatchAllowed && targetName && targetSku) {
         setShowBatchModal(true);
       }
       return;
@@ -355,6 +400,7 @@ export default function AddHistoryEntryModal({
                 type="text"
                 value={sku}
                 onChange={(e) => {
+                  setNoBatchConfirmed(false);
                   setSku(e.target.value);
                   setErrors((er) => ({ ...er, sku: undefined }));
                 }}
@@ -363,18 +409,26 @@ export default function AddHistoryEntryModal({
               />
             </Field>
 
-            <Field id="add-entry-batch" label="Nomor Batch" required error={errors.batch}>
+            <Field
+              id="add-entry-batch"
+              label="Nomor Batch"
+              required={!allowEmptyBatch}
+              error={errors.batch}
+            >
               <button
                 id="add-entry-batch"
                 type="button"
                 onClick={() => setShowBatchModal(true)}
                 className={`w-full h-9 px-3 rounded-xl border flex items-center justify-between gap-1 text-left transition-colors active:scale-[0.98] ${
-                  batch.trim()
+                  batch.trim() || noBatchConfirmed || canAutoEmpty
                     ? "bg-[#D5F4F3] border-[#7CD4D3] text-[#0B666E] font-mono text-xs font-semibold"
                     : "bg-[#EEFBFB] border-[#9CE0DF]/80 text-[#487277] text-xs font-medium hover:bg-white"
                 }`}
               >
-                <span className="truncate">{batch.trim() || "Pilih Batch..."}</span>
+                <span className="truncate">
+                  {batch.trim() ||
+                    (noBatchConfirmed || canAutoEmpty ? "Tanpa Batch" : "Pilih Batch...")}
+                </span>
                 <ChevronDownIcon className="w-3.5 h-3.5 shrink-0 opacity-75" />
               </button>
             </Field>
@@ -410,8 +464,11 @@ export default function AddHistoryEntryModal({
         sku={sku}
         currentBatch={batch}
         batches={batchesForSku}
+        allowEmptyBatch={allowEmptyBatch}
         onSelectBatch={(selectedBatch) => {
-          setBatch(selectedBatch);
+          const clean = selectedBatch.trim();
+          setNoBatchConfirmed(!clean);
+          setBatch(clean);
           setErrors((er) => ({ ...er, batch: undefined }));
           setShowBatchModal(false);
           setTimeout(() => {

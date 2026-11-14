@@ -28,6 +28,7 @@ import {
 import { findDuplicates, DuplicateMatch } from "@/lib/duplicates";
 import { getHistoryLocal, getPendingWrites, updatePendingWrite } from "@/lib/localDb";
 import { scrollElementCenter } from "@/lib/scroll";
+import { getSkuBatchInfo } from "@/lib/batch";
 import { Product, HistoryEntry } from "@/lib/types";
 import { getCache, setCache, clearCache } from "@/lib/cache";
 import {
@@ -110,6 +111,7 @@ function InputPageContent() {
     isNew: boolean;
   } | null>(null);
   const [showAddFormBatchModal, setShowAddFormBatchModal] = useState(false);
+  const [noBatchConfirmed, setNoBatchConfirmed] = useState(false);
   const [masterDataTick, setMasterDataTick] = useState(0);
 
   // Move location (shared MoveSheet)
@@ -125,6 +127,7 @@ function InputPageContent() {
   // Unique key per product row
   const productKey = (sku: string, batch: string) => `${sku}__${batch}`;
   const allProductsRef = useRef<Product[] | null>(null);
+  const searchedProductsRef = useRef<Product[]>([]);
 
   useEffect(() => {
     const updateOnline = () => setOnline(navigator.onLine);
@@ -145,43 +148,40 @@ function InputPageContent() {
     barcode: String(p.barcode ?? ""),
   });
 
-  // Get unique batches for current SKU (Tambah Produk Baru)
-  const batchesForSku = useMemo(() => {
-    const sku = String(newProductForm.sku || "").trim().toLowerCase();
-    if (!sku) return [];
-    const all = allProductsRef.current || [];
-    const batchSet = new Set<string>();
-    all.forEach((p) => {
-      if (p && String(p.sku || "").trim().toLowerCase() === sku && p.batch) {
-        batchSet.add(String(p.batch));
-      }
-    });
-    [...products, ...newProducts].forEach((p) => {
-      if (p && String(p.sku || "").trim().toLowerCase() === sku && p.batch) {
-        batchSet.add(String(p.batch));
-      }
-    });
-    return Array.from(batchSet).sort();
-  }, [newProductForm.sku, products, newProducts, masterDataTick]);
+  // Informasi batch & izin tanpa batch berdasarkan Master Data untuk form Tambah Produk Baru
+  const addFormBatchInfo = useMemo(
+    () =>
+      getSkuBatchInfo(
+        newProductForm.sku,
+        allProductsRef.current,
+        searchedProductsRef.current,
+        products,
+        newProducts
+      ),
+    [newProductForm.sku, products, newProducts, masterDataTick]
+  );
+  const batchesForSku = addFormBatchInfo.batches;
+  const allowAddFormEmptyBatch = addFormBatchInfo.allowEmptyBatch;
+  const canAddFormAutoEmpty = allowAddFormEmptyBatch && batchesForSku.length === 0;
 
-  // Batches for row BatchPickerModal
-  const inlineBatchesForSku = useMemo(() => {
-    const sku = String(batchModalTarget?.sku || "").trim().toLowerCase();
-    if (!sku) return [];
-    const all = allProductsRef.current || [];
-    const batchSet = new Set<string>();
-    all.forEach((p) => {
-      if (p && String(p.sku || "").trim().toLowerCase() === sku && p.batch) {
-        batchSet.add(String(p.batch));
-      }
-    });
-    [...products, ...newProducts].forEach((p) => {
-      if (p && String(p.sku || "").trim().toLowerCase() === sku && p.batch) {
-        batchSet.add(String(p.batch));
-      }
-    });
-    return Array.from(batchSet).sort();
-  }, [batchModalTarget?.sku, products, newProducts, masterDataTick]);
+  // Informasi batch & izin tanpa batch untuk BatchPickerModal pada baris lokasi
+  const inlineBatchInfo = useMemo(
+    () =>
+      getSkuBatchInfo(
+        batchModalTarget?.sku || "",
+        allProductsRef.current,
+        searchedProductsRef.current,
+        products,
+        newProducts
+      ),
+    [batchModalTarget?.sku, products, newProducts, masterDataTick]
+  );
+  const inlineBatchesForSku = inlineBatchInfo.batches;
+  const inlineAllowEmptyBatch = Boolean(
+    batchModalTarget &&
+      (inlineBatchInfo.allowEmptyBatch ||
+        (!batchModalTarget.isNew && !String(batchModalTarget.batch || "").trim()))
+  );
 
   useEffect(() => {
     if (!isReady) return;
@@ -437,23 +437,54 @@ function InputPageContent() {
     }
     try {
       const result = await searchProductsApi(query.trim());
-      return result.success && result.products ? dedupBySku(result.products) : [];
+      if (result.success && result.products) {
+        searchedProductsRef.current = result.products;
+        setMasterDataTick((t) => t + 1);
+        return dedupBySku(result.products);
+      }
+      return [];
     } catch {
       return [];
     }
   }, []);
 
-  const handleSelectSuggestion = useCallback((product: Product) => {
-    setNewProductForm((prev) => ({
-      ...prev,
-      productName: product.productName,
-      sku: product.sku,
-      batch: "",
-      barcode: product.barcode || prev.barcode,
-    }));
-    // Munculkan pop-up pilih batch (model chip) terlebih dahulu sebelum fokus ke input Qty
-    setShowAddFormBatchModal(true);
-  }, []);
+  const applySelectedMasterProduct = useCallback(
+    (product: Product, overrideBarcode?: string) => {
+      const info = getSkuBatchInfo(
+        product.sku,
+        allProductsRef.current,
+        searchedProductsRef.current,
+        products,
+        newProducts,
+        [product]
+      );
+      const autoNoBatch = info.allowEmptyBatch && info.batches.length === 0;
+      setNewProductForm((prev) => ({
+        ...prev,
+        productName: product.productName,
+        sku: product.sku,
+        batch: "",
+        barcode: overrideBarcode || product.barcode || prev.barcode,
+      }));
+      setNoBatchConfirmed(autoNoBatch);
+      if (autoNoBatch) {
+        setShowAddFormBatchModal(false);
+        setTimeout(() => {
+          scrollElementCenter(addFormQtyRef.current, { focusInput: true, select: true });
+        }, 90);
+      } else {
+        setShowAddFormBatchModal(true);
+      }
+    },
+    [products, newProducts]
+  );
+
+  const handleSelectSuggestion = useCallback(
+    (product: Product) => {
+      applySelectedMasterProduct(product);
+    },
+    [applySelectedMasterProduct]
+  );
 
   const handleOpenRowBatchPicker = (product: Product, isNew: boolean) => {
     setBatchModalTarget({
@@ -501,14 +532,9 @@ function InputPageContent() {
     try {
       const result = await lookupBarcodeApi(cleanCode);
       if (result.success && result.product) {
-        setNewProductForm((prev) => ({
-          ...prev,
-          productName: result.product!.productName,
-          sku: result.product!.sku,
-          batch: "",
-          barcode: cleanCode,
-        }));
-        setShowAddFormBatchModal(true);
+        searchedProductsRef.current = [result.product, ...searchedProductsRef.current];
+        setMasterDataTick((t) => t + 1);
+        applySelectedMasterProduct(result.product, cleanCode);
       } else {
         setNewProductForm((prev) => ({ ...prev, barcode: cleanCode }));
         toast.error(result.message || "Produk tidak ditemukan di Master, isi manual");
@@ -528,7 +554,9 @@ function InputPageContent() {
     }
 
     const batchValue = newProductForm.batch.trim();
-    if (!batchValue) {
+    const emptyBatchAllowed =
+      allowAddFormEmptyBatch && (noBatchConfirmed || batchesForSku.length === 0);
+    if (!batchValue && !emptyBatchAllowed) {
       toast.error("Pilih nomor batch terlebih dahulu");
       setShowAddFormBatchModal(true);
       return;
@@ -576,6 +604,7 @@ function InputPageContent() {
     }
 
     setNewProductForm({ productName: "", sku: "", batch: "", barcode: "", qty: 0 });
+    setNoBatchConfirmed(false);
     setNewProductFormula("");
     setShowAddForm(false);
     toast.success("Produk ditambahkan ke hitungan");
@@ -588,7 +617,7 @@ function InputPageContent() {
     selectedBatch: string
   ) => {
     const newBatch = selectedBatch.trim().toUpperCase();
-    if (!newBatch) {
+    if (!newBatch && !inlineAllowEmptyBatch) {
       toast.error("Batch tidak boleh kosong");
       return;
     }
@@ -599,7 +628,7 @@ function InputPageContent() {
       (p) =>
         String(p.sku || "").trim().toLowerCase() === String(sku || "").trim().toLowerCase() &&
         String(p.batch || "").trim().toLowerCase() === newBatch.toLowerCase() &&
-        String(p.batch || "") !== oldBatch
+        String(p.batch || "").trim().toLowerCase() !== String(oldBatch || "").trim().toLowerCase()
     );
 
     if (duplicateInLoc) {
@@ -1011,12 +1040,15 @@ function InputPageContent() {
       showAddForm,
     };
     latestDraft.current = draft;
-    try {
-      saveDraft(user.email, draft);
-      setDraftError("");
-    } catch {
-      setDraftError("Draft gagal disimpan di perangkat. Jangan tutup halaman sebelum menyimpan hasil.");
-    }
+    const saveTimer = window.setTimeout(() => {
+      try {
+        saveDraft(user.email, draft);
+        setDraftError("");
+      } catch {
+        setDraftError("Draft gagal disimpan di perangkat. Jangan tutup halaman sebelum menyimpan hasil.");
+      }
+    }, 300);
+    return () => window.clearTimeout(saveTimer);
   }, [
     draftReady,
     user?.email,
@@ -1065,8 +1097,8 @@ function InputPageContent() {
       {/* ============================================================== */}
       <div className="sticky top-0 z-30 shrink-0 shadow-subtle">
         <header>
-          {/* Baris 1: Navigasi, Status Item & Menu Aksi (Frosted Aqua Pastel) */}
-          <div className="min-h-[44px] px-2 py-1 bg-gradient-to-r from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md border-b border-[#8ADBD9]/65 flex items-center justify-between gap-1.5">
+          {/* Baris 1: Navigasi, Status Item & Menu Aksi (Aqua Pastel solid cepat) */}
+          <div className="min-h-[44px] px-2 py-1 bg-gradient-to-r from-[#D5F4F3] via-[#E4F8F8] to-[#EEFAFA] border-b border-[#8ADBD9]/65 flex items-center justify-between gap-1.5">
             <div className="flex items-center gap-1 min-w-0">
               <button
                 type="button"
@@ -1112,7 +1144,7 @@ function InputPageContent() {
               <button
                 type="button"
                 onClick={() => setShowAddForm(true)}
-                className="h-8 px-2.5 bg-[#C7EEED] hover:bg-[#B4E6E5] border border-[#7AD3D2]/85 rounded-xl text-[11px] font-semibold text-[#0B666E] flex items-center gap-1 active:scale-[0.97] transition-all"
+                className="h-8 px-2.5 bg-[#C7EEED] hover:bg-[#B4E6E5] border border-[#7AD3D2]/85 rounded-xl text-[11px] font-semibold text-[#0B666E] flex items-center gap-1 active:scale-[0.97] transition-colors"
                 title="Tambah Produk Baru ke Rak Ini"
               >
                 <PlusIcon className="w-3.5 h-3.5" />
@@ -1162,7 +1194,7 @@ function InputPageContent() {
         {/* ============================================================== */}
         {/* 2. SEARCH & FILTER BAR                                         */}
         {/* ============================================================== */}
-        <div className="bg-[#EEFBFB]/95 backdrop-blur-md border-b border-[#9BE0DF]/70 px-2.5 py-1.5 space-y-1.5">
+        <div className="bg-[#EEFBFB] border-b border-[#9BE0DF]/70 px-2.5 py-1.5 space-y-1.5">
           {/* Baris 1: Input pencarian + tombol kamera */}
           <div className="flex items-center gap-1.5">
             <div className="relative flex-1 min-w-0 flex items-center">
@@ -1194,7 +1226,7 @@ function InputPageContent() {
                 setScannerMode("quick");
                 setShowBarcodeScanner(true);
               }}
-              className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-[#D5F4F3] border border-[#82D6D5]/80 hover:bg-[#C2ECEB] text-[#0B666E] active:scale-[0.97] transition-all"
+              className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-[#D5F4F3] border border-[#82D6D5]/80 hover:bg-[#C2ECEB] text-[#0B666E] active:scale-[0.97] transition-colors"
               title="Scan Barcode"
               aria-label="Scan barcode dengan kamera"
             >
@@ -1207,7 +1239,7 @@ function InputPageContent() {
             <button
               type="button"
               onClick={() => setActiveTab("all")}
-              className={`h-8 rounded-lg flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
+              className={`h-8 rounded-lg flex items-center justify-center gap-1 transition-colors active:scale-[0.98] ${
                 activeTab === "all"
                   ? "bg-white text-[#0D3B40] font-semibold shadow-subtle"
                   : "text-[#487277] hover:text-[#0D3B40]"
@@ -1220,7 +1252,7 @@ function InputPageContent() {
             <button
               type="button"
               onClick={() => setActiveTab("pending")}
-              className={`h-8 rounded-lg flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
+              className={`h-8 rounded-lg flex items-center justify-center gap-1 transition-colors active:scale-[0.98] ${
                 activeTab === "pending"
                   ? "bg-white text-[#0D3B40] font-semibold shadow-subtle"
                   : "text-[#487277] hover:text-[#0D3B40]"
@@ -1233,7 +1265,7 @@ function InputPageContent() {
             <button
               type="button"
               onClick={() => setActiveTab("completed")}
-              className={`h-8 rounded-lg flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
+              className={`h-8 rounded-lg flex items-center justify-center gap-1 transition-colors active:scale-[0.98] ${
                 activeTab === "completed"
                   ? "bg-white text-[#16A34A] font-semibold shadow-subtle"
                   : "text-[#487277] hover:text-[#0D3B40]"
@@ -1321,7 +1353,7 @@ function InputPageContent() {
                   data-product-idx={idx}
                   data-product-key={k}
                   data-count-status={isItemCounted ? "counted" : "uncounted"}
-                  className={`${rowBorderAndBg} scroll-mt-[176px] scroll-mb-24 transition-all ${
+                  className={`${rowBorderAndBg} scroll-mt-[176px] scroll-mb-24 transition-colors ${
                     flashRowKey === k ? "ring-2 ring-inset ring-[#0E838C] bg-[#D9F6F5]" : ""
                   }`}
                 >
@@ -1359,7 +1391,7 @@ function InputPageContent() {
                             handleOpenRowBatchPicker(product, isNew);
                           }}
                           title="Klik untuk pilih / ubah Batch"
-                          className={`h-6 px-2 rounded-lg font-mono text-[11px] font-semibold border transition-all active:scale-[0.97] flex items-center gap-1 ${
+                          className={`h-6 px-2 rounded-lg font-mono text-[11px] font-semibold border transition-colors active:scale-[0.97] flex items-center gap-1 ${
                             isBatchModalOpenForRow
                               ? "bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white border-[#0E838C]"
                               : "bg-[#D5F4F3] text-[#0B666E] border-[#82D6D5]/75 hover:bg-[#C2ECEB]"
@@ -1405,7 +1437,7 @@ function InputPageContent() {
                             focusAndScrollRowByKey(k, true);
                           }
                         }}
-                        className={`h-8 px-2.5 rounded-lg font-mono text-[11px] font-bold border transition-all flex items-center justify-center gap-1 tabular-nums tnum shadow-subtle active:scale-[0.97] touch-manipulation ${
+                        className={`h-8 px-2.5 rounded-lg font-mono text-[11px] font-bold border transition-colors flex items-center justify-center gap-1 tabular-nums tnum shadow-subtle active:scale-[0.97] touch-manipulation ${
                           isItemCounted
                             ? "bg-[#D5F4F3] text-[#0B666E] border-[#7CD4D3]/85 hover:bg-[#C2ECEB]"
                             : "bg-[#EEFBFB] text-[#0D3B40] border-[#9CE0DF]/85 hover:bg-[#DCF6F5]"
@@ -1494,7 +1526,7 @@ function InputPageContent() {
       {/* ============================================================== */}
       {/* 4. FIXED THUMB-ZONE BOTTOM ACTION DOCK                         */}
       {/* ============================================================== */}
-      <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-30 bg-gradient-to-t from-[#DAF4F4] via-[#E8F9F9]/95 to-[#F4FCFC]/95 backdrop-blur-md border-t border-[#8ADBD9]/75 shadow-bar px-2.5 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center gap-2">
+      <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-30 bg-gradient-to-t from-[#DAF4F4] via-[#E8F9F9] to-[#F4FCFC] border-t border-[#8ADBD9]/75 shadow-bar px-2.5 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center gap-2">
         <button
           type="button"
           onClick={() => {
@@ -1665,27 +1697,31 @@ function InputPageContent() {
                 id="add-sku"
                 type="text"
                 value={newProductForm.sku}
-                onChange={(e) =>
-                  setNewProductForm({ ...newProductForm, sku: e.target.value })
-                }
+                onChange={(e) => {
+                  setNoBatchConfirmed(false);
+                  setNewProductForm({ ...newProductForm, sku: e.target.value });
+                }}
                 className="w-full h-9 px-3 bg-[#EEFBFB] border border-[#9CE0DF]/80 rounded-xl font-mono text-[13px] font-semibold text-[#0D3B40] placeholder:text-[#6B9498] focus:bg-white focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20"
                 placeholder="SKU…"
               />
             </Field>
 
-            <Field id="add-batch" label="Nomor Batch" required>
+            <Field id="add-batch" label="Nomor Batch" required={!allowAddFormEmptyBatch}>
               <button
                 id="add-batch"
                 type="button"
                 onClick={() => setShowAddFormBatchModal(true)}
                 className={`w-full h-9 px-3 rounded-xl border flex items-center justify-between gap-1 text-left transition-colors active:scale-[0.98] ${
-                  newProductForm.batch.trim()
+                  newProductForm.batch.trim() || noBatchConfirmed || canAddFormAutoEmpty
                     ? "bg-[#D5F4F3] border-[#7CD4D3] text-[#0B666E] font-mono text-xs font-semibold"
                     : "bg-[#EEFBFB] border-[#9CE0DF]/80 text-[#487277] text-xs font-medium hover:bg-white"
                 }`}
               >
                 <span className="truncate">
-                  {newProductForm.batch.trim() || "Pilih Batch..."}
+                  {newProductForm.batch.trim() ||
+                    (noBatchConfirmed || canAddFormAutoEmpty
+                      ? "Tanpa Batch"
+                      : "Pilih Batch...")}
                 </span>
                 <ChevronDownIcon className="w-3.5 h-3.5 shrink-0 opacity-75" />
               </button>
@@ -1723,7 +1759,9 @@ function InputPageContent() {
                   return;
                 }
                 const batchValue = newProductForm.batch.trim();
-                if (!batchValue) {
+                const emptyBatchAllowed =
+                  allowAddFormEmptyBatch && (noBatchConfirmed || batchesForSku.length === 0);
+                if (!batchValue && !emptyBatchAllowed) {
                   toast.error("Pilih nomor batch terlebih dahulu");
                   setShowAddFormBatchModal(true);
                   return;
@@ -1779,6 +1817,7 @@ function InputPageContent() {
                       qty: 0,
                     });
                     setShowAddForm(false);
+                    setNoBatchConfirmed(false);
                     setNewProductFormula("");
                     toast.success("Produk tersimpan ke Master Data lokasi ini");
                   } else {
@@ -1806,6 +1845,7 @@ function InputPageContent() {
         sku={batchModalTarget?.sku || ""}
         currentBatch={batchModalTarget?.batch || ""}
         batches={inlineBatchesForSku}
+        allowEmptyBatch={inlineAllowEmptyBatch}
         onSelectBatch={(selectedBatch) => {
           if (!batchModalTarget) return;
           handleBatchSave(
@@ -1825,8 +1865,11 @@ function InputPageContent() {
         sku={newProductForm.sku}
         currentBatch={newProductForm.batch}
         batches={batchesForSku}
+        allowEmptyBatch={allowAddFormEmptyBatch}
         onSelectBatch={(selectedBatch) => {
-          setNewProductForm((prev) => ({ ...prev, batch: selectedBatch }));
+          const clean = selectedBatch.trim();
+          setNoBatchConfirmed(!clean);
+          setNewProductForm((prev) => ({ ...prev, batch: clean }));
           setShowAddFormBatchModal(false);
           setTimeout(() => {
             scrollElementCenter(addFormQtyRef.current, { focusInput: true, select: true });

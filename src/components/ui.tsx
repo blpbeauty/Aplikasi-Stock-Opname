@@ -7,7 +7,7 @@ import {
   useState,
   ReactNode,
 } from "react";
-import { useDataSync } from "@/components/DataSyncProvider";
+import { useDataSync, useSyncProgress } from "@/components/DataSyncProvider";
 import { XIcon, RefreshIcon, ChevronLeftIcon } from "@/components/icons";
 
 const FOCUSABLE =
@@ -112,7 +112,7 @@ export function Dialog({
 
   return (
     <div
-      className={`fixed inset-0 z-[70] bg-[#0B393E]/40 backdrop-blur-[2px] flex ${
+      className={`fixed inset-0 z-[70] bg-[#0B393E]/40 flex ${
         size === "sm" ? "items-center p-4" : "items-end"
       } justify-center animate-fadeIn`}
       onClick={onClose}
@@ -230,7 +230,7 @@ export function PageHeader({
   right,
 }: PageHeaderProps) {
   return (
-    <header className="sticky top-0 z-30 min-h-[44px] bg-gradient-to-r from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md text-[#0D3B40] px-2.5 py-1 border-b border-[#8ADBD9]/65 flex items-center justify-between gap-2">
+    <header className="sticky top-0 z-30 min-h-[44px] bg-gradient-to-r from-[#D5F4F3] via-[#E4F8F8] to-[#EEFAFA] text-[#0D3B40] px-2.5 py-1 border-b border-[#8ADBD9]/65 flex items-center justify-between gap-2">
       <div className="flex items-center gap-1.5 min-w-0 flex-1">
         {onBack && (
           <button
@@ -328,7 +328,8 @@ export function LocationBand({ code, sub }: { code: string; sub?: ReactNode }) {
 }
 
 export function SyncStatusBadge() {
-  const { syncProgress, lastSyncTime, forceSync } = useDataSync();
+  const { lastSyncTime, forceSync } = useDataSync();
+  const syncProgress = useSyncProgress();
   const [online, setOnline] = useState(true);
 
   useEffect(() => {

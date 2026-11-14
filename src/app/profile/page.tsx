@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { useDataSync } from "@/components/DataSyncProvider";
+import { useDataSync, useSyncProgress } from "@/components/DataSyncProvider";
 import BottomNav from "@/components/BottomNav";
 import ConfirmModal from "@/components/ConfirmModal";
 import { getHistoryApi, getAllLocationsApi } from "@/lib/api";
@@ -20,8 +20,8 @@ export default function ProfilePage() {
     testingOffline,
     toggleOfflineTest,
     forceSync,
-    syncProgress,
   } = useDataSync();
+  const syncProgress = useSyncProgress();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [allLocations, setAllLocations] = useState<LocationResult[]>([]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -121,7 +121,7 @@ export default function ProfilePage() {
       {/* ============================================================== */}
       {/* 1. AQUA PASTEL STICKY HEADER                                   */}
       {/* ============================================================== */}
-      <header className="sticky top-0 z-30 min-h-[44px] bg-gradient-to-r from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md border-b border-[#8ADBD9]/65 px-3 py-1.5 flex items-center justify-between gap-2">
+      <header className="sticky top-0 z-30 min-h-[44px] bg-gradient-to-r from-[#D5F4F3] via-[#E4F8F8] to-[#EEFAFA] border-b border-[#8ADBD9]/65 px-3 py-1.5 flex items-center justify-between gap-2">
         <div className="min-w-0">
           <h1 className="text-[13px] font-bold text-[#0D3B40] tracking-tight truncate">
             Profil Operator

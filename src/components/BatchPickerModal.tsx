@@ -11,6 +11,8 @@ interface BatchPickerModalProps {
   sku: string;
   currentBatch?: string;
   batches: string[];
+  /** True bila di Master Data terdapat entri SKU ini tanpa nomor batch. */
+  allowEmptyBatch?: boolean;
   onSelectBatch: (batch: string) => void;
 }
 
@@ -21,6 +23,7 @@ export default function BatchPickerModal({
   sku,
   currentBatch = "",
   batches,
+  allowEmptyBatch = false,
   onSelectBatch,
 }: BatchPickerModalProps) {
   const [activeTab, setActiveTab] = useState<"list" | "new">("list");
@@ -33,12 +36,12 @@ export default function BatchPickerModal({
   useEffect(() => {
     if (!isOpen) return;
     setNewBatchInput("");
-    if (batches.length === 0) {
+    if (batches.length === 0 && !allowEmptyBatch) {
       setActiveTab("new");
     } else {
       setActiveTab("list");
     }
-  }, [isOpen, batches.length, sku]);
+  }, [isOpen, batches.length, allowEmptyBatch, sku]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -84,7 +87,7 @@ export default function BatchPickerModal({
 
   return (
     <div
-      className="fixed inset-0 z-[80] bg-[#0B393E]/45 backdrop-blur-[2px] flex items-center justify-center p-4 animate-fadeIn"
+      className="fixed inset-0 z-[80] bg-[#0B393E]/45 flex items-center justify-center p-4 animate-fadeIn"
       onClick={onClose}
     >
       <div
@@ -152,43 +155,71 @@ export default function BatchPickerModal({
 
           {/* Tab 1: Daftar Chip Batch */}
           {activeTab === "list" ? (
-            batches.length > 0 ? (
-              <div className="grid grid-cols-3 gap-1.5 max-h-[46dvh] overflow-y-auto pt-0.5">
-                {batches.map((b) => {
-                  const isSelected =
-                    String(currentBatch || "").trim().toLowerCase() ===
-                    String(b || "").trim().toLowerCase();
-                  return (
-                    <button
-                      key={b}
-                      type="button"
-                      onClick={() => onSelectBatch(b)}
-                      className={`min-h-[40px] px-2 py-2 rounded-xl border font-mono text-[11px] font-bold tracking-wide text-center flex items-center justify-center break-all transition active:scale-[0.97] touch-manipulation ${isSelected
-                          ? "bg-[#D5F4F3] border-[#0E838C] text-[#0B666E] ring-1 ring-[#0E838C]"
-                          : "bg-white border-[#9CE0DF]/75 text-[#0D3B40] hover:border-[#0E838C] hover:bg-[#EEFBFB]"
-                        }`}
-                    >
-                      {b}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="py-4 px-3 text-center bg-[#EFFAFA] rounded-xl border border-dashed border-[#8ADBD9] space-y-2">
-                <p className="text-[11px] font-medium text-[#487277] leading-relaxed">
-                  Belum ada daftar batch di Master Data untuk SKU{" "}
-                  <strong className="font-mono text-[#0D3B40]">{cleanSku || "ini"}</strong>.
-                </p>
+            <div className="space-y-2 pt-0.5">
+              {allowEmptyBatch && (
                 <button
                   type="button"
-                  onClick={() => setActiveTab("new")}
-                  className="h-9 px-3.5 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] active:scale-[0.98] text-white rounded-xl text-[11px] font-semibold transition inline-flex items-center gap-1.5"
+                  onClick={() => onSelectBatch("")}
+                  className={`w-full min-h-[42px] px-3 py-2 rounded-xl border text-left flex items-center justify-between gap-2 transition-colors active:scale-[0.98] touch-manipulation ${
+                    !String(currentBatch || "").trim()
+                      ? "bg-[#D5F4F3] border-[#0E838C] text-[#0B666E] ring-1 ring-[#0E838C]"
+                      : "bg-[#EFFAFA] border-[#8ADBD9] text-[#0D3B40] hover:bg-[#D5F4F3]"
+                  }`}
                 >
-                  <PlusIcon className="w-3.5 h-3.5" />
-                  <span>Buat Batch Baru</span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold leading-tight">Tanpa Batch</p>
+                    <p className="text-[10px] text-[#487277] mt-0.5">
+                      Sesuai Master Data (tanpa nomor batch)
+                    </p>
+                  </div>
+                  <CheckIcon className="w-4 h-4 shrink-0 text-[#0E838C]" />
                 </button>
-              </div>
-            )
+              )}
+
+              {batches.length > 0 ? (
+                <div className="grid grid-cols-3 gap-1.5 max-h-[42dvh] overflow-y-auto">
+                  {batches.map((b) => {
+                    const isSelected =
+                      String(currentBatch || "").trim().toLowerCase() ===
+                      String(b || "").trim().toLowerCase();
+                    return (
+                      <button
+                        key={b}
+                        type="button"
+                        onClick={() => onSelectBatch(b)}
+                        className={`min-h-[40px] px-2 py-2 rounded-xl border font-mono text-[11px] font-bold tracking-wide text-center flex items-center justify-center break-all transition-colors active:scale-[0.97] touch-manipulation ${
+                          isSelected
+                            ? "bg-[#D5F4F3] border-[#0E838C] text-[#0B666E] ring-1 ring-[#0E838C]"
+                            : "bg-white border-[#9CE0DF]/75 text-[#0D3B40] hover:border-[#0E838C] hover:bg-[#EEFBFB]"
+                        }`}
+                      >
+                        {b}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : allowEmptyBatch ? (
+                <p className="text-[11px] text-[#487277] text-center py-1">
+                  Produk ini terdaftar tanpa batch di Master Data. Ketuk{" "}
+                  <strong className="text-[#0D3B40]">Tanpa Batch</strong> di atas untuk melanjutkan.
+                </p>
+              ) : (
+                <div className="py-4 px-3 text-center bg-[#EFFAFA] rounded-xl border border-dashed border-[#8ADBD9] space-y-2">
+                  <p className="text-[11px] font-medium text-[#487277] leading-relaxed">
+                    Belum ada daftar batch di Master Data untuk SKU{" "}
+                    <strong className="font-mono text-[#0D3B40]">{cleanSku || "ini"}</strong>.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("new")}
+                    className="h-9 px-3.5 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] active:scale-[0.98] text-white rounded-xl text-[11px] font-semibold transition-transform inline-flex items-center gap-1.5"
+                  >
+                    <PlusIcon className="w-3.5 h-3.5" />
+                    <span>Buat Batch Baru</span>
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             /* Tab 2: Buat Batch Baru */
             <div className="space-y-2.5 pt-0.5">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { flushPendingWrites } from "@/lib/api";
 import { getPendingWrites, isOffline, PendingWrite } from "@/lib/localDb";
 import { useAuth } from "./AuthProvider";
@@ -11,13 +11,11 @@ import {
   SyncProgress,
 } from "@/lib/localDb";
 
-// ── Context Type ───────────────────────────────────────────────
+// ── Context Types ──────────────────────────────────────────────
 
 type DataSyncContextType = {
   /** Whether the initial sync has completed (data is ready to use) */
   isReady: boolean;
-  /** Current sync progress */
-  syncProgress: SyncProgress;
   /** Force a re-sync from Google Sheets */
   forceSync: () => Promise<void>;
   /** Last successful sync time */
@@ -29,15 +27,28 @@ type DataSyncContextType = {
   toggleOfflineTest: () => void;
 };
 
+const defaultSyncProgress: SyncProgress = {
+  status: "idle",
+  step: "",
+  percent: 0,
+  lastSyncTime: null,
+};
+
 const DataSyncContext = createContext<DataSyncContextType>({
   isReady: false,
-  syncProgress: { status: "idle", step: "", percent: 0, lastSyncTime: null },
   forceSync: async () => {},
   lastSyncTime: null,
-  pendingWrites: [], queueReady: false, offline: false, testingOffline: false, toggleOfflineTest: () => {},
+  pendingWrites: [],
+  queueReady: false,
+  offline: false,
+  testingOffline: false,
+  toggleOfflineTest: () => {},
 });
 
+const SyncProgressContext = createContext<SyncProgress>(defaultSyncProgress);
+
 export const useDataSync = () => useContext(DataSyncContext);
+export const useSyncProgress = () => useContext(SyncProgressContext);
 
 // ── Provider Component ─────────────────────────────────────────
 
@@ -129,9 +140,11 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
     const refresh = async () => {
       const jobs = await getPendingWrites();
       if (!alive) return;
-      setPendingWrites(jobs);
+      setPendingWrites((prev) =>
+        prev.length === 0 && jobs.length === 0 ? prev : jobs
+      );
       setQueueReady(true);
-      setQueueError(jobs.find(job => job.error)?.error || "");
+      setQueueError(jobs.find((job) => job.error)?.error || "");
       setOffline(isOffline());
       setTestingOffline(localStorage.getItem("testOffline") === "true");
     };
@@ -201,8 +214,32 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
     }
   }, [user]);
 
+  const dataSyncValue = useMemo<DataSyncContextType>(
+    () => ({
+      isReady,
+      forceSync,
+      lastSyncTime,
+      pendingWrites,
+      queueReady,
+      offline,
+      testingOffline,
+      toggleOfflineTest,
+    }),
+    [
+      isReady,
+      forceSync,
+      lastSyncTime,
+      pendingWrites,
+      queueReady,
+      offline,
+      testingOffline,
+      toggleOfflineTest,
+    ]
+  );
+
   return (
-    <DataSyncContext.Provider value={{ isReady, syncProgress, forceSync, lastSyncTime, pendingWrites, queueReady, offline, testingOffline, toggleOfflineTest }}>
+    <DataSyncContext.Provider value={dataSyncValue}>
+      <SyncProgressContext.Provider value={syncProgress}>
       {/* Sync Loading Overlay — only shown during first-time sync when no local data */}
       {user && !isReady && syncProgress.status === "syncing" && (
         <div className="fixed inset-0 z-[80] bg-gradient-to-b from-[#D7F4F4] via-[#ECF9F9] to-[#F4FCFC] flex items-center justify-center p-4">
@@ -342,6 +379,7 @@ export default function DataSyncProvider({ children }: { children: React.ReactNo
         </div>
       )}
       {children}
+      </SyncProgressContext.Provider>
     </DataSyncContext.Provider>
   );
 }

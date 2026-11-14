@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, useDeferredValue } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import DeliveryBadge from "@/components/DeliveryBadge";
 import { useDataSync } from "@/components/DataSyncProvider";
@@ -64,6 +64,7 @@ export default function HistoryPage() {
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [timeFilter, setTimeFilter] = useState<"week" | "month">("week");
   const [activeMonth, setActiveMonth] = useState("");
   const [selectedLocations, setSelectedLocations] = useState<Set<string>>(new Set());
@@ -82,7 +83,13 @@ export default function HistoryPage() {
   );
 
   useEffect(() => {
-    fetchHistory();
+    if (!user) return;
+    // Hydrate cache sinkron terlebih dahulu agar perpindahan tab terasa instan
+    const cached = getCache<HistoryEntry[]>("history:ALL:all");
+    if (cached) {
+      setHistory(cached.data.map(normalizeEntry));
+      setLoading(false);
+    }
 
     const cachedProducts = getCache<Product[]>("allProducts");
     if (cachedProducts) allProductsRef.current = cachedProducts.data;
@@ -91,25 +98,33 @@ export default function HistoryPage() {
     );
     if (cachedLocations) allLocationsRef.current = cachedLocations.data;
 
-    getAllProductsApi()
-      .then((res) => {
-        if (res.success && res.products) {
-          allProductsRef.current = res.products;
-          setCache("allProducts", res.products);
-        }
-      })
-      .catch(() => {});
+    // Tunda refresh master lookup modal sejenak agar tidak menyaingi render daftar riwayat
+    const idleTimer = window.setTimeout(() => {
+      if (!cachedProducts) {
+        getAllProductsApi()
+          .then((res) => {
+            if (res.success && res.products) {
+              allProductsRef.current = res.products;
+              setCache("allProducts", res.products);
+            }
+          })
+          .catch(() => {});
+      }
+      if (!cachedLocations) {
+        getAllLocationsApi()
+          .then((res) => {
+            if (res.success && res.locations) {
+              allLocationsRef.current = res.locations;
+              setCache("allLocations", res.locations);
+            }
+          })
+          .catch(() => {});
+      }
+    }, 300);
 
-    getAllLocationsApi()
-      .then((res) => {
-        if (res.success && res.locations) {
-          allLocationsRef.current = res.locations;
-          setCache("allLocations", res.locations);
-        }
-      })
-      .catch(() => {});
+    return () => window.clearTimeout(idleTimer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isReady]);
+  }, [user?.email]);
 
   const normalizeEntry = (e: any): HistoryEntry => ({
     ...e,
@@ -242,7 +257,7 @@ export default function HistoryPage() {
       return ts >= minTimestamp;
     });
 
-    const trimmedQuery = String(searchQuery || "").trim().toLowerCase();
+    const trimmedQuery = String(deferredSearchQuery || "").trim().toLowerCase();
     if (trimmedQuery) {
       result = result.filter(
         (e) =>
@@ -275,7 +290,7 @@ export default function HistoryPage() {
       const tb = parseTimestamp(b.timestamp)?.getTime() || 0;
       return tb - ta;
     });
-  }, [history, timeFilter, searchQuery, selectedLocations]);
+  }, [history, timeFilter, deferredSearchQuery, selectedLocations]);
 
   // Grouped by location
   const groupedHistory = useMemo(() => {
@@ -302,7 +317,7 @@ export default function HistoryPage() {
   }, [filteredHistory, groupedHistory]);
 
   const isGroupExpanded = (loc: string) => {
-    if (String(searchQuery || "").trim()) return true;
+    if (String(deferredSearchQuery || "").trim()) return true;
     return expandedGroups.has(loc);
   };
 
@@ -315,14 +330,14 @@ export default function HistoryPage() {
     });
   };
 
-  const handleEdit = (entry: HistoryEntry) => {
+  const handleEdit = useCallback((entry: HistoryEntry) => {
     setSelectedEntry(entry);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const promptDelete = (entry: HistoryEntry) => {
+  const promptDelete = useCallback((entry: HistoryEntry) => {
     setDeleteModal({ isOpen: true, entry });
-  };
+  }, []);
 
   const confirmDelete = async () => {
     if (!deleteModal.entry) return;
@@ -453,49 +468,54 @@ export default function HistoryPage() {
     clearCache("products:");
   };
 
-  const saveInlineQty = async (
-    entry: HistoryEntry,
-    newQty: number,
-    newFormula: string
-  ): Promise<boolean> => {
-    if (newQty === entry.qty && newFormula === (entry.formula || "")) {
-      return true;
-    }
-    setInlineSaving(entry.rowId);
-    const editTimestamp = new Date().toISOString();
+  const saveInlineQty = useCallback(
+    async (
+      entry: HistoryEntry,
+      newQty: number,
+      newFormula: string
+    ): Promise<boolean> => {
+      if (newQty === entry.qty && newFormula === (entry.formula || "")) {
+        return true;
+      }
+      setInlineSaving(entry.rowId);
+      const editTimestamp = new Date().toISOString();
 
-    try {
-      const result = await updateEntryApi(
-        entry.rowId,
-        entry.sessionId,
-        newQty,
-        editTimestamp,
-        {
-          formula: newFormula,
+      try {
+        const result = await updateEntryApi(
+          entry.rowId,
+          entry.sessionId,
+          newQty,
+          editTimestamp,
+          {
+            formula: newFormula,
+          }
+        );
+        if (!result.success) {
+          setInlineSaving(null);
+          toast.error(result.message || "Gagal update qty, data tidak diubah");
+          return false;
         }
-      );
-      if (!result.success) {
+      } catch {
         setInlineSaving(null);
-        toast.error(result.message || "Gagal update qty, data tidak diubah");
+        toast.error("Gagal update qty, data tidak diubah");
         return false;
       }
-    } catch {
-      setInlineSaving(null);
-      toast.error("Gagal update qty, data tidak diubah");
-      return false;
-    }
 
-    const updated = history.map((e) =>
-      e.rowId === entry.rowId
-        ? { ...e, qty: newQty, formula: newFormula, edited: "Yes", editTimestamp }
-        : e
-    );
-    setHistory(updated);
-    setCache(`history:ALL:all`, updated);
-    clearCache("products:");
-    setInlineSaving(null);
-    return true;
-  };
+      setHistory((prev) => {
+        const updated = prev.map((e) =>
+          e.rowId === entry.rowId
+            ? { ...e, qty: newQty, formula: newFormula, edited: "Yes", editTimestamp }
+            : e
+        );
+        setCache(`history:ALL:all`, updated);
+        return updated;
+      });
+      clearCache("products:");
+      setInlineSaving(null);
+      return true;
+    },
+    []
+  );
 
   const activeAreas = areaGroups.filter(
     (g) => g.name === "CEN/PARAS" || g.name === "CEN/PAYU"
@@ -506,7 +526,7 @@ export default function HistoryPage() {
       {/* ============================================================== */}
       {/* 1. UNIFIED AQUA PASTEL STICKY HEADER & FILTERS                 */}
       {/* ============================================================== */}
-      <div className="sticky top-0 z-30 bg-gradient-to-b from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md border-b border-[#8ADBD9]/65 shadow-subtle">
+      <div className="sticky top-0 z-30 bg-gradient-to-b from-[#D5F4F3] via-[#E4F8F8] to-[#EEFAFA] border-b border-[#8ADBD9]/65 shadow-subtle">
         <header className="min-h-[44px] px-3 py-1 border-b border-[#8ADBD9]/45 flex items-center justify-between gap-2">
           <div className="min-w-0">
             <h1 className="text-[13px] font-bold text-[#0D3B40] tracking-tight truncate">
@@ -569,7 +589,7 @@ export default function HistoryPage() {
               <button
                 type="button"
                 onClick={() => setTimeFilter("week")}
-                className={`h-7 px-2.5 rounded-lg transition-all active:scale-[0.98] ${
+                className={`h-7 px-2.5 rounded-lg transition-colors active:scale-[0.98] ${
                   timeFilter === "week"
                     ? "bg-white text-[#0D3B40] font-semibold shadow-subtle"
                     : "text-[#487277] hover:text-[#0D3B40]"
@@ -580,7 +600,7 @@ export default function HistoryPage() {
               <button
                 type="button"
                 onClick={() => setTimeFilter("month")}
-                className={`h-7 px-2.5 rounded-lg transition-all active:scale-[0.98] ${
+                className={`h-7 px-2.5 rounded-lg transition-colors active:scale-[0.98] ${
                   timeFilter === "month"
                     ? "bg-white text-[#0D3B40] font-semibold shadow-subtle"
                     : "text-[#487277] hover:text-[#0D3B40]"
@@ -604,7 +624,7 @@ export default function HistoryPage() {
                       key={group.name}
                       type="button"
                       onClick={() => toggleLocation(group.name)}
-                      className={`h-8 px-2 rounded-xl border text-[11px] font-semibold flex items-center gap-1 transition-all whitespace-nowrap active:scale-[0.98] ${
+                      className={`h-8 px-2 rounded-xl border text-[11px] font-semibold flex items-center gap-1 transition-colors whitespace-nowrap active:scale-[0.98] ${
                         isSelected
                           ? "bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white border-[#0E838C] shadow-subtle"
                           : "bg-[#D5F4F3] text-[#0B666E] border-[#82D6D5]/75 hover:bg-[#C2ECEB]"
@@ -723,9 +743,9 @@ export default function HistoryPage() {
                         key={entry.rowId}
                         entry={entry}
                         saving={inlineSaving === entry.rowId}
-                        onEdit={() => handleEdit(entry)}
-                        onDelete={() => promptDelete(entry)}
-                        onSaveCount={(qty, formula) => saveInlineQty(entry, qty, formula)}
+                        onEdit={handleEdit}
+                        onDelete={promptDelete}
+                        onSaveCount={saveInlineQty}
                       />
                     ))}
 

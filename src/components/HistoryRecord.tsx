@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import type { HistoryEntry } from "@/lib/types";
 import { formatDisplayTime } from "@/lib/format";
 import { calcExpr } from "./QtyInput";
@@ -10,12 +10,12 @@ import { PencilIcon, TrashIcon } from "./icons";
 interface Props {
   entry: HistoryEntry;
   saving: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-  onSaveCount: (quantity: number, formula: string) => Promise<boolean>;
+  onEdit: (entry: HistoryEntry) => void;
+  onDelete: (entry: HistoryEntry) => void;
+  onSaveCount: (entry: HistoryEntry, quantity: number, formula: string) => Promise<boolean>;
 }
 
-export default function HistoryRecord({
+function HistoryRecord({
   entry,
   saving,
   onEdit,
@@ -42,7 +42,7 @@ export default function HistoryRecord({
       const formula = /[+\-*xX×/]/.test(raw)
         ? `${raw.replace(/\s+/g, "")}=${result}`
         : "";
-      if (await onSaveCount(result, formula)) setEditing(false);
+      if (await onSaveCount(entry, result, formula)) setEditing(false);
     } finally {
       setSubmitting(false);
     }
@@ -65,7 +65,7 @@ export default function HistoryRecord({
 
   return (
     <article
-      className={`${borderStatus} hover:bg-[#EEFBFB] transition-colors`}
+      className={`${borderStatus} hover:bg-[#EEFBFB] transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_58px]`}
       data-history-row={entry.rowId}
     >
       {/* Ultra-Compact 2-Tier HP Row */}
@@ -82,7 +82,7 @@ export default function HistoryRecord({
             disabled={busy}
             aria-label={`Edit kuantitas ${entry.qty} untuk ${entry.productName}`}
             title="Ketuk untuk ubah cepat kuantitas / rumus"
-            className="h-7 px-2.5 shrink-0 bg-[#D5F4F3]/90 hover:bg-[#C2ECEB] active:scale-[0.98] border border-[#7CD4D3]/85 rounded-lg font-mono text-xs font-bold text-[#0B666E] tabular-nums tnum inline-flex items-center gap-1 transition-all"
+            className="h-7 px-2.5 shrink-0 bg-[#D5F4F3]/90 hover:bg-[#C2ECEB] active:scale-[0.98] border border-[#7CD4D3]/85 rounded-lg font-mono text-xs font-bold text-[#0B666E] tabular-nums tnum inline-flex items-center gap-1 transition-colors"
           >
             <span>{entry.qty.toLocaleString("id-ID")}</span>
             <span className="font-sans text-[10px] font-medium text-[#487277]">Pcs</span>
@@ -109,22 +109,22 @@ export default function HistoryRecord({
           <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
-              onClick={onEdit}
+              onClick={() => onEdit(entry)}
               disabled={busy}
               aria-label={`Edit detail ${entry.productName}`}
               title="Edit Detail / Pindah Rak"
-              className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#9CE0DF]/80 bg-white hover:bg-[#D5F4F3] hover:text-[#0B666E] text-[#487277] active:scale-[0.96] transition-all"
+              className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#9CE0DF]/80 bg-white hover:bg-[#D5F4F3] hover:text-[#0B666E] text-[#487277] active:scale-[0.96] transition-colors"
             >
               <PencilIcon className="w-3.5 h-3.5" />
             </button>
 
             <button
               type="button"
-              onClick={onDelete}
+              onClick={() => onDelete(entry)}
               disabled={busy}
               aria-label={`Hapus ${entry.productName}`}
               title="Hapus Entri"
-              className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#9CE0DF]/80 bg-white hover:bg-[#FEF2F2] text-[#487277] hover:text-[#DC2626] active:scale-[0.96] transition-all"
+              className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#9CE0DF]/80 bg-white hover:bg-[#FEF2F2] text-[#487277] hover:text-[#DC2626] active:scale-[0.96] transition-colors"
             >
               <TrashIcon className="w-3.5 h-3.5" />
             </button>
@@ -230,14 +230,14 @@ export default function HistoryRecord({
               type="button"
               onClick={() => setEditing(false)}
               disabled={busy}
-              className="h-9 px-3.5 bg-white border border-[#9CE0DF]/80 rounded-xl text-[11px] font-semibold text-[#487277] hover:text-[#0D3B40] active:scale-[0.98] transition-all"
+              className="h-9 px-3.5 bg-white border border-[#9CE0DF]/80 rounded-xl text-[11px] font-semibold text-[#487277] hover:text-[#0D3B40] active:scale-[0.98] transition-colors"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={result === null || busy}
-              className="h-9 px-3.5 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white rounded-xl text-[11px] font-semibold shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] active:scale-[0.98] transition-all disabled:opacity-40"
+              className="h-9 px-3.5 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white rounded-xl text-[11px] font-semibold shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] active:scale-[0.98] transition-colors disabled:opacity-40"
             >
               {busy ? "Menyimpan…" : "Simpan"}
             </button>
@@ -247,3 +247,5 @@ export default function HistoryRecord({
     </article>
   );
 }
+
+export default memo(HistoryRecord);
