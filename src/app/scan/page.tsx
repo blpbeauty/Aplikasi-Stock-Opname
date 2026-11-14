@@ -227,60 +227,60 @@ export default function ScanDashboard() {
   }, [user?.email, isReady]);
 
   return (
-    <div className="max-w-md mx-auto min-h-dvh bg-gradient-to-b from-[#D7F4F4] via-[#ECF9F9] to-[#F4FCFC] text-[#0D3B40] pb-24 sm:border-x sm:border-[#8ADBD9]/65 font-sans antialiased">
+    <div className="max-w-md mx-auto min-h-dvh bg-gradient-to-b from-[#D7F4F4] via-[#ECF9F9] to-[#F4FCFC] text-[#0D3B40] pb-20 sm:border-x sm:border-[#8ADBD9]/65 font-sans antialiased">
       {/* ── 1. Aqua Pastel Sticky Header ── */}
-      <header className="sticky top-0 z-30 min-h-[54px] bg-gradient-to-r from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md border-b border-[#8ADBD9]/65 px-3.5 py-2 flex items-center justify-between gap-2">
+      <header className="sticky top-0 z-30 min-h-[44px] bg-gradient-to-r from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md border-b border-[#8ADBD9]/65 px-3 py-1.5 flex items-center justify-between gap-2">
         <div className="min-w-0 flex flex-col justify-center leading-tight">
-          <h1 className="text-sm font-bold text-[#0D3B40] tracking-tight truncate">
+          <h1 className="text-[13px] font-bold text-[#0D3B40] tracking-tight truncate">
             BLP Stock Opname
           </h1>
-          <span className="text-xs font-medium text-[#487277] truncate">
+          <span className="text-[11px] font-medium text-[#487277] truncate">
             PARAS &amp; PAYU
           </span>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <div className="font-mono text-xs bg-[#C7EEED] text-[#0B666E] border border-[#7ED4D3]/80 px-2.5 py-1 rounded-full font-semibold tabular-nums tnum">
+          <div className="font-mono text-[11px] bg-[#C7EEED] text-[#0B666E] border border-[#7ED4D3]/80 px-2 py-0.5 rounded-full font-semibold tabular-nums tnum">
             {stats.scannedCount}/{stats.total} Rak
           </div>
-          <div className="flex items-center gap-1.5 text-xs font-medium bg-white/85 border border-[#8EDCDC]/75 text-[#0D3B40] px-2.5 py-1 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-[#16A34A] shrink-0" />
-            <span className="truncate max-w-[72px]">
+          <div className="flex items-center gap-1 text-[11px] font-medium bg-white/85 border border-[#8EDCDC]/75 text-[#0D3B40] px-2 py-0.5 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] shrink-0" />
+            <span className="truncate max-w-[70px]">
               {user?.name?.split(" ")[0] || "Operator"}
             </span>
           </div>
         </div>
       </header>
 
-      <div className="px-3.5 pt-3 space-y-3">
+      <div className="px-2.5 pt-2.5 space-y-2.5">
         {/* ── 2. Progres Cakupan Gudang (Paling Atas — Aqua Pastel Hero Card) ── */}
         <section
           aria-label="Progres opname"
-          className="bg-gradient-to-br from-[#CCF2F1] via-[#E1F8F8] to-[#FFFFFF] border border-[#7CD4D3]/80 shadow-card rounded-2xl p-3.5 space-y-2.5"
+          className="bg-gradient-to-br from-[#CCF2F1] via-[#E1F8F8] to-[#FFFFFF] border border-[#7CD4D3]/80 shadow-card rounded-2xl p-3 space-y-2"
         >
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-[#0B666E]">
+              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#0B666E]">
                 Progres Cakupan Gudang
               </h2>
-              <p className="text-xs text-[#487277] mt-0.5 truncate">
+              <p className="text-[11px] text-[#487277] mt-0.5 truncate">
                 Target penghitungan seluruh rak aktif
               </p>
             </div>
-            <span className="shrink-0 inline-flex items-baseline gap-1 font-mono text-xs font-bold text-[#0D3B40] bg-white/85 border border-[#8ADBD9]/75 px-2.5 py-1 rounded-xl tabular-nums tnum shadow-subtle">
+            <span className="shrink-0 inline-flex items-baseline gap-1 font-mono text-[11px] font-bold text-[#0D3B40] bg-white/85 border border-[#8ADBD9]/75 px-2 py-0.5 rounded-lg tabular-nums tnum shadow-subtle">
               {stats.scannedCount}/{stats.total}
               <span className="text-[#0E838C]">({stats.progress}%)</span>
             </span>
           </div>
 
-          <div className="w-full h-2.5 bg-[#D4EFEF] border border-[#9BE0DF]/60 rounded-full overflow-hidden">
+          <div className="w-full h-2 bg-[#D4EFEF] border border-[#9BE0DF]/60 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-[#0E838C] via-[#14B8A6] to-[#2DD4BF] rounded-full transition-all duration-300"
               style={{ width: `${Math.min(100, Math.max(0, stats.progress))}%` }}
             />
           </div>
 
-          <div className="flex items-center justify-between text-xs pt-0.5">
+          <div className="flex items-center justify-between text-[11px]">
             <span className="text-[#487277]">
               Belum dihitung:{" "}
               <strong className="font-mono font-bold text-[#DC2626] tnum">
@@ -291,7 +291,7 @@ export default function ScanDashboard() {
               <button
                 type="button"
                 onClick={() => setShowPendingModal(true)}
-                className="min-h-[44px] px-3 -mr-1.5 rounded-xl font-semibold text-xs text-[#0B666E] bg-white/80 border border-[#8ADBD9]/65 hover:bg-white transition-colors"
+                className="h-7 px-2.5 -mr-1 rounded-lg font-semibold text-[11px] text-[#0B666E] bg-white/80 border border-[#8ADBD9]/65 hover:bg-white transition-colors"
               >
                 Lihat Daftar →
               </button>
@@ -302,26 +302,26 @@ export default function ScanDashboard() {
         {/* ── 3. Pilih / Scan Kode Rak (Tengah) ── */}
         <section
           aria-label="Buka lokasi"
-          className="relative z-20 bg-white border border-[#9BE0DF]/75 shadow-card rounded-2xl p-3.5 space-y-2.5"
+          className="relative z-20 bg-white border border-[#9BE0DF]/75 shadow-card rounded-2xl p-3 space-y-2"
         >
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-[#0B666E] flex items-center gap-1.5">
-              <MapPinIcon className="w-4 h-4 text-[#0E838C]" />
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#0B666E] flex items-center gap-1">
+              <MapPinIcon className="w-3.5 h-3.5 text-[#0E838C]" />
               Pilih / Scan Kode Rak
             </h2>
-            <span className="font-mono text-xs bg-[#EEFBFB] border border-[#9CE0DF]/75 text-[#487277] px-2.5 py-0.5 rounded-full tabular-nums tnum">
+            <span className="font-mono text-[11px] bg-[#EEFBFB] border border-[#9CE0DF]/75 text-[#487277] px-2 py-0.5 rounded-full tabular-nums tnum">
               Pending: <strong className="text-[#DC2626]">{stats.pending}</strong>
             </span>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <label
               htmlFor="scan-location-input"
-              className="block text-xs font-semibold text-[#0D3B40]"
+              className="block text-[11px] font-semibold text-[#0D3B40]"
             >
               Cari atau pindai lokasi
             </label>
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-1.5 items-center">
               <Autocomplete<LocationResult>
                 id="scan-location-input"
                 value={locationCode}
@@ -330,10 +330,10 @@ export default function ScanDashboard() {
                 getKey={(l) => l.locationCode}
                 renderItem={(l) => (
                   <div className="w-full min-w-0 flex items-center justify-between py-0.5">
-                    <span className="font-mono text-sm font-semibold text-[#0D3B40] uppercase tnum">
+                    <span className="font-mono text-[13px] font-semibold text-[#0D3B40] uppercase tnum">
                       {l.locationCode}
                     </span>
-                    <span className="font-mono text-xs text-[#487277] tnum">
+                    <span className="font-mono text-[11px] text-[#487277] tnum">
                       {l.productCount} SKU
                     </span>
                   </div>
@@ -348,27 +348,27 @@ export default function ScanDashboard() {
               <button
                 type="button"
                 onClick={() => setShowLocationScanner(true)}
-                className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white flex items-center justify-center shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] active:scale-[0.97] transition-all"
+                className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white flex items-center justify-center shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] active:scale-[0.97] transition-all"
                 aria-label="Pindai barcode lokasi"
                 title="Pindai barcode lokasi"
               >
-                <CameraIcon className="w-5 h-5" />
+                <CameraIcon className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          <div className="flex gap-2 pt-0.5">
+          <div className="flex gap-1.5 pt-0.5">
             <button
               type="button"
               onClick={() => openLocation(locationCode)}
               disabled={!locationCode.trim() || loading}
-              className="flex-1 min-h-[44px] bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white rounded-xl font-semibold text-sm shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] disabled:from-[#D5EDED] disabled:to-[#D5EDED] disabled:text-[#5B8E92] disabled:shadow-none active:scale-[0.98] transition-all duration-150"
+              className="flex-1 h-9 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white rounded-xl font-semibold text-xs shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] disabled:from-[#D5EDED] disabled:to-[#D5EDED] disabled:text-[#5B8E92] disabled:shadow-none active:scale-[0.98] transition-all duration-150"
             >
               {loading ? "Membuka…" : "Buka Lokasi"}
             </button>
             <button
               type="button"
-              className="min-h-[44px] px-3.5 border border-[#8ADBD9]/80 bg-[#D5F4F3] hover:bg-[#C2ECEB] text-[#0B666E] rounded-xl font-semibold text-xs whitespace-nowrap active:scale-[0.98] transition-all duration-150"
+              className="h-9 px-3 border border-[#8ADBD9]/80 bg-[#D5F4F3] hover:bg-[#C2ECEB] text-[#0B666E] rounded-xl font-semibold text-[11px] whitespace-nowrap active:scale-[0.98] transition-all duration-150"
               onClick={() => {
                 setNewLocation(locationCode.trim().toUpperCase());
                 setShowNewLocation(true);
@@ -385,16 +385,16 @@ export default function ScanDashboard() {
             className="bg-white border border-[#9BE0DF]/75 border-l-4 border-l-[#D97706] shadow-subtle rounded-2xl overflow-hidden"
             aria-label="Draft hitungan"
           >
-            <div className="px-3.5 py-2 bg-[#FEF7E6] border-b border-[#F3DCAB]/70 flex items-center justify-between gap-2">
-              <h2 className="text-xs font-bold text-[#0D3B40]">
+            <div className="px-3 py-1.5 bg-[#FEF7E6] border-b border-[#F3DCAB]/70 flex items-center justify-between gap-2">
+              <h2 className="text-[11px] font-bold text-[#0D3B40]">
                 Draft Belum Disimpan ({drafts.length})
               </h2>
               <button
                 type="button"
                 onClick={() => setConfirmResetDrafts(true)}
-                className="min-h-[44px] px-3 rounded-xl bg-[#FEF2F2] border border-[#DC2626]/20 text-xs font-semibold text-[#DC2626] hover:bg-red-100/70 flex items-center gap-1.5 active:scale-[0.98] transition-transform"
+                className="h-7 px-2.5 rounded-lg bg-[#FEF2F2] border border-[#DC2626]/20 text-[11px] font-semibold text-[#DC2626] hover:bg-red-100/70 flex items-center gap-1 active:scale-[0.98] transition-transform"
               >
-                <TrashIcon className="w-3.5 h-3.5" />
+                <TrashIcon className="w-3 h-3" />
                 <span>Reset Semua</span>
               </button>
             </div>
@@ -402,24 +402,24 @@ export default function ScanDashboard() {
               {drafts.slice(0, 5).map((draft) => (
                 <div
                   key={draft.location}
-                  className="px-3.5 py-2.5 flex items-center justify-between gap-2 hover:bg-[#EEFBFB]"
+                  className="px-3 py-2 flex items-center justify-between gap-2 hover:bg-[#EEFBFB]"
                 >
                   <button
                     type="button"
-                    className="flex-1 min-w-0 min-h-[44px] text-left flex flex-col justify-center"
+                    className="flex-1 min-w-0 text-left flex flex-col justify-center"
                     onClick={() =>
                       router.push(`/input?location=${encodeURIComponent(draft.location)}`)
                     }
                   >
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs font-semibold bg-[#D5F4F3] text-[#0B666E] border border-[#82D6D5]/75 px-2 py-0.5 rounded-lg tnum">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-mono text-[11px] font-semibold bg-[#D5F4F3] text-[#0B666E] border border-[#82D6D5]/75 px-1.5 py-0.5 rounded-md tnum">
                         {draft.location}
                       </span>
-                      <span className="font-mono text-xs text-[#487277] tnum">
+                      <span className="font-mono text-[11px] text-[#487277] tnum">
                         {Object.values(draft.counted).filter(Boolean).length} dihitung
                       </span>
                     </div>
-                    <span className="block text-xs text-[#487277] mt-1">
+                    <span className="block text-[11px] text-[#487277] mt-0.5">
                       Diperbarui {formatRelativeTime(new Date(draft.updatedAt).toISOString())}
                     </span>
                   </button>
@@ -428,9 +428,9 @@ export default function ScanDashboard() {
                     onClick={() => setDraftToDelete(draft.location)}
                     title={`Hapus draft ${draft.location}`}
                     aria-label={`Hapus draft lokasi ${draft.location}`}
-                    className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl text-[#487277] hover:text-[#DC2626] hover:bg-[#FEF2F2] active:scale-[0.96] transition-all"
+                    className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-[#487277] hover:text-[#DC2626] hover:bg-[#FEF2F2] active:scale-[0.96] transition-all"
                   >
-                    <TrashIcon className="w-4 h-4" />
+                    <TrashIcon className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
@@ -443,21 +443,21 @@ export default function ScanDashboard() {
           aria-label="Terakhir dikerjakan"
           className="bg-white border border-[#9BE0DF]/75 shadow-subtle rounded-2xl overflow-hidden"
         >
-          <div className="px-3.5 py-2 bg-gradient-to-r from-[#E4F8F8] to-[#F3FCFC] border-b border-[#9BE0DF]/50 flex items-center justify-between">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-[#0B666E] flex items-center gap-1.5">
-              <ClockIcon className="w-4 h-4 text-[#0E838C]" /> Terakhir Dikerjakan
+          <div className="px-3 py-1.5 bg-gradient-to-r from-[#E4F8F8] to-[#F3FCFC] border-b border-[#9BE0DF]/50 flex items-center justify-between">
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#0B666E] flex items-center gap-1">
+              <ClockIcon className="w-3.5 h-3.5 text-[#0E838C]" /> Terakhir Dikerjakan
             </h2>
             <button
               type="button"
               onClick={() => router.push("/history")}
-              className="min-h-[44px] px-2 -mr-2 rounded-xl text-xs font-semibold text-[#0B666E] hover:bg-[#D5F4F3]/70 transition-colors"
+              className="h-7 px-2 -mr-1 rounded-lg text-[11px] font-semibold text-[#0B666E] hover:bg-[#D5F4F3]/70 transition-colors"
             >
               Semua Riwayat →
             </button>
           </div>
 
           {recentScans.length === 0 ? (
-            <p className="text-xs text-[#487277] text-center py-5">
+            <p className="text-xs text-[#487277] text-center py-4">
               Belum ada aktivitas opname tercatat
             </p>
           ) : (
@@ -467,23 +467,23 @@ export default function ScanDashboard() {
                   <button
                     type="button"
                     onClick={() => openLocation(item.location)}
-                    className="w-full min-h-[52px] px-3.5 py-2.5 flex items-center justify-between text-left hover:bg-[#EEFBFB] active:bg-[#D5F4F3]/70 transition-colors"
+                    className="w-full min-h-[40px] px-3 py-1.5 flex items-center justify-between text-left hover:bg-[#EEFBFB] active:bg-[#D5F4F3]/70 transition-colors"
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="w-2 h-2 rounded-full bg-[#16A34A] shrink-0" />
-                      <span className="font-mono text-sm font-semibold text-[#0D3B40] uppercase tnum">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] shrink-0" />
+                      <span className="font-mono text-xs font-semibold text-[#0D3B40] uppercase tnum">
                         {item.location}
                       </span>
                       <span className="text-[#487277]/45">•</span>
-                      <span className="font-mono text-xs text-[#487277] tnum">
+                      <span className="font-mono text-[11px] text-[#487277] tnum">
                         {item.count} SKU
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-xs text-[#487277]">
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[11px] text-[#487277]">
                         {formatRelativeTime(item.time)}
                       </span>
-                      <ChevronRightIcon className="w-4 h-4 text-[#487277]" />
+                      <ChevronRightIcon className="w-3.5 h-3.5 text-[#487277]" />
                     </div>
                   </button>
                 </li>

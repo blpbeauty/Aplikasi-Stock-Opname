@@ -14,6 +14,7 @@ import BatchPickerModal from "@/components/BatchPickerModal";
 import QtyInput from "@/components/QtyInput";
 import { Dialog, Field } from "@/components/ui";
 import Autocomplete from "@/components/Autocomplete";
+import { scrollElementCenter } from "@/lib/scroll";
 import { CalculatorIcon, CameraIcon, SearchIcon, ChevronDownIcon } from "@/components/icons";
 import toast from "react-hot-toast";
 
@@ -227,12 +228,12 @@ export default function AddHistoryEntryModal({
         title={`Tambah Produk — ${location || "Lokasi"}`}
         description="Catat produk baru ke riwayat opname rak ini."
         footer={
-          <div className="flex gap-2.5">
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="flex-1 min-h-[44px] bg-[#EEFBFB] border border-[#9CE0DF]/80 hover:bg-[#D5F4F3] text-[#0D3B40] text-sm font-semibold rounded-xl transition-all duration-150 active:scale-[0.98] disabled:opacity-50"
+              className="flex-1 h-9 bg-[#EEFBFB] border border-[#9CE0DF]/80 hover:bg-[#D5F4F3] text-[#0D3B40] text-xs font-semibold rounded-xl transition-all duration-150 active:scale-[0.98] disabled:opacity-50"
             >
               Batal
             </button>
@@ -240,14 +241,14 @@ export default function AddHistoryEntryModal({
               type="button"
               onClick={handleSubmit}
               disabled={submitting}
-              className="flex-1 min-h-[44px] bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white text-sm font-semibold rounded-xl shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] transition-all duration-150 active:scale-[0.98] disabled:opacity-50"
+              className="flex-1 h-9 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white text-xs font-semibold rounded-xl shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] transition-all duration-150 active:scale-[0.98] disabled:opacity-50"
             >
               {submitting ? "Menyimpan…" : "Tambah Produk"}
             </button>
           </div>
         }
       >
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           <Autocomplete<{ locationCode: string; productCount: number }>
             id="add-entry-location"
             label="Lokasi Rak"
@@ -296,7 +297,7 @@ export default function AddHistoryEntryModal({
                     handleBarcodeScan(barcode);
                   }
                 }}
-                className="flex-1 min-w-0 min-h-[44px] px-3.5 bg-[#EEFBFB] border border-[#9CE0DF]/80 rounded-xl font-mono text-sm text-[#0D3B40] placeholder:text-[#6B9498] focus:bg-white focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20"
+                className="flex-1 min-w-0 h-9 px-3 bg-[#EEFBFB] border border-[#9CE0DF]/80 rounded-xl font-mono text-[13px] text-[#0D3B40] placeholder:text-[#6B9498] focus:bg-white focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20"
                 placeholder="Barcode…"
                 autoComplete="off"
               />
@@ -304,7 +305,7 @@ export default function AddHistoryEntryModal({
                 type="button"
                 onClick={() => barcode && handleBarcodeScan(barcode)}
                 disabled={!barcode || scanningBarcode}
-                className="w-11 h-11 shrink-0 rounded-xl bg-white border border-[#9CE0DF]/80 hover:bg-[#EEFBFB] flex items-center justify-center text-[#0D3B40] disabled:opacity-40 active:scale-[0.97] transition-all"
+                className="w-9 h-9 shrink-0 rounded-xl bg-white border border-[#9CE0DF]/80 hover:bg-[#EEFBFB] flex items-center justify-center text-[#0D3B40] disabled:opacity-40 active:scale-[0.97] transition-all"
                 aria-label="Cari barcode"
               >
                 <SearchIcon className="w-4 h-4" />
@@ -313,7 +314,7 @@ export default function AddHistoryEntryModal({
                 type="button"
                 onClick={() => setShowBarcodeScanner(true)}
                 disabled={scanningBarcode}
-                className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white flex items-center justify-center disabled:opacity-40 active:scale-[0.97] transition-all"
+                className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white flex items-center justify-center disabled:opacity-40 active:scale-[0.97] transition-all"
                 aria-label="Pindai barcode dengan kamera"
               >
                 <CameraIcon className="w-4 h-4" />
@@ -347,7 +348,7 @@ export default function AddHistoryEntryModal({
             error={errors.name}
           />
 
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-2">
             <Field id="add-entry-sku" label="SKU" required error={errors.sku}>
               <input
                 id="add-entry-sku"
@@ -358,7 +359,7 @@ export default function AddHistoryEntryModal({
                   setErrors((er) => ({ ...er, sku: undefined }));
                 }}
                 placeholder="SKU produk"
-                className="w-full min-h-[44px] px-3 bg-[#EEFBFB] border border-[#9CE0DF]/80 rounded-xl font-mono text-sm font-semibold text-[#0D3B40] uppercase placeholder:text-[#6B9498] focus:bg-white focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20"
+                className="w-full h-9 px-3 bg-[#EEFBFB] border border-[#9CE0DF]/80 rounded-xl font-mono text-[13px] font-semibold text-[#0D3B40] uppercase placeholder:text-[#6B9498] focus:bg-white focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20"
               />
             </Field>
 
@@ -367,20 +368,20 @@ export default function AddHistoryEntryModal({
                 id="add-entry-batch"
                 type="button"
                 onClick={() => setShowBatchModal(true)}
-                className={`w-full min-h-[44px] px-3 rounded-xl border flex items-center justify-between gap-1.5 text-left transition-colors active:scale-[0.98] ${
+                className={`w-full h-9 px-3 rounded-xl border flex items-center justify-between gap-1 text-left transition-colors active:scale-[0.98] ${
                   batch.trim()
                     ? "bg-[#D5F4F3] border-[#7CD4D3] text-[#0B666E] font-mono text-xs font-semibold"
                     : "bg-[#EEFBFB] border-[#9CE0DF]/80 text-[#487277] text-xs font-medium hover:bg-white"
                 }`}
               >
                 <span className="truncate">{batch.trim() || "Pilih Batch..."}</span>
-                <ChevronDownIcon className="w-4 h-4 shrink-0 opacity-75" />
+                <ChevronDownIcon className="w-3.5 h-3.5 shrink-0 opacity-75" />
               </button>
             </Field>
           </div>
 
-          <div className="pt-2 border-t border-[#9BE0DF]/55" ref={qtyWrapperRef}>
-            <p className="text-xs font-semibold text-[#487277] mb-1.5">Quantity</p>
+          <div className="pt-1.5 border-t border-[#9BE0DF]/55 scroll-my-4" ref={qtyWrapperRef}>
+            <p className="text-[11px] font-semibold text-[#487277] mb-1">Quantity</p>
             <QtyInput
               value={quantity}
               onChange={(v) => {
@@ -388,13 +389,14 @@ export default function AddHistoryEntryModal({
                 setErrors((e) => ({ ...e, qty: undefined }));
               }}
               onExprCommit={(expr) => setFormula(expr)}
+              onFocus={() => scrollElementCenter(qtyWrapperRef.current)}
               wide
               ariaLabel="Kuantitas produk"
             />
-            {errors.qty && <p className="text-[#DC2626] text-xs font-semibold mt-1.5">{errors.qty}</p>}
+            {errors.qty && <p className="text-[#DC2626] text-[11px] font-semibold mt-1">{errors.qty}</p>}
             {formula && (
-              <p className="inline-flex items-center gap-1.5 text-xs text-[#0B666E] mt-1.5 font-mono font-semibold tnum">
-                <CalculatorIcon className="w-4 h-4" aria-hidden="true" /> Rumus: {formula}
+              <p className="inline-flex items-center gap-1 text-[11px] text-[#0B666E] mt-1 font-mono font-semibold tnum">
+                <CalculatorIcon className="w-3.5 h-3.5" aria-hidden="true" /> Rumus: {formula}
               </p>
             )}
           </div>
@@ -413,13 +415,8 @@ export default function AddHistoryEntryModal({
           setErrors((er) => ({ ...er, batch: undefined }));
           setShowBatchModal(false);
           setTimeout(() => {
-            qtyWrapperRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-            const qtyInput = qtyWrapperRef.current?.querySelector(
-              'input[type="text"]'
-            ) as HTMLInputElement | null;
-            qtyInput?.focus();
-            qtyInput?.select();
-          }, 120);
+            scrollElementCenter(qtyWrapperRef.current, { focusInput: true, select: true });
+          }, 90);
         }}
       />
 

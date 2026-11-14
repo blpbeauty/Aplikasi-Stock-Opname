@@ -98,17 +98,17 @@ export default function BatchPickerModal({
         className="bg-white w-full max-w-sm rounded-2xl border border-[#8ADBD9]/80 shadow-[0_14px_40px_-8px_rgba(14,131,140,0.24)] outline-none flex flex-col max-h-[85dvh] overflow-hidden animate-fadeIn"
       >
         {/* Header Pop-up (Tetap muncul di tengah layar sesuai preferensi operator) */}
-        <div className="px-4 pt-3.5 pb-3 bg-gradient-to-r from-[#DCF6F5] to-[#EEFBFB] border-b border-[#BCEBEB]/80 flex items-start justify-between gap-2 shrink-0">
+        <div className="px-3.5 pt-2.5 pb-2 bg-gradient-to-r from-[#DCF6F5] to-[#EEFBFB] border-b border-[#BCEBEB]/80 flex items-start justify-between gap-2 shrink-0">
           <div className="min-w-0 pt-0.5">
             <h2
               id={titleId}
-              className="text-base font-extrabold text-[#0D3B40] tracking-wide uppercase leading-tight"
+              className="text-sm font-extrabold text-[#0D3B40] tracking-wide uppercase leading-tight"
             >
               PILIH BATCH
             </h2>
             <p
               id={descId}
-              className="text-xs text-[#487277] mt-0.5 font-medium break-words leading-snug"
+              className="text-[11px] text-[#487277] mt-0.5 font-medium break-words leading-snug"
             >
               {formattedSubtitle}
             </p>
@@ -116,7 +116,7 @@ export default function BatchPickerModal({
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 w-11 h-11 -mr-1.5 -mt-1 rounded-full bg-white/90 border border-[#9CE0DF]/60 hover:bg-white active:scale-[0.96] flex items-center justify-center text-[#487277] hover:text-[#0D3B40] transition"
+            className="shrink-0 w-9 h-9 -mr-1 -mt-0.5 rounded-full bg-white/90 border border-[#9CE0DF]/60 hover:bg-white active:scale-[0.96] flex items-center justify-center text-[#487277] hover:text-[#0D3B40] transition"
             aria-label="Tutup pilih batch"
           >
             <XIcon className="w-4 h-4" />
@@ -124,13 +124,13 @@ export default function BatchPickerModal({
         </div>
 
         {/* Body */}
-        <div className="p-4 space-y-3.5 overflow-y-auto flex-1">
+        <div className="p-3 space-y-2.5 overflow-y-auto flex-1">
           {/* Tab Switcher: Batch Produk (N) vs + Buat Batch Baru */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-1.5">
             <button
               type="button"
               onClick={() => setActiveTab("list")}
-              className={`min-h-[44px] px-3 rounded-full text-xs font-bold transition active:scale-[0.98] flex items-center justify-center gap-1.5 ${activeTab === "list"
+              className={`h-9 px-2.5 rounded-full text-[11px] font-bold transition active:scale-[0.98] flex items-center justify-center gap-1 ${activeTab === "list"
                   ? "bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white shadow-subtle"
                   : "bg-[#E5F7F7] text-[#487277] border border-[#9CE0DF]/60 hover:text-[#0D3B40]"
                 }`}
@@ -140,12 +140,12 @@ export default function BatchPickerModal({
             <button
               type="button"
               onClick={() => setActiveTab("new")}
-              className={`min-h-[44px] px-3 rounded-full text-xs font-bold transition active:scale-[0.98] flex items-center justify-center gap-1 ${activeTab === "new"
+              className={`h-9 px-2.5 rounded-full text-[11px] font-bold transition active:scale-[0.98] flex items-center justify-center gap-1 ${activeTab === "new"
                   ? "bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white shadow-subtle"
                   : "bg-[#E5F7F7] text-[#487277] border border-[#9CE0DF]/60 hover:text-[#0D3B40]"
                 }`}
             >
-              <PlusIcon className="w-4 h-4" />
+              <PlusIcon className="w-3.5 h-3.5" />
               <span>Buat Batch Baru</span>
             </button>
           </div>
@@ -153,7 +153,7 @@ export default function BatchPickerModal({
           {/* Tab 1: Daftar Chip Batch */}
           {activeTab === "list" ? (
             batches.length > 0 ? (
-              <div className="grid grid-cols-3 gap-2 max-h-[46dvh] overflow-y-auto pt-0.5">
+              <div className="grid grid-cols-3 gap-1.5 max-h-[46dvh] overflow-y-auto pt-0.5">
                 {batches.map((b) => {
                   const isSelected =
                     String(currentBatch || "").trim().toLowerCase() ===
@@ -163,7 +163,7 @@ export default function BatchPickerModal({
                       key={b}
                       type="button"
                       onClick={() => onSelectBatch(b)}
-                      className={`min-h-[48px] px-2.5 py-2.5 rounded-xl border font-mono text-xs font-bold tracking-wide text-center flex items-center justify-center break-all transition active:scale-[0.97] touch-manipulation ${isSelected
+                      className={`min-h-[40px] px-2 py-2 rounded-xl border font-mono text-[11px] font-bold tracking-wide text-center flex items-center justify-center break-all transition active:scale-[0.97] touch-manipulation ${isSelected
                           ? "bg-[#D5F4F3] border-[#0E838C] text-[#0B666E] ring-1 ring-[#0E838C]"
                           : "bg-white border-[#9CE0DF]/75 text-[#0D3B40] hover:border-[#0E838C] hover:bg-[#EEFBFB]"
                         }`}
@@ -174,28 +174,28 @@ export default function BatchPickerModal({
                 })}
               </div>
             ) : (
-              <div className="py-5 px-3 text-center bg-[#EFFAFA] rounded-xl border border-dashed border-[#8ADBD9] space-y-2.5">
-                <p className="text-xs font-medium text-[#487277] leading-relaxed">
+              <div className="py-4 px-3 text-center bg-[#EFFAFA] rounded-xl border border-dashed border-[#8ADBD9] space-y-2">
+                <p className="text-[11px] font-medium text-[#487277] leading-relaxed">
                   Belum ada daftar batch di Master Data untuk SKU{" "}
                   <strong className="font-mono text-[#0D3B40]">{cleanSku || "ini"}</strong>.
                 </p>
                 <button
                   type="button"
                   onClick={() => setActiveTab("new")}
-                  className="min-h-[44px] px-4 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] active:scale-[0.98] text-white rounded-xl text-xs font-semibold transition inline-flex items-center gap-1.5"
+                  className="h-9 px-3.5 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] active:scale-[0.98] text-white rounded-xl text-[11px] font-semibold transition inline-flex items-center gap-1.5"
                 >
-                  <PlusIcon className="w-4 h-4" />
+                  <PlusIcon className="w-3.5 h-3.5" />
                   <span>Buat Batch Baru</span>
                 </button>
               </div>
             )
           ) : (
             /* Tab 2: Buat Batch Baru */
-            <div className="space-y-3 pt-1">
+            <div className="space-y-2.5 pt-0.5">
               <div>
                 <label
                   htmlFor="new-batch-modal-input"
-                  className="block text-xs font-bold uppercase tracking-wider text-[#487277] mb-1.5"
+                  className="block text-[11px] font-bold uppercase tracking-wider text-[#487277] mb-1"
                 >
                   Nomor Batch Baru
                 </label>
@@ -213,7 +213,7 @@ export default function BatchPickerModal({
                   }}
                   placeholder="Ketik nomor batch fisik (mis. CAG0701)…"
                   autoComplete="off"
-                  className="w-full min-h-[44px] px-3.5 bg-[#EEFBFB] border border-[#9CE0DF]/80 rounded-xl font-mono text-sm font-bold text-[#0D3B40] uppercase placeholder:font-sans placeholder:font-normal placeholder:text-[#6B9498] focus:bg-white focus:outline-none focus:border-[#0E838C]"
+                  className="w-full h-10 px-3 bg-[#EEFBFB] border border-[#9CE0DF]/80 rounded-xl font-mono text-[13px] font-bold text-[#0D3B40] uppercase placeholder:font-sans placeholder:font-normal placeholder:text-[#6B9498] focus:bg-white focus:outline-none focus:border-[#0E838C]"
                 />
               </div>
 
@@ -221,7 +221,7 @@ export default function BatchPickerModal({
                 type="button"
                 onClick={handleConfirmNewBatch}
                 disabled={!newBatchInput.trim()}
-                className="w-full min-h-[44px] bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] active:scale-[0.98] disabled:from-[#D5EDED] disabled:to-[#D5EDED] disabled:text-[#5B8E92] text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-subtle"
+                className="w-full h-10 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] active:scale-[0.98] disabled:from-[#D5EDED] disabled:to-[#D5EDED] disabled:text-[#5B8E92] text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-subtle"
               >
                 <CheckIcon className="w-4 h-4" />
                 <span>Pakai Batch Ini &amp; Lanjut Input Qty</span>

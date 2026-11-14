@@ -143,14 +143,14 @@ export default function Autocomplete<T>({
     open && !loading && items.length === 0 && value.trim().length >= minChars;
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div ref={containerRef} className={`relative scroll-mt-16 ${className}`}>
       {label && (
-        <label htmlFor={id} className="block text-xs font-semibold text-[#0D3B40] mb-1.5">
+        <label htmlFor={id} className="block text-[11px] font-semibold text-[#0D3B40] mb-1">
           {label}
         </label>
       )}
       <div className="relative flex items-center">
-        <SearchIcon className="absolute left-3.5 w-4 h-4 text-[#0E838C] pointer-events-none" />
+        <SearchIcon className="absolute left-3 w-3.5 h-3.5 text-[#0E838C] pointer-events-none" />
         <input
           id={id}
           type="text"
@@ -164,13 +164,20 @@ export default function Autocomplete<T>({
           onFocus={() => {
             if (showOnEmpty && value.trim().length === 0) runResolve("");
             else if (items.length > 0) setOpen(true);
+            setTimeout(() => {
+              containerRef.current?.scrollIntoView?.({
+                behavior: "smooth",
+                block: "nearest",
+                inline: "nearest",
+              });
+            }, 220);
           }}
           placeholder={placeholder}
           autoComplete="off"
           autoFocus={autoFocus}
           disabled={disabled}
           aria-invalid={!!error}
-          className={`w-full min-h-[44px] pl-10 ${value && !disabled ? "pr-11" : "pr-3.5"} bg-[#EEFBFB] border rounded-xl focus:bg-white focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20 text-sm font-medium text-[#0D3B40] placeholder:font-normal placeholder:text-[#6B9498] transition-colors ${
+          className={`w-full h-9 pl-9 ${value && !disabled ? "pr-9" : "pr-3"} bg-[#EEFBFB] border rounded-xl focus:bg-white focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20 text-[13px] font-medium text-[#0D3B40] placeholder:font-normal placeholder:text-[#6B9498] transition-colors ${
             error ? "border-[#DC2626]" : "border-[#9CE0DF]/80"
           } ${uppercase ? "uppercase font-mono" : ""}`}
         />
@@ -183,16 +190,16 @@ export default function Autocomplete<T>({
               setItems([]);
               setOpen(false);
             }}
-            className="absolute right-0 w-11 h-11 rounded-xl flex items-center justify-center text-[#487277] hover:text-[#0D3B40]"
+            className="absolute right-0 w-9 h-9 rounded-xl flex items-center justify-center text-[#487277] hover:text-[#0D3B40]"
             aria-label="Bersihkan isian"
           >
-            <XIcon className="w-4 h-4" />
+            <XIcon className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
-      {hint && !error && <p className="text-xs text-[#487277] mt-1 leading-snug">{hint}</p>}
+      {hint && !error && <p className="text-[11px] text-[#487277] mt-0.5 leading-snug">{hint}</p>}
       {error && (
-        <p role="alert" className="text-xs font-semibold text-[#DC2626] mt-1 leading-snug">
+        <p role="alert" className="text-[11px] font-semibold text-[#DC2626] mt-0.5 leading-snug">
           {error}
         </p>
       )}
@@ -201,10 +208,10 @@ export default function Autocomplete<T>({
         <div
           id={listId}
           role="listbox"
-          className="absolute z-[100] left-0 right-0 mt-1.5 bg-white border border-[#8ADBD9]/80 rounded-2xl shadow-[0_10px_28px_-4px_rgba(14,131,140,0.18)] overflow-hidden max-h-56 overflow-y-auto divide-y divide-[#E5F7F7]"
+          className="absolute z-[100] left-0 right-0 mt-1 bg-white border border-[#8ADBD9]/80 rounded-xl shadow-[0_10px_28px_-4px_rgba(14,131,140,0.18)] overflow-hidden max-h-52 overflow-y-auto divide-y divide-[#E5F7F7]"
         >
           {loading && (
-            <p className="px-3.5 py-2.5 text-xs font-medium text-[#487277]">Mencari…</p>
+            <p className="px-3 py-2 text-[11px] font-medium text-[#487277]">Mencari…</p>
           )}
           {items.map((item, idx) => (
             <button
@@ -214,7 +221,7 @@ export default function Autocomplete<T>({
               aria-selected={idx === activeIdx}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => select(item)}
-              className={`w-full min-h-[44px] text-left px-3.5 py-2.5 text-xs transition overflow-hidden ${
+              className={`w-full min-h-[38px] text-left px-3 py-2 text-xs transition overflow-hidden ${
                 idx === activeIdx ? "bg-[#D8F5F4]" : "hover:bg-[#EEFBFB] active:bg-[#D8F5F4]"
               }`}
             >
@@ -222,7 +229,7 @@ export default function Autocomplete<T>({
             </button>
           ))}
           {showEmptyState && (
-            <p className="px-3.5 py-3 text-xs text-[#487277]">{emptyText}</p>
+            <p className="px-3 py-2.5 text-[11px] text-[#487277]">{emptyText}</p>
           )}
         </div>
       )}

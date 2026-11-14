@@ -502,23 +502,23 @@ export default function HistoryPage() {
   );
 
   return (
-    <div className="max-w-md mx-auto min-h-dvh bg-gradient-to-b from-[#D7F4F4] via-[#ECF9F9] to-[#F4FCFC] text-[#0D3B40] pb-24 sm:border-x sm:border-[#8ADBD9]/65 font-sans antialiased">
+    <div className="max-w-md mx-auto min-h-dvh bg-gradient-to-b from-[#D7F4F4] via-[#ECF9F9] to-[#F4FCFC] text-[#0D3B40] pb-20 sm:border-x sm:border-[#8ADBD9]/65 font-sans antialiased">
       {/* ============================================================== */}
       {/* 1. UNIFIED AQUA PASTEL STICKY HEADER & FILTERS                 */}
       {/* ============================================================== */}
       <div className="sticky top-0 z-30 bg-gradient-to-b from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md border-b border-[#8ADBD9]/65 shadow-subtle">
-        <header className="min-h-[52px] px-3.5 py-1.5 border-b border-[#8ADBD9]/45 flex items-center justify-between gap-2">
+        <header className="min-h-[44px] px-3 py-1 border-b border-[#8ADBD9]/45 flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <h1 className="text-sm font-bold text-[#0D3B40] tracking-tight truncate">
+            <h1 className="text-[13px] font-bold text-[#0D3B40] tracking-tight truncate">
               Riwayat Opname
             </h1>
-            <p className="text-xs text-[#487277] truncate">
+            <p className="text-[11px] text-[#487277] truncate">
               PARAS &amp; PAYU
             </p>
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <div className="font-mono text-xs bg-[#C7EEED] border border-[#7ED4D3]/80 text-[#0B666E] px-2.5 py-1 rounded-full font-semibold tabular-nums tnum">
+            <div className="font-mono text-[11px] bg-[#C7EEED] border border-[#7ED4D3]/80 text-[#0B666E] px-2 py-0.5 rounded-full font-semibold tabular-nums tnum">
               {summary.totalQty.toLocaleString("id-ID")} Pcs · {summary.locCount} Rak
             </div>
 
@@ -526,7 +526,7 @@ export default function HistoryPage() {
               type="button"
               onClick={() => fetchHistory()}
               disabled={loading}
-              className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/85 border border-[#8ADBD9]/75 hover:bg-white text-[#0D3B40] disabled:opacity-40 active:scale-[0.96] transition-transform"
+              className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/85 border border-[#8ADBD9]/75 hover:bg-white text-[#0D3B40] disabled:opacity-40 active:scale-[0.96] transition-transform"
               aria-label="Muat ulang riwayat"
               title="Muat ulang"
             >
@@ -536,9 +536,9 @@ export default function HistoryPage() {
         </header>
 
         {/* Search & Filter Controls */}
-        <div className="px-3 py-2 space-y-2">
+        <div className="px-2.5 py-1.5 space-y-1.5">
           <div className="relative flex items-center">
-            <SearchIcon className="w-4 h-4 text-[#487277] absolute left-3.5 pointer-events-none" />
+            <SearchIcon className="w-3.5 h-3.5 text-[#487277] absolute left-3 pointer-events-none" />
             <label htmlFor="history-search" className="sr-only">
               Cari riwayat
             </label>
@@ -549,27 +549,27 @@ export default function HistoryPage() {
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Cari nama barang, SKU, batch, lokasi…"
               autoComplete="off"
-              className="w-full min-h-[44px] pl-10 pr-11 bg-white border border-[#9CE0DF]/85 rounded-xl text-sm text-[#0D3B40] placeholder:text-[#6B9498] focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20 transition-colors"
+              className="w-full h-9 pl-9 pr-9 bg-white border border-[#9CE0DF]/85 rounded-xl text-[13px] text-[#0D3B40] placeholder:text-[#6B9498] focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20 transition-colors"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
                 aria-label="Bersihkan pencarian"
-                className="absolute right-0.5 w-10 h-10 flex items-center justify-center rounded-lg text-[#487277] hover:text-[#0D3B40]"
+                className="absolute right-0.5 w-8 h-8 flex items-center justify-center rounded-lg text-[#487277] hover:text-[#0D3B40]"
               >
-                <XIcon className="w-4 h-4" />
+                <XIcon className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar">
+          <div className="flex items-center justify-between gap-1.5 overflow-x-auto hide-scrollbar">
             {/* Segmented Period Filter */}
-            <div className="flex items-center p-1 bg-[#D8F3F2] border border-[#9BE0DF]/65 rounded-xl shrink-0 text-xs font-medium gap-1">
+            <div className="flex items-center p-0.5 bg-[#D8F3F2] border border-[#9BE0DF]/65 rounded-xl shrink-0 text-[11px] font-medium gap-0.5">
               <button
                 type="button"
                 onClick={() => setTimeFilter("week")}
-                className={`min-h-[44px] px-3 rounded-lg transition-all active:scale-[0.98] ${
+                className={`h-7 px-2.5 rounded-lg transition-all active:scale-[0.98] ${
                   timeFilter === "week"
                     ? "bg-white text-[#0D3B40] font-semibold shadow-subtle"
                     : "text-[#487277] hover:text-[#0D3B40]"
@@ -580,7 +580,7 @@ export default function HistoryPage() {
               <button
                 type="button"
                 onClick={() => setTimeFilter("month")}
-                className={`min-h-[44px] px-3 rounded-lg transition-all active:scale-[0.98] ${
+                className={`h-7 px-2.5 rounded-lg transition-all active:scale-[0.98] ${
                   timeFilter === "month"
                     ? "bg-white text-[#0D3B40] font-semibold shadow-subtle"
                     : "text-[#487277] hover:text-[#0D3B40]"
@@ -593,7 +593,7 @@ export default function HistoryPage() {
             {/* Area Gudang Filter Chips (CEN/PARAS & CEN/PAYU) */}
             {activeAreas.length > 0 && (
               <div
-                className="flex items-center gap-1.5 shrink-0"
+                className="flex items-center gap-1 shrink-0"
                 role="group"
                 aria-label="Filter area gudang"
               >
@@ -604,15 +604,15 @@ export default function HistoryPage() {
                       key={group.name}
                       type="button"
                       onClick={() => toggleLocation(group.name)}
-                      className={`min-h-[44px] px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap active:scale-[0.98] ${
+                      className={`h-8 px-2 rounded-xl border text-[11px] font-semibold flex items-center gap-1 transition-all whitespace-nowrap active:scale-[0.98] ${
                         isSelected
                           ? "bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white border-[#0E838C] shadow-subtle"
                           : "bg-[#D5F4F3] text-[#0B666E] border-[#82D6D5]/75 hover:bg-[#C2ECEB]"
                       }`}
                     >
-                      <span className="font-mono text-xs">{group.name}</span>
+                      <span className="font-mono text-[11px]">{group.name}</span>
                       <span
-                        className={`font-mono text-xs px-1.5 py-0.5 rounded-md tabular-nums tnum ${
+                        className={`font-mono text-[10px] px-1 py-[1px] rounded tabular-nums tnum ${
                           isSelected
                             ? "bg-white/20 text-white"
                             : "bg-white text-[#0B666E]"
@@ -632,8 +632,8 @@ export default function HistoryPage() {
       {/* ============================================================== */}
       {/* 2. GROUPED HISTORY LIST                                        */}
       {/* ============================================================== */}
-      <main className="p-3 space-y-2.5">
-        <div className="flex items-center justify-between text-xs text-[#487277] px-1">
+      <main className="p-2.5 space-y-2">
+        <div className="flex items-center justify-between text-[11px] text-[#487277] px-0.5">
           <span>
             Menampilkan{" "}
             <strong className="font-mono font-bold text-[#0D3B40] tnum">
@@ -652,7 +652,7 @@ export default function HistoryPage() {
                 setSearchQuery("");
                 setSelectedLocations(new Set());
               }}
-              className="min-h-[44px] px-2 -mr-2 rounded-xl font-semibold text-xs text-[#0B666E] hover:bg-[#D5F4F3]/70 transition-colors"
+              className="h-7 px-2 -mr-1 rounded-lg font-semibold text-[11px] text-[#0B666E] hover:bg-[#D5F4F3]/70 transition-colors"
             >
               Reset Filter
             </button>
@@ -663,7 +663,7 @@ export default function HistoryPage() {
           <ListSkeleton rows={5} />
         ) : groupedHistory.length === 0 ? (
           <EmptyState
-            icon={<ClipboardIcon className="w-6 h-6" />}
+            icon={<ClipboardIcon className="w-5 h-5" />}
             title="Tidak ada hasil opname"
             description={
               searchQuery || selectedLocations.size > 0
@@ -692,23 +692,21 @@ export default function HistoryPage() {
                   onClick={() => toggleGroup(loc)}
                   aria-expanded={expanded}
                   aria-label={`${expanded ? "Tutup" : "Buka"} grup ${loc}`}
-                  className="w-full min-h-[54px] px-3.5 py-2.5 bg-gradient-to-r from-[#E4F8F8] to-[#F3FCFC] hover:from-[#D5F4F3] hover:to-[#E8F9F9] flex items-center justify-between gap-2 text-left transition-colors"
+                  className="w-full min-h-[42px] px-3 py-1.5 bg-gradient-to-r from-[#E4F8F8] to-[#F3FCFC] hover:from-[#D5F4F3] hover:to-[#E8F9F9] flex items-center justify-between gap-2 text-left transition-colors"
                 >
-                  <div className="min-w-0 flex-1 pr-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs font-semibold bg-[#D5F4F3] text-[#0B666E] border border-[#82D6D5]/75 px-2 py-0.5 rounded-lg uppercase tnum">
-                        {loc}
-                      </span>
-                      <span className="font-mono text-xs text-[#487277] tabular-nums tnum">
-                        {entries.length} SKU ·{" "}
-                        <strong className="font-bold text-[#0D3B40]">
-                          {totalQty.toLocaleString("id-ID")} Pcs
-                        </strong>
-                      </span>
-                    </div>
+                  <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
+                    <span className="font-mono text-[11px] font-semibold bg-[#D5F4F3] text-[#0B666E] border border-[#82D6D5]/75 px-1.5 py-0.5 rounded-md uppercase tnum">
+                      {loc}
+                    </span>
+                    <span className="font-mono text-[11px] text-[#487277] tabular-nums tnum">
+                      {entries.length} SKU ·{" "}
+                      <strong className="font-bold text-[#0D3B40]">
+                        {totalQty.toLocaleString("id-ID")} Pcs
+                      </strong>
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <DeliveryBadge rowIds={entries.map((entry) => entry.rowId)} />
                     {expanded ? (
                       <ChevronDownIcon className="w-4 h-4 text-[#487277]" />
@@ -735,7 +733,7 @@ export default function HistoryPage() {
                       <button
                         type="button"
                         onClick={() => setFullGroups((prev) => new Set(prev).add(loc))}
-                        className="w-full min-h-[44px] px-3.5 bg-[#EEFBFB] hover:bg-[#D5F4F3]/70 text-xs font-semibold text-[#0B666E] flex items-center justify-center transition-colors"
+                        className="w-full min-h-[38px] px-3 bg-[#EEFBFB] hover:bg-[#D5F4F3]/70 text-[11px] font-semibold text-[#0B666E] flex items-center justify-center transition-colors"
                       >
                         Tampilkan semua {entries.length.toLocaleString("id-ID")} entri
                       </button>
@@ -745,9 +743,9 @@ export default function HistoryPage() {
                       type="button"
                       onClick={() => setAddModal({ isOpen: true, location: loc })}
                       aria-label={`Tambah produk di ${loc}`}
-                      className="w-full min-h-[44px] px-3.5 bg-[#EEFBFB] hover:bg-[#D5F4F3]/70 text-xs font-semibold text-[#0D3B40] flex items-center justify-center gap-1.5 transition-colors"
+                      className="w-full min-h-[38px] px-3 bg-[#EEFBFB] hover:bg-[#D5F4F3]/70 text-[11px] font-semibold text-[#0D3B40] flex items-center justify-center gap-1 transition-colors"
                     >
-                      <PlusIcon className="w-4 h-4 text-[#0E838C]" />
+                      <PlusIcon className="w-3.5 h-3.5 text-[#0E838C]" />
                       <span>Tambah Produk di Rak {loc}</span>
                     </button>
                   </div>

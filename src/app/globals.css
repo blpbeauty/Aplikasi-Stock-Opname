@@ -149,12 +149,12 @@ textarea.border-border:not(:focus) {
 .location-band {
   background-color: var(--primary);
   color: var(--ivory);
-  border-radius: 14px;
-  padding: 10px 14px;
+  border-radius: 12px;
+  padding: 8px 12px;
 }
 .location-band .location-band-code {
   font-family: var(--font-jetbrains), Consolas, monospace;
-  font-size: 1.0625rem;
+  font-size: 0.9375rem;
   line-height: 1.25;
   font-weight: 700;
   letter-spacing: 0;
@@ -164,7 +164,7 @@ textarea.border-border:not(:focus) {
 }
 .location-band .location-band-sub {
   color: var(--on-dark-muted);
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -188,26 +188,23 @@ textarea.border-border:not(:focus) {
 .mobile-bottom-nav { max-width: 28rem; margin-inline: auto; }
 .mobile-sync-status { max-width: 28rem; margin-inline: auto; }
 input, select, textarea { min-width: 0; }
-@media (max-width: 640px) {
-  input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px; }
-}
 @media (min-width: 481px) {
   body { background: var(--page-outer) !important; }
 }
 
 .formula-breakdown {
-  margin-top: 8px;
-  padding: 8px 10px;
+  margin-top: 6px;
+  padding: 6px 8px;
   border: 1px solid rgb(var(--primary-rgb) / 0.14);
   border-left: 3px solid var(--ochre);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--primary-pale);
 }
 .formula-caption {
   display: flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--primary);
   text-transform: uppercase;
@@ -217,14 +214,14 @@ input, select, textarea { min-width: 0; }
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px 8px;
-  margin-top: 3px;
+  gap: 4px 6px;
+  margin-top: 2px;
   color: var(--espresso);
   font-variant-numeric: tabular-nums;
 }
-.formula-expression { font-family: var(--font-jetbrains), Consolas, monospace; font-size: 13px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
-.formula-result { font-family: var(--font-jetbrains), Consolas, monospace; font-size: 13px; font-weight: 800; line-height: 1.4; overflow-wrap: anywhere; }
-.formula-result > span { font-size: 12px; font-weight: 600; }
+.formula-expression { font-family: var(--font-jetbrains), Consolas, monospace; font-size: 12px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.formula-result { font-family: var(--font-jetbrains), Consolas, monospace; font-size: 12px; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
+.formula-result > span { font-size: 11px; font-weight: 600; }
 
 /* Focus ring & animations */
 a:focus-visible,

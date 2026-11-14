@@ -27,6 +27,7 @@ import {
 } from "@/lib/api";
 import { findDuplicates, DuplicateMatch } from "@/lib/duplicates";
 import { getHistoryLocal, getPendingWrites, updatePendingWrite } from "@/lib/localDb";
+import { scrollElementCenter } from "@/lib/scroll";
 import { Product, HistoryEntry } from "@/lib/types";
 import { getCache, setCache, clearCache } from "@/lib/cache";
 import {
@@ -114,7 +115,9 @@ function InputPageContent() {
   // Move location (shared MoveSheet)
   const [showMoveModal, setShowMoveModal] = useState(false);
 
-  // Auto-scroll refs
+  // Auto-scroll & flash refs
+  const [flashRowKey, setFlashRowKey] = useState<string | null>(null);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addFormQtyRef = useRef<HTMLDivElement>(null);
   const productListRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -477,15 +480,17 @@ function InputPageContent() {
       if (matchIdx !== -1) {
         const matched = all[matchIdx];
         const isNew = matchIdx >= products.length;
+        const matchKey = productKey(matched.sku, matched.batch);
         setActiveTab("all");
         setFilterQuery("");
         handleOpenRowBatchPicker(matched, isNew);
         setTimeout(() => {
-          const rowEl = productListRef.current?.querySelector(
-            `[data-product-idx="${matchIdx}"]`
-          ) as HTMLElement | null;
-          rowEl?.scrollIntoView({ behavior: "smooth", block: "center" });
-        }, 100);
+          const rowEl = findRowElementByKey(matchKey);
+          if (rowEl) {
+            scrollElementCenter(rowEl, { focusInput: false });
+            triggerRowFlash(matchKey);
+          }
+        }, 120);
         return;
       }
       // Jika belum ada di lokasi ini, buka modal tambah produk & cari di Master Data
@@ -543,9 +548,15 @@ function InputPageContent() {
         String(p?.batch || "").trim().toLowerCase() === targetBatch
     );
     if (existingIndex !== -1) {
+      const existingProd = all[existingIndex];
+      const dupKey = productKey(existingProd.sku, existingProd.batch);
       toast.error("Produk dengan SKU dan Batch ini sudah ada di daftar. Silakan edit kuantitasnya langsung.");
+      setActiveTab("all");
+      setFilterQuery("");
       setShowAddForm(false);
-      scrollToNextProduct(existingIndex - 1);
+      setExpandedRowKey(dupKey);
+      focusAndScrollRowByKey(dupKey, true);
+      triggerRowFlash(dupKey);
       return;
     }
 
@@ -597,15 +608,8 @@ function InputPageContent() {
         setBatchModalTarget(null);
         const existingKey = productKey(sku, newBatch);
         setExpandedRowKey(existingKey);
-        setTimeout(() => {
-          const rowEl = productListRef.current?.querySelector(
-            `[data-product-key="${existingKey}"]`
-          ) as HTMLElement | null;
-          rowEl?.scrollIntoView({ behavior: "smooth", block: "center" });
-          const qtyInput = rowEl?.querySelector('input[type="text"]') as HTMLInputElement | null;
-          qtyInput?.focus();
-          qtyInput?.select();
-        }, 120);
+        focusAndScrollRowByKey(existingKey, true);
+        triggerRowFlash(existingKey);
         return;
       }
       toast.error("Batch tersebut sudah dipakai SKU ini di lokasi");
@@ -654,15 +658,8 @@ function InputPageContent() {
     // Flow otomatis: setelah pilih chip batch di pop-up, langsung buka & fokus ke input Qty!
     const targetKey = productKey(sku, newBatch);
     setExpandedRowKey(targetKey);
-    setTimeout(() => {
-      const rowEl = productListRef.current?.querySelector(
-        `[data-product-key="${targetKey}"]`
-      ) as HTMLElement | null;
-      rowEl?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      const qtyInput = rowEl?.querySelector('input[type="text"]') as HTMLInputElement | null;
-      qtyInput?.focus();
-      qtyInput?.select();
-    }, 120);
+    focusAndScrollRowByKey(targetKey, true);
+    triggerRowFlash(targetKey);
   };
 
   const handleMoveProducts = () => {
@@ -913,7 +910,7 @@ function InputPageContent() {
     const q = filterQuery.trim().toLowerCase();
     return allProducts
       .map((product, idx) => ({ product, idx, isNew: idx >= products.length }))
-      .filter(({ product, isNew }) => {
+      .filter(({ product }) => {
         if (q) {
           const matchesText =
             String(product?.productName || "").toLowerCase().includes(q) ||
@@ -924,31 +921,67 @@ function InputPageContent() {
         }
         const k = productKey(product.sku, product.batch);
         const isItemCounted = Boolean(counted[k]);
-        const qty = quantities[k] || 0;
 
-        if (activeTab === "pending") return !isItemCounted;
+        if (activeTab === "pending") return !isItemCounted || expandedRowKey === k;
         if (activeTab === "completed") return isItemCounted;
         return true;
       });
-  }, [allProducts, products.length, filterQuery, activeTab, counted, quantities]);
+  }, [allProducts, products.length, filterQuery, activeTab, counted, expandedRowKey]);
 
-  const handleFinishRowQty = () => {
-    setExpandedRowKey(null);
+  const findRowElementByKey = (targetKey: string): HTMLElement | null => {
+    const listEl = productListRef.current;
+    if (!listEl) return null;
+    const rows = Array.from(listEl.querySelectorAll<HTMLElement>("[data-product-key]"));
+    return rows.find((el) => el.dataset.productKey === targetKey) || null;
   };
 
-  const scrollToNextProduct = (currentGlobalIdx: number) => {
-    const totalCount = allProducts.length;
-    if (currentGlobalIdx < totalCount - 1) {
-      const nextCard = productListRef.current?.querySelector(
-        `[data-product-idx="${currentGlobalIdx + 1}"]`
-      ) as HTMLElement | null;
-      if (nextCard) {
-        setTimeout(() => {
-          nextCard.scrollIntoView({ behavior: "smooth", block: "center" });
-          const nextInput = nextCard.querySelector('input[type="text"]') as HTMLInputElement | null;
-          if (nextInput) nextInput.focus();
-        }, 120);
+  const triggerRowFlash = (targetKey: string) => {
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    setFlashRowKey(targetKey);
+    flashTimerRef.current = setTimeout(() => setFlashRowKey(null), 1200);
+  };
+
+  const focusAndScrollRowByKey = (targetKey: string, focusInput = true) => {
+    setTimeout(() => {
+      const rowEl = findRowElementByKey(targetKey);
+      if (rowEl) {
+        scrollElementCenter(rowEl, { focusInput, select: true });
       }
+    }, 90);
+  };
+
+  const handleFinishRowQty = (finishedKey?: string, explicit = true) => {
+    let nextTargetKey: string | null = null;
+    if (explicit && finishedKey) {
+      const currentIdx = visibleProducts.findIndex(
+        (item) => productKey(item.product.sku, item.product.batch) === finishedKey
+      );
+      if (currentIdx !== -1) {
+        const tail = visibleProducts.slice(currentIdx + 1);
+        const nextCandidate =
+          tail.find(
+            (item) => !counted[productKey(item.product.sku, item.product.batch)]
+          ) || tail[0];
+        if (nextCandidate) {
+          nextTargetKey = productKey(
+            nextCandidate.product.sku,
+            nextCandidate.product.batch
+          );
+        }
+      }
+    }
+
+    setExpandedRowKey(null);
+
+    if (nextTargetKey) {
+      const keyToScroll = nextTargetKey;
+      setTimeout(() => {
+        const nextRow = findRowElementByKey(keyToScroll);
+        if (nextRow) {
+          scrollElementCenter(nextRow, { focusInput: false });
+          triggerRowFlash(keyToScroll);
+        }
+      }, 140);
     }
   };
 
@@ -1026,32 +1059,32 @@ function InputPageContent() {
   }
 
   return (
-    <div className="max-w-md mx-auto min-h-dvh flex flex-col bg-gradient-to-b from-[#D7F4F4] via-[#ECF9F9] to-[#F4FCFC] text-[#0D3B40] font-sans antialiased select-none pb-28 sm:border-x sm:border-[#8ADBD9]/65">
+    <div className="max-w-md mx-auto min-h-dvh flex flex-col bg-gradient-to-b from-[#D7F4F4] via-[#ECF9F9] to-[#F4FCFC] text-[#0D3B40] font-sans antialiased select-none pb-20 sm:border-x sm:border-[#8ADBD9]/65">
       {/* ============================================================== */}
       {/* 1. TOP HEADER & SEARCH PINNED (Sticky)                         */}
       {/* ============================================================== */}
       <div className="sticky top-0 z-30 shrink-0 shadow-subtle">
         <header>
           {/* Baris 1: Navigasi, Status Item & Menu Aksi (Frosted Aqua Pastel) */}
-          <div className="min-h-[52px] px-2 py-1.5 bg-gradient-to-r from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md border-b border-[#8ADBD9]/65 flex items-center justify-between gap-1.5">
+          <div className="min-h-[44px] px-2 py-1 bg-gradient-to-r from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md border-b border-[#8ADBD9]/65 flex items-center justify-between gap-1.5">
             <div className="flex items-center gap-1 min-w-0">
               <button
                 type="button"
                 onClick={handleBackClick}
-                className="w-11 h-11 flex items-center justify-center rounded-xl text-[#0D3B40] hover:bg-white/75 active:scale-[0.96] transition-transform shrink-0"
+                className="w-9 h-9 flex items-center justify-center rounded-xl text-[#0D3B40] hover:bg-white/75 active:scale-[0.96] transition-transform shrink-0"
                 aria-label="Kembali ke halaman scan"
                 title="Kembali"
               >
-                <ChevronLeftIcon className="w-5 h-5" />
+                <ChevronLeftIcon className="w-4 h-4" />
               </button>
-              <span className="text-sm font-bold text-[#0D3B40] tracking-tight truncate">
+              <span className="text-[13px] font-bold text-[#0D3B40] tracking-tight truncate">
                 SO Central
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 shrink-0">
               <div
-                className="flex items-center gap-1.5 bg-white/85 border border-[#8ADBD9]/75 px-2.5 py-1.5 rounded-full font-mono text-xs font-semibold text-[#0D3B40] tabular-nums tnum"
+                className="flex items-center gap-1 bg-white/85 border border-[#8ADBD9]/75 px-2 py-1 rounded-full font-mono text-[11px] font-semibold text-[#0D3B40] tabular-nums tnum"
                 title={
                   draftError
                     ? draftError
@@ -1063,7 +1096,7 @@ function InputPageContent() {
                 }
               >
                 <span
-                  className={`w-2 h-2 rounded-full shrink-0 ${
+                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                     draftError
                       ? "bg-[#DC2626]"
                       : online
@@ -1079,10 +1112,10 @@ function InputPageContent() {
               <button
                 type="button"
                 onClick={() => setShowAddForm(true)}
-                className="min-h-[44px] px-3 bg-[#C7EEED] hover:bg-[#B4E6E5] border border-[#7AD3D2]/85 rounded-xl text-xs font-semibold text-[#0B666E] flex items-center gap-1 active:scale-[0.97] transition-all"
+                className="h-8 px-2.5 bg-[#C7EEED] hover:bg-[#B4E6E5] border border-[#7AD3D2]/85 rounded-xl text-[11px] font-semibold text-[#0B666E] flex items-center gap-1 active:scale-[0.97] transition-all"
                 title="Tambah Produk Baru ke Rak Ini"
               >
-                <PlusIcon className="w-4 h-4" />
+                <PlusIcon className="w-3.5 h-3.5" />
                 <span>Produk</span>
               </button>
 
@@ -1091,26 +1124,26 @@ function InputPageContent() {
                 onClick={() => setShowActions(true)}
                 aria-expanded={showActions}
                 aria-label="Menu tindakan lokasi"
-                className="w-11 h-11 bg-white/85 border border-[#8ADBD9]/75 hover:bg-white rounded-xl text-[#0D3B40] flex items-center justify-center active:scale-[0.96] transition-transform"
+                className="w-8 h-8 bg-white/85 border border-[#8ADBD9]/75 hover:bg-white rounded-xl text-[#0D3B40] flex items-center justify-center active:scale-[0.96] transition-transform"
               >
-                <MoreHorizontalIcon className="w-5 h-5" />
+                <MoreHorizontalIcon className="w-4 h-4" />
               </button>
             </div>
           </div>
 
           {/* Baris 2: Banner Kode Rak / Lokasi (Gradient Teal, Tanpa Truncate) */}
-          <div className="px-3.5 py-2 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white flex items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <span className="w-2 h-2 rounded-full bg-[#A7F3D0] shrink-0" />
-              <span className="text-xs font-semibold text-[#DCF7F6] uppercase tracking-wider shrink-0">
+          <div className="px-3 py-1.5 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#A7F3D0] shrink-0" />
+              <span className="text-[11px] font-semibold text-[#DCF7F6] uppercase tracking-wider shrink-0">
                 LOKASI:
               </span>
-              <span className="font-mono text-sm font-bold text-white tracking-wide break-words tnum">
+              <span className="font-mono text-[13px] font-bold text-white tracking-wide break-words tnum">
                 {location}
               </span>
             </div>
 
-            <div className="text-xs font-mono text-[#DCF7F6] shrink-0 tnum">
+            <div className="text-[11px] font-mono text-[#DCF7F6] shrink-0 tnum">
               Total: <strong className="text-white font-bold">{totalItems}</strong> Pcs
             </div>
           </div>
@@ -1120,7 +1153,7 @@ function InputPageContent() {
         {draftError && (
           <div
             role="alert"
-            className="bg-[#FEF2F2] border-b border-[#DC2626]/20 px-3.5 py-1.5 text-xs font-medium text-[#DC2626]"
+            className="bg-[#FEF2F2] border-b border-[#DC2626]/20 px-3 py-1 text-[11px] font-medium text-[#DC2626]"
           >
             {draftError}
           </div>
@@ -1129,11 +1162,11 @@ function InputPageContent() {
         {/* ============================================================== */}
         {/* 2. SEARCH & FILTER BAR                                         */}
         {/* ============================================================== */}
-        <div className="bg-[#EEFBFB]/95 backdrop-blur-md border-b border-[#9BE0DF]/70 px-3 py-2 space-y-2">
-          {/* Baris 1: Input pencarian + tombol kamera 44x44px */}
+        <div className="bg-[#EEFBFB]/95 backdrop-blur-md border-b border-[#9BE0DF]/70 px-2.5 py-1.5 space-y-1.5">
+          {/* Baris 1: Input pencarian + tombol kamera */}
           <div className="flex items-center gap-1.5">
             <div className="relative flex-1 min-w-0 flex items-center">
-              <SearchIcon className="w-4 h-4 text-[#487277] absolute left-3.5 pointer-events-none" />
+              <SearchIcon className="w-3.5 h-3.5 text-[#487277] absolute left-3 pointer-events-none" />
               <input
                 ref={searchInputRef}
                 id="input-filter"
@@ -1142,16 +1175,16 @@ function InputPageContent() {
                 onChange={(e) => setFilterQuery(e.target.value)}
                 placeholder="Cari nama / scan SKU…"
                 autoComplete="off"
-                className="w-full min-h-[44px] pl-10 pr-11 bg-white border border-[#9CE0DF]/85 rounded-xl text-sm text-[#0D3B40] placeholder:text-[#6B9498] focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20 transition-colors"
+                className="w-full h-9 pl-9 pr-9 bg-white border border-[#9CE0DF]/85 rounded-xl text-[13px] text-[#0D3B40] placeholder:text-[#6B9498] focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20 transition-colors"
               />
               {filterQuery && (
                 <button
                   type="button"
                   onClick={() => setFilterQuery("")}
-                  className="absolute right-0.5 w-10 h-10 flex items-center justify-center rounded-lg text-[#487277] hover:text-[#0D3B40]"
+                  className="absolute right-0.5 w-8 h-8 flex items-center justify-center rounded-lg text-[#487277] hover:text-[#0D3B40]"
                   aria-label="Bersihkan pencarian"
                 >
-                  <XIcon className="w-4 h-4" />
+                  <XIcon className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
@@ -1161,53 +1194,53 @@ function InputPageContent() {
                 setScannerMode("quick");
                 setShowBarcodeScanner(true);
               }}
-              className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl bg-[#D5F4F3] border border-[#82D6D5]/80 hover:bg-[#C2ECEB] text-[#0B666E] active:scale-[0.97] transition-all"
+              className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-[#D5F4F3] border border-[#82D6D5]/80 hover:bg-[#C2ECEB] text-[#0B666E] active:scale-[0.97] transition-all"
               title="Scan Barcode"
               aria-label="Scan barcode dengan kamera"
             >
-              <CameraIcon className="w-5 h-5" />
+              <CameraIcon className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Baris 2: Segmented filter tabs (44px touch target) */}
-          <div className="grid grid-cols-3 gap-1 p-1 bg-[#D8F3F2] border border-[#9BE0DF]/65 rounded-xl text-xs font-medium">
+          {/* Baris 2: Segmented filter tabs */}
+          <div className="grid grid-cols-3 gap-1 p-0.5 bg-[#D8F3F2] border border-[#9BE0DF]/65 rounded-xl text-[11px] font-medium">
             <button
               type="button"
               onClick={() => setActiveTab("all")}
-              className={`min-h-[44px] rounded-lg flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
+              className={`h-8 rounded-lg flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
                 activeTab === "all"
                   ? "bg-white text-[#0D3B40] font-semibold shadow-subtle"
                   : "text-[#487277] hover:text-[#0D3B40]"
               }`}
             >
               <span>Semua</span>
-              <span className="font-mono text-xs tabular-nums tnum">({allProducts.length})</span>
+              <span className="font-mono text-[11px] tabular-nums tnum">({allProducts.length})</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab("pending")}
-              className={`min-h-[44px] rounded-lg flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
+              className={`h-8 rounded-lg flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
                 activeTab === "pending"
                   ? "bg-white text-[#0D3B40] font-semibold shadow-subtle"
                   : "text-[#487277] hover:text-[#0D3B40]"
               }`}
             >
               <span>Belum</span>
-              <span className="font-mono text-xs tabular-nums tnum">({pendingCount})</span>
+              <span className="font-mono text-[11px] tabular-nums tnum">({pendingCount})</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab("completed")}
-              className={`min-h-[44px] rounded-lg flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
+              className={`h-8 rounded-lg flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
                 activeTab === "completed"
                   ? "bg-white text-[#16A34A] font-semibold shadow-subtle"
                   : "text-[#487277] hover:text-[#0D3B40]"
               }`}
             >
               <span>Selesai</span>
-              <span className="font-mono text-xs tabular-nums tnum">({countedCount})</span>
+              <span className="font-mono text-[11px] tabular-nums tnum">({countedCount})</span>
             </button>
           </div>
         </div>
@@ -1216,18 +1249,18 @@ function InputPageContent() {
       {/* ============================================================== */}
       {/* 3. PRODUCT LIST (Aqua Pastel Grouped Card for Compact HP)      */}
       {/* ============================================================== */}
-      <div ref={productListRef} className="flex-1 px-2.5 pt-2.5">
+      <div ref={productListRef} className="flex-1 px-2.5 pt-2">
         {allProducts.length === 0 ? (
           <div className="p-2">
             <EmptyState
-              icon={<BoxIcon className="w-6 h-6" />}
+              icon={<BoxIcon className="w-5 h-5" />}
               title="Belum ada produk di lokasi ini"
               description="Ketuk tombol + Produk di kanan atas atau Scan Barcode di bawah untuk menambahkan barang."
               action={
                 <button
                   type="button"
                   onClick={() => setShowAddForm(true)}
-                  className="min-h-[44px] px-5 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white rounded-xl font-semibold text-xs shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] active:scale-[0.98] transition-all"
+                  className="h-9 px-4 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white rounded-xl font-semibold text-xs shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] active:scale-[0.98] transition-all"
                 >
                   + Tambah Produk
                 </button>
@@ -1288,10 +1321,12 @@ function InputPageContent() {
                   data-product-idx={idx}
                   data-product-key={k}
                   data-count-status={isItemCounted ? "counted" : "uncounted"}
-                  className={`${rowBorderAndBg} transition-colors`}
+                  className={`${rowBorderAndBg} scroll-mt-[176px] scroll-mb-24 transition-all ${
+                    flashRowKey === k ? "ring-2 ring-inset ring-[#0E838C] bg-[#D9F6F5]" : ""
+                  }`}
                 >
                   {/* Main Compact HP Row */}
-                  <div className="px-3.5 py-2.5 flex items-center justify-between gap-2 min-h-[60px]">
+                  <div className="px-3 py-2 flex items-center justify-between gap-2">
                     {/* Sisi Kiri: Info Barang */}
                     <div
                       className={`min-w-0 flex-1 pr-1 ${
@@ -1304,14 +1339,14 @@ function InputPageContent() {
                       }}
                     >
                       {/* Baris 1: Nama Produk */}
-                      <h3 className="text-sm font-semibold text-[#0D3B40] leading-snug break-words">
+                      <h3 className="text-[13px] font-semibold text-[#0D3B40] leading-snug break-words">
                         {product.productName}
                       </h3>
 
                       {/* Baris 2: Titik Status + SKU + Chip Batch + Rumus/Badge */}
-                      <div className="flex items-center gap-1.5 mt-1.5 text-xs text-[#487277] leading-normal flex-wrap">
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
-                        <span className="font-mono text-xs text-[#487277] tabular-nums tnum">
+                      <div className="flex items-center gap-1 mt-1 text-[11px] text-[#487277] leading-normal flex-wrap">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} />
+                        <span className="font-mono text-[11px] text-[#487277] tabular-nums tnum">
                           {product.sku}
                         </span>
                         <span className="text-[#487277]/45">•</span>
@@ -1324,32 +1359,32 @@ function InputPageContent() {
                             handleOpenRowBatchPicker(product, isNew);
                           }}
                           title="Klik untuk pilih / ubah Batch"
-                          className={`min-h-[44px] px-2.5 rounded-xl font-mono text-xs font-semibold border transition-all active:scale-[0.97] flex items-center gap-1 ${
+                          className={`h-6 px-2 rounded-lg font-mono text-[11px] font-semibold border transition-all active:scale-[0.97] flex items-center gap-1 ${
                             isBatchModalOpenForRow
                               ? "bg-gradient-to-r from-[#0E838C] to-[#14B8A6] text-white border-[#0E838C]"
                               : "bg-[#D5F4F3] text-[#0B666E] border-[#82D6D5]/75 hover:bg-[#C2ECEB]"
                           }`}
                         >
                           <span>{product.batch || "NO-BATCH"}</span>
-                          <ChevronDownIcon className="w-3.5 h-3.5 opacity-75" />
+                          <ChevronDownIcon className="w-3 h-3 opacity-75" />
                         </button>
 
                         {formula ? (
                           <>
                             <span className="text-[#487277]/45">•</span>
-                            <span className="font-mono text-xs text-[#487277] font-semibold tnum">
+                            <span className="font-mono text-[11px] text-[#487277] font-semibold tnum">
                               ={formula}
                             </span>
                           </>
                         ) : null}
 
                         {isItemCounted && qty === 0 && (
-                          <span className="font-mono text-xs font-semibold bg-[#FEF2F2] text-[#DC2626] px-2 py-0.5 rounded-lg tnum">
+                          <span className="font-mono text-[10px] font-semibold bg-[#FEF2F2] text-[#DC2626] px-1.5 py-0.5 rounded-md tnum">
                             STOK 0
                           </span>
                         )}
                         {isNew && (
-                          <span className="font-mono text-xs font-semibold bg-[#FFFBEB] text-[#B45309] px-2 py-0.5 rounded-lg">
+                          <span className="font-mono text-[10px] font-semibold bg-[#FFFBEB] text-[#B45309] px-1.5 py-0.5 rounded-md">
                             BARU
                           </span>
                         )}
@@ -1367,9 +1402,10 @@ function InputPageContent() {
                             handleOpenRowBatchPicker(product, isNew);
                           } else {
                             setExpandedRowKey(k);
+                            focusAndScrollRowByKey(k, true);
                           }
                         }}
-                        className={`min-h-[44px] px-3 rounded-xl font-mono text-xs font-bold border transition-all flex items-center justify-center gap-1 tabular-nums tnum shadow-subtle active:scale-[0.97] touch-manipulation ${
+                        className={`h-8 px-2.5 rounded-lg font-mono text-[11px] font-bold border transition-all flex items-center justify-center gap-1 tabular-nums tnum shadow-subtle active:scale-[0.97] touch-manipulation ${
                           isItemCounted
                             ? "bg-[#D5F4F3] text-[#0B666E] border-[#7CD4D3]/85 hover:bg-[#C2ECEB]"
                             : "bg-[#EEFBFB] text-[#0D3B40] border-[#9CE0DF]/85 hover:bg-[#DCF6F5]"
@@ -1382,7 +1418,7 @@ function InputPageContent() {
                       >
                         <span>{isItemCounted ? `${qty} Pcs` : "Hitung"}</span>
                         <ChevronDownIcon
-                          className={`w-4 h-4 text-current opacity-70 transition-transform duration-150 ${
+                          className={`w-3.5 h-3.5 text-current opacity-70 transition-transform duration-150 ${
                             isExpanded ? "rotate-180" : ""
                           }`}
                         />
@@ -1392,25 +1428,26 @@ function InputPageContent() {
 
                   {/* Inline Mini Drawer: Kalkulator Rumus + Tandai 0 + Reset + Hapus */}
                   {isExpanded && (
-                    <div className="px-3.5 py-3 bg-[#EEFBFB] border-t border-[#9BE0DF]/55 space-y-2.5">
+                    <div className="px-3 py-2.5 bg-[#EEFBFB] border-t border-[#9BE0DF]/55 space-y-2">
                       <QtyInput
                         wide
                         value={qty}
                         unfilled={!isItemCounted}
                         onChange={(v) => handleQuantityChange(k, v)}
                         onExprCommit={(expr) => handleExprCommit(k, expr)}
-                        onCommit={handleFinishRowQty}
+                        onFocus={() => scrollElementCenter(findRowElementByKey(k))}
+                        onCommit={(explicit) => handleFinishRowQty(k, Boolean(explicit))}
                         ariaLabel={`Kalkulator kuantitas ${product.productName}`}
                       />
-                      <div className="flex items-center justify-between gap-2 pt-0.5">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between gap-1.5 pt-0.5">
+                        <div className="flex items-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => {
                               handleQuantityChange(k, 0);
-                              handleFinishRowQty();
+                              handleFinishRowQty(k, true);
                             }}
-                            className="min-h-[44px] px-3 bg-white border border-[#9CE0DF]/80 rounded-xl text-xs font-semibold text-[#0D3B40] hover:bg-[#D5F4F3]/60 active:scale-[0.98] transition-all"
+                            className="h-8 px-2.5 bg-white border border-[#9CE0DF]/80 rounded-lg text-[11px] font-semibold text-[#0D3B40] hover:bg-[#D5F4F3]/60 active:scale-[0.98] transition-all"
                           >
                             Stok 0
                           </button>
@@ -1426,7 +1463,7 @@ function InputPageContent() {
                                 setQuantities((prev) => ({ ...prev, [k]: 0 }));
                                 setFormulas((prev) => ({ ...prev, [k]: "" }));
                               }}
-                              className="min-h-[44px] px-3 bg-white border border-[#9CE0DF]/80 rounded-xl text-xs font-semibold text-[#487277] hover:text-[#0D3B40] active:scale-[0.98] transition-all"
+                              className="h-8 px-2.5 bg-white border border-[#9CE0DF]/80 rounded-lg text-[11px] font-semibold text-[#487277] hover:text-[#0D3B40] active:scale-[0.98] transition-all"
                             >
                               Reset Belum
                             </button>
@@ -1439,9 +1476,9 @@ function InputPageContent() {
                             setExpandedRowKey(null);
                             handleDeleteProduct(product, isNew);
                           }}
-                          className="min-h-[44px] px-3 bg-[#FEF2F2] border border-[#DC2626]/20 rounded-xl text-xs font-semibold text-[#DC2626] hover:bg-red-100/70 flex items-center gap-1.5 active:scale-[0.98] transition-transform"
+                          className="h-8 px-2.5 bg-[#FEF2F2] border border-[#DC2626]/20 rounded-lg text-[11px] font-semibold text-[#DC2626] hover:bg-red-100/70 flex items-center gap-1 active:scale-[0.98] transition-transform"
                         >
-                          <TrashIcon className="w-4 h-4" />
+                          <TrashIcon className="w-3.5 h-3.5" />
                           <span>Hapus</span>
                         </button>
                       </div>
@@ -1457,16 +1494,16 @@ function InputPageContent() {
       {/* ============================================================== */}
       {/* 4. FIXED THUMB-ZONE BOTTOM ACTION DOCK                         */}
       {/* ============================================================== */}
-      <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-30 bg-gradient-to-t from-[#DAF4F4] via-[#E8F9F9]/95 to-[#F4FCFC]/95 backdrop-blur-md border-t border-[#8ADBD9]/75 shadow-bar px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] flex items-center gap-2">
+      <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-30 bg-gradient-to-t from-[#DAF4F4] via-[#E8F9F9]/95 to-[#F4FCFC]/95 backdrop-blur-md border-t border-[#8ADBD9]/75 shadow-bar px-2.5 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center gap-2">
         <button
           type="button"
           onClick={() => {
             setScannerMode("quick");
             setShowBarcodeScanner(true);
           }}
-          className="flex-[7] min-h-[48px] bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white font-semibold text-sm rounded-xl shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] flex items-center justify-center gap-2 active:scale-[0.98] transition-all duration-150 touch-manipulation"
+          className="flex-[7] h-10 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white font-semibold text-xs rounded-xl shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all duration-150 touch-manipulation"
         >
-          <CameraIcon className="w-5 h-5" />
+          <CameraIcon className="w-4 h-4" />
           <span>SCAN BARCODE</span>
         </button>
 
@@ -1474,9 +1511,9 @@ function InputPageContent() {
           type="button"
           onClick={handleSaveClick}
           disabled={saving || countedCount === 0}
-          className="flex-[3] min-h-[48px] bg-[#16A34A] hover:bg-[#15803D] disabled:bg-[#D5EDED] disabled:text-[#5B8E92] disabled:shadow-none text-white font-semibold text-sm rounded-xl shadow-subtle flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all duration-150 touch-manipulation"
+          className="flex-[3] h-10 bg-[#16A34A] hover:bg-[#15803D] disabled:bg-[#D5EDED] disabled:text-[#5B8E92] disabled:shadow-none text-white font-semibold text-xs rounded-xl shadow-subtle flex items-center justify-center gap-1 active:scale-[0.98] transition-all duration-150 touch-manipulation"
         >
-          <CheckIcon className="w-5 h-5" />
+          <CheckIcon className="w-4 h-4" />
           <span>{saving ? "…" : "Submit"}</span>
         </button>
       </footer>
@@ -1491,8 +1528,8 @@ function InputPageContent() {
         description={location}
         size="md"
       >
-        <div className="space-y-2.5">
-          <div className="flex items-center justify-between text-xs text-[#487277] bg-[#EEFBFB] border border-[#9CE0DF]/75 rounded-2xl px-3.5 py-2.5">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-[11px] text-[#487277] bg-[#EEFBFB] border border-[#9CE0DF]/75 rounded-xl px-3 py-2">
             <span>
               Total Kuantitas:{" "}
               <strong className="font-mono font-bold text-[#0D3B40] tnum">{totalItems} Pcs</strong>
@@ -1507,7 +1544,7 @@ function InputPageContent() {
               setShowMoveModal(true);
               setShowActions(false);
             }}
-            className="w-full min-h-[48px] px-4 rounded-xl border border-[#9CE0DF]/80 bg-white hover:bg-[#EEFBFB] text-sm font-semibold text-[#0D3B40] flex items-center justify-between active:scale-[0.98] transition-all disabled:opacity-40"
+            className="w-full h-10 px-3.5 rounded-xl border border-[#9CE0DF]/80 bg-white hover:bg-[#EEFBFB] text-xs font-semibold text-[#0D3B40] flex items-center justify-between active:scale-[0.98] transition-all disabled:opacity-40"
           >
             <span>⇄ Pindah ke Rak Lain</span>
             <ChevronDownIcon className="w-4 h-4 -rotate-90 text-[#487277]" />
@@ -1520,13 +1557,13 @@ function InputPageContent() {
               setShowZeroConfirm(true);
               setShowActions(false);
             }}
-            className="w-full min-h-[48px] px-4 rounded-xl border border-[#DC2626]/20 bg-[#FEF2F2] hover:bg-red-100/70 text-sm font-semibold text-[#DC2626] flex items-center justify-between active:scale-[0.98] transition-all disabled:opacity-40"
+            className="w-full h-10 px-3.5 rounded-xl border border-[#DC2626]/20 bg-[#FEF2F2] hover:bg-red-100/70 text-xs font-semibold text-[#DC2626] flex items-center justify-between active:scale-[0.98] transition-all disabled:opacity-40"
           >
             <span>⊘ Set Semua Stok 0</span>
           </button>
 
           {hasUnsavedChanges && (
-            <p className="text-xs text-[#B45309] bg-[#FFFBEB] border border-[#F59E0B]/25 rounded-xl px-3.5 py-2 leading-relaxed">
+            <p className="text-[11px] text-[#B45309] bg-[#FFFBEB] border border-[#F59E0B]/25 rounded-xl px-3 py-1.5 leading-snug">
               * Simpan hitungan terlebih dahulu sebelum memindahkan produk.
             </p>
           )}
@@ -1564,7 +1601,7 @@ function InputPageContent() {
                     handleBarcodeScan(b);
                   }
                 }}
-                className="flex-1 min-w-0 min-h-[44px] px-3.5 bg-[#EEFBFB] border border-[#9CE0DF]/80 rounded-xl font-mono text-sm text-[#0D3B40] placeholder:text-[#6B9498] focus:bg-white focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20"
+                className="flex-1 min-w-0 h-9 px-3 bg-[#EEFBFB] border border-[#9CE0DF]/80 rounded-xl font-mono text-[13px] text-[#0D3B40] placeholder:text-[#6B9498] focus:bg-white focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20"
                 placeholder="Scan / ketik barcode…"
                 autoComplete="off"
               />
@@ -1578,7 +1615,7 @@ function InputPageContent() {
                   }
                 }}
                 disabled={!String(newProductForm.barcode || "").trim() || scanningBarcode}
-                className="w-11 h-11 shrink-0 rounded-xl bg-white border border-[#9CE0DF]/80 hover:bg-[#EEFBFB] flex items-center justify-center text-[#0D3B40] disabled:opacity-40 active:scale-[0.97] transition-all"
+                className="w-9 h-9 shrink-0 rounded-xl bg-white border border-[#9CE0DF]/80 hover:bg-[#EEFBFB] flex items-center justify-center text-[#0D3B40] disabled:opacity-40 active:scale-[0.97] transition-all"
                 aria-label="Cari barcode"
               >
                 <SearchIcon className="w-4 h-4" />
@@ -1590,7 +1627,7 @@ function InputPageContent() {
                   setShowBarcodeScanner(true);
                 }}
                 disabled={scanningBarcode}
-                className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white flex items-center justify-center disabled:opacity-40 active:scale-[0.97] transition-all"
+                className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white flex items-center justify-center disabled:opacity-40 active:scale-[0.97] transition-all"
                 aria-label="Pindai barcode dengan kamera"
               >
                 <CameraIcon className="w-4 h-4" />
@@ -1608,8 +1645,8 @@ function InputPageContent() {
             getKey={(p, i) => `${p.sku}-${i}`}
             renderItem={(p) => (
               <>
-                <p className="font-semibold text-[#0D3B40] text-sm leading-snug">{p.productName}</p>
-                <p className="font-mono text-xs text-[#487277] mt-0.5">
+                <p className="font-semibold text-[#0D3B40] text-[13px] leading-snug">{p.productName}</p>
+                <p className="font-mono text-[11px] text-[#487277] mt-0.5">
                   SKU: {p.sku}
                 </p>
               </>
@@ -1622,7 +1659,7 @@ function InputPageContent() {
           />
 
           {/* SKU & Nomor Batch (Pop-up Chip) */}
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-2">
             <Field id="add-sku" label="SKU" required>
               <input
                 id="add-sku"
@@ -1631,7 +1668,7 @@ function InputPageContent() {
                 onChange={(e) =>
                   setNewProductForm({ ...newProductForm, sku: e.target.value })
                 }
-                className="w-full min-h-[44px] px-3 bg-[#EEFBFB] border border-[#9CE0DF]/80 rounded-xl font-mono text-sm font-semibold text-[#0D3B40] placeholder:text-[#6B9498] focus:bg-white focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20"
+                className="w-full h-9 px-3 bg-[#EEFBFB] border border-[#9CE0DF]/80 rounded-xl font-mono text-[13px] font-semibold text-[#0D3B40] placeholder:text-[#6B9498] focus:bg-white focus:outline-none focus:border-[#0E838C] focus:ring-2 focus:ring-[#14B8A6]/20"
                 placeholder="SKU…"
               />
             </Field>
@@ -1641,7 +1678,7 @@ function InputPageContent() {
                 id="add-batch"
                 type="button"
                 onClick={() => setShowAddFormBatchModal(true)}
-                className={`w-full min-h-[44px] px-3 rounded-xl border flex items-center justify-between gap-1.5 text-left transition-colors active:scale-[0.98] ${
+                className={`w-full h-9 px-3 rounded-xl border flex items-center justify-between gap-1 text-left transition-colors active:scale-[0.98] ${
                   newProductForm.batch.trim()
                     ? "bg-[#D5F4F3] border-[#7CD4D3] text-[#0B666E] font-mono text-xs font-semibold"
                     : "bg-[#EEFBFB] border-[#9CE0DF]/80 text-[#487277] text-xs font-medium hover:bg-white"
@@ -1650,28 +1687,29 @@ function InputPageContent() {
                 <span className="truncate">
                   {newProductForm.batch.trim() || "Pilih Batch..."}
                 </span>
-                <ChevronDownIcon className="w-4 h-4 shrink-0 opacity-75" />
+                <ChevronDownIcon className="w-3.5 h-3.5 shrink-0 opacity-75" />
               </button>
             </Field>
           </div>
 
           {/* Qty Input */}
           <Field id="add-qty" label="Quantity" required>
-            <div ref={addFormQtyRef}>
+            <div ref={addFormQtyRef} className="scroll-my-4">
               <QtyInput
                 value={newProductForm.qty}
                 onChange={(v) => setNewProductForm((prev) => ({ ...prev, qty: v }))}
                 onExprCommit={(expr) => setNewProductFormula(expr)}
+                onFocus={() => scrollElementCenter(addFormQtyRef.current)}
                 wide
               />
             </div>
           </Field>
 
-          <div className="pt-2 space-y-2">
+          <div className="pt-1.5 space-y-1.5">
             <button
               type="button"
               onClick={handleAddNewProduct}
-              className="w-full min-h-[48px] bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white rounded-xl font-semibold text-sm shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] active:scale-[0.98] transition-all"
+              className="w-full h-10 bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white rounded-xl font-semibold text-xs shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)] active:scale-[0.98] transition-all"
             >
               Masukkan ke Hitungan Opname
             </button>
@@ -1752,7 +1790,7 @@ function InputPageContent() {
                   setSavingMasterData(false);
                 }
               }}
-              className="w-full min-h-[44px] bg-[#EEFBFB] border border-[#9CE0DF]/80 text-[#0D3B40] rounded-xl font-semibold text-xs hover:bg-[#D5F4F3] active:scale-[0.98] transition-all disabled:opacity-50"
+              className="w-full h-9 bg-[#EEFBFB] border border-[#9CE0DF]/80 text-[#0D3B40] rounded-xl font-semibold text-[11px] hover:bg-[#D5F4F3] active:scale-[0.98] transition-all disabled:opacity-50"
             >
               {savingMasterData ? "Menyimpan…" : "Simpan ke Master Data Saja (Tanpa Hitung)"}
             </button>
@@ -1791,13 +1829,8 @@ function InputPageContent() {
           setNewProductForm((prev) => ({ ...prev, batch: selectedBatch }));
           setShowAddFormBatchModal(false);
           setTimeout(() => {
-            addFormQtyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-            const qtyInput = addFormQtyRef.current?.querySelector(
-              'input[type="text"]'
-            ) as HTMLInputElement | null;
-            qtyInput?.focus();
-            qtyInput?.select();
-          }, 120);
+            scrollElementCenter(addFormQtyRef.current, { focusInput: true, select: true });
+          }, 90);
         }}
       />
 

@@ -80,7 +80,7 @@ interface QtyInputProps {
   wide?: boolean;
   onExprCommit?: (expr: string) => void;
   onFocus?: () => void;
-  onCommit?: () => void;
+  onCommit?: (explicit?: boolean) => void;
   ariaLabel?: string;
   unfilled?: boolean;
   onValidityChange?: (valid: boolean) => void;
@@ -161,7 +161,7 @@ export default function QtyInput({
         setDisplay(String(result));
         setPreview(null);
         setFocused(false);
-        onCommit?.();
+        onCommit?.(isExplicit);
         return;
       }
       setFocused(false);
@@ -177,14 +177,14 @@ export default function QtyInput({
       setDisplay("0");
       onChange(0);
       if (onExprCommit) onExprCommit("");
-      if (isExplicit) onCommit?.();
+      if (isExplicit) onCommit?.(true);
     } else {
       const num = parseInt(display, 10);
       if (!isNaN(num) && num >= 0) {
         onChange(num);
       }
       if (onExprCommit) onExprCommit("");
-      onCommit?.();
+      onCommit?.(isExplicit);
     }
     setPreview(null);
     setFocused(false);
@@ -192,16 +192,16 @@ export default function QtyInput({
   };
 
   const defaultCls = wide
-    ? "w-full min-h-[44px] text-center bg-[#EEFBFB] focus:bg-white border border-[#9CE0DF]/80 focus:border-[#0E838C] rounded-xl font-mono text-base font-bold text-[#0D3B40] tabular-nums tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition"
-    : "w-20 min-h-[44px] text-center bg-[#EEFBFB] focus:bg-white border border-[#9CE0DF]/80 focus:border-[#0E838C] rounded-xl font-mono text-sm font-bold text-[#0D3B40] tabular-nums tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition";
+    ? "w-full h-9 text-center bg-[#EEFBFB] focus:bg-white border border-[#9CE0DF]/80 focus:border-[#0E838C] rounded-xl font-mono text-sm font-bold text-[#0D3B40] tabular-nums tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition"
+    : "w-16 h-9 text-center bg-[#EEFBFB] focus:bg-white border border-[#9CE0DF]/80 focus:border-[#0E838C] rounded-xl font-mono text-[13px] font-bold text-[#0D3B40] tabular-nums tnum [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition";
 
   const opBtnCls = wide
-    ? "flex-1 min-h-[44px] rounded-xl bg-white border border-[#9CE0DF]/80 text-[#0D3B40] font-mono text-sm font-bold hover:bg-[#D8F5F4] active:scale-[0.97] active:bg-[#0E838C] active:text-white transition select-none flex items-center justify-center shadow-subtle"
-    : "w-11 min-h-[44px] rounded-xl bg-white border border-[#9CE0DF]/80 text-[#0D3B40] font-mono text-sm font-bold hover:bg-[#D8F5F4] active:scale-[0.97] active:bg-[#0E838C] active:text-white transition select-none flex items-center justify-center";
+    ? "flex-1 h-8 rounded-lg bg-white border border-[#9CE0DF]/80 text-[#0D3B40] font-mono text-xs font-bold hover:bg-[#D8F5F4] active:scale-[0.97] active:bg-[#0E838C] active:text-white transition select-none flex items-center justify-center shadow-subtle"
+    : "w-9 h-9 rounded-lg bg-white border border-[#9CE0DF]/80 text-[#0D3B40] font-mono text-xs font-bold hover:bg-[#D8F5F4] active:scale-[0.97] active:bg-[#0E838C] active:text-white transition select-none flex items-center justify-center";
 
   return (
     <div className={`relative inline-flex flex-col items-center gap-1.5 ${wide ? "w-full" : ""}`}>
-      <div className={`flex items-center gap-2 ${wide ? "w-full" : ""}`}>
+      <div className={`flex items-center gap-1.5 ${wide ? "w-full" : ""}`}>
         <input
           ref={inputRef}
           type="text"
@@ -234,7 +234,7 @@ export default function QtyInput({
               commit(true);
             }}
             onClick={() => commit(true)}
-            className="min-h-[44px] px-4 rounded-xl bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white font-mono text-base font-bold whitespace-nowrap active:scale-[0.97] transition select-none flex items-center justify-center shrink-0 shadow-subtle"
+            className="h-9 px-3.5 rounded-xl bg-gradient-to-r from-[#0E838C] to-[#14B8A6] hover:from-[#0B6F77] hover:to-[#0D9488] text-white font-mono text-sm font-bold whitespace-nowrap active:scale-[0.97] transition select-none flex items-center justify-center shrink-0 shadow-subtle"
             aria-label="Hitung rumus dan selesai"
             title="Selesai & lanjut ke produk berikutnya"
           >

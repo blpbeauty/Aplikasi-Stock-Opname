@@ -21,6 +21,7 @@ interface DialogProps {
   children?: ReactNode;
   footer?: ReactNode;
   size?: "sm" | "md";
+  restoreFocusOnClose?: boolean;
 }
 
 export function Dialog({
@@ -31,6 +32,7 @@ export function Dialog({
   children,
   footer,
   size = "md",
+  restoreFocusOnClose = true,
 }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
@@ -96,9 +98,15 @@ export function Dialog({
       clearTimeout(t);
       document.removeEventListener("keydown", handleKeyDown, true);
       document.body.style.overflow = prevOverflow;
-      restoreFocusRef.current?.focus?.();
+      requestAnimationFrame(() => {
+        if (!restoreFocusOnClose) return;
+        const active = document.activeElement;
+        if (!active || active === document.body || active === panelRef.current) {
+          restoreFocusRef.current?.focus?.({ preventScroll: true });
+        }
+      });
     };
-  }, [isOpen]);
+  }, [isOpen, restoreFocusOnClose]);
 
   if (!isOpen) return null;
 
@@ -127,13 +135,13 @@ export function Dialog({
         )}
 
         {/* Soft Aqua Pastel Header */}
-        <div className={`px-4 ${size === "sm" ? "pt-3.5 pb-2.5" : "pt-2 pb-2.5"} bg-gradient-to-r from-[#DCF6F5] to-[#EEFBFB] border-b border-[#BCEBEB]/80 flex items-start justify-between gap-2 shrink-0`}>
+        <div className={`px-3.5 ${size === "sm" ? "pt-3 pb-2" : "pt-2 pb-2"} bg-gradient-to-r from-[#DCF6F5] to-[#EEFBFB] border-b border-[#BCEBEB]/80 flex items-start justify-between gap-2 shrink-0`}>
           <div className="min-w-0 flex-1 pt-0.5">
-            <h2 id={titleId} className="text-[15px] font-bold text-[#0D3B40] leading-snug break-words">
+            <h2 id={titleId} className="text-sm font-bold text-[#0D3B40] leading-snug break-words">
               {title}
             </h2>
             {description && (
-              <p id={descId} className="text-xs text-[#487277] mt-0.5 leading-relaxed break-words">
+              <p id={descId} className="text-[11px] text-[#487277] mt-0.5 leading-snug break-words">
                 {description}
               </p>
             )}
@@ -141,7 +149,7 @@ export function Dialog({
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 w-11 h-11 -mr-1.5 -mt-1 rounded-full bg-white/90 border border-[#9CE0DF]/60 hover:bg-white flex items-center justify-center text-[#487277] hover:text-[#0D3B40] transition active:scale-[0.96]"
+            className="shrink-0 w-9 h-9 -mr-1 -mt-0.5 rounded-full bg-white/90 border border-[#9CE0DF]/60 hover:bg-white flex items-center justify-center text-[#487277] hover:text-[#0D3B40] transition active:scale-[0.96]"
             aria-label="Tutup dialog"
           >
             <XIcon className="w-4 h-4" />
@@ -149,13 +157,13 @@ export function Dialog({
         </div>
 
         {children && (
-          <div className={`px-4 py-3 overflow-y-auto flex-1 ${footer ? "" : "pb-[max(1.25rem,env(safe-area-inset-bottom))]"}`}>
+          <div className={`px-3.5 py-2.5 overflow-y-auto flex-1 ${footer ? "" : "pb-[max(1rem,env(safe-area-inset-bottom))]"}`}>
             {children}
           </div>
         )}
 
         {footer && (
-          <div className="px-4 py-3 bg-[#EFFAFA] border-t border-[#BCEBEB]/80 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0">
+          <div className="px-3.5 py-2.5 bg-[#EFFAFA] border-t border-[#BCEBEB]/80 pb-[max(0.625rem,env(safe-area-inset-bottom))] shrink-0">
             {footer}
           </div>
         )}
@@ -185,7 +193,7 @@ export function IconButton({
   title,
   className = "",
 }: IconButtonProps) {
-  const sizeCls = size === "lg" ? "w-12 h-12" : "w-11 h-11";
+  const sizeCls = size === "lg" ? "w-10 h-10" : "w-9 h-9";
   const variantCls =
     variant === "primary"
       ? "bg-gradient-to-br from-[#0E838C] to-[#14B8A6] text-white hover:from-[#0B6F77] hover:to-[#0D9488]"
@@ -222,22 +230,22 @@ export function PageHeader({
   right,
 }: PageHeaderProps) {
   return (
-    <header className="sticky top-0 z-30 min-h-[52px] bg-gradient-to-r from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md text-[#0D3B40] px-3 py-1.5 border-b border-[#8ADBD9]/65 flex items-center justify-between gap-2">
+    <header className="sticky top-0 z-30 min-h-[44px] bg-gradient-to-r from-[#D5F4F3]/95 via-[#E4F8F8]/95 to-[#EEFAFA]/95 backdrop-blur-md text-[#0D3B40] px-2.5 py-1 border-b border-[#8ADBD9]/65 flex items-center justify-between gap-2">
       <div className="flex items-center gap-1.5 min-w-0 flex-1">
         {onBack && (
           <button
             type="button"
             onClick={onBack}
-            className="w-11 h-11 -ml-1.5 rounded-xl bg-white/75 hover:bg-white flex items-center justify-center text-[#0D3B40] transition active:scale-[0.97] shrink-0"
+            className="w-9 h-9 -ml-1 rounded-xl bg-white/75 hover:bg-white flex items-center justify-center text-[#0D3B40] transition active:scale-[0.97] shrink-0"
             aria-label={backLabel}
           >
-            <ChevronLeftIcon className="w-5 h-5" />
+            <ChevronLeftIcon className="w-4 h-4" />
           </button>
         )}
         <div className="min-w-0 flex-1 flex flex-col justify-center">
-          <h1 className="text-[15px] font-bold text-[#0D3B40] leading-tight truncate">{title}</h1>
+          <h1 className="text-[13px] font-bold text-[#0D3B40] leading-tight truncate">{title}</h1>
           {subtitle && (
-            <div className="text-xs text-[#487277] truncate">{subtitle}</div>
+            <div className="text-[11px] text-[#487277] truncate">{subtitle}</div>
           )}
         </div>
       </div>
@@ -255,17 +263,17 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className="bg-white rounded-2xl border border-[#9BE0DF]/70 shadow-subtle px-5 py-7 text-center">
+    <div className="bg-white rounded-2xl border border-[#9BE0DF]/70 shadow-subtle px-4 py-5 text-center">
       {icon && (
-        <div className="w-11 h-11 rounded-xl bg-[#D5F4F3] text-[#0E838C] mx-auto flex items-center justify-center mb-2.5">
+        <div className="w-10 h-10 rounded-xl bg-[#D5F4F3] text-[#0E838C] mx-auto flex items-center justify-center mb-2">
           {icon}
         </div>
       )}
-      <p className="text-sm font-bold text-[#0D3B40]">{title}</p>
+      <p className="text-[13px] font-bold text-[#0D3B40]">{title}</p>
       {description && (
-        <p className="text-xs text-[#487277] mt-1 max-w-xs mx-auto leading-relaxed">{description}</p>
+        <p className="text-[11px] text-[#487277] mt-1 max-w-xs mx-auto leading-snug">{description}</p>
       )}
-      {action && <div className="mt-3.5 flex justify-center">{action}</div>}
+      {action && <div className="mt-3 flex justify-center">{action}</div>}
     </div>
   );
 }
@@ -291,7 +299,7 @@ export function Field({
 }: FieldProps) {
   return (
     <div className={className}>
-      <label htmlFor={id} className="block text-xs font-semibold text-[#0D3B40] mb-1">
+      <label htmlFor={id} className="block text-[11px] font-semibold text-[#0D3B40] mb-1">
         {label}
         {required && (
           <span className="text-[#DC2626] ml-0.5" aria-hidden="true">
@@ -300,9 +308,9 @@ export function Field({
         )}
       </label>
       {children}
-      {hint && !error && <p className="text-xs text-[#487277] mt-1 leading-snug">{hint}</p>}
+      {hint && !error && <p className="text-[11px] text-[#487277] mt-0.5 leading-snug">{hint}</p>}
       {error && (
-        <p id={`${id}-error`} role="alert" className="text-xs font-semibold text-[#DC2626] mt-1 leading-snug">
+        <p id={`${id}-error`} role="alert" className="text-[11px] font-semibold text-[#DC2626] mt-0.5 leading-snug">
           {error}
         </p>
       )}
@@ -382,7 +390,7 @@ export function SyncStatusBadge() {
           : "Ketuk untuk sinkronisasi"
       }
       aria-label={`Status sinkronisasi: ${label}. Ketuk untuk sinkron ulang.`}
-      className={`min-h-[44px] px-3 inline-flex items-center gap-1.5 rounded-xl border ${toneCls} text-xs font-semibold transition active:scale-[0.98]`}
+      className={`min-h-[34px] px-2.5 inline-flex items-center gap-1 rounded-xl border ${toneCls} text-[11px] font-semibold transition active:scale-[0.98]`}
     >
       {syncing ? (
         <RefreshIcon className="w-3.5 h-3.5 animate-spin" />
