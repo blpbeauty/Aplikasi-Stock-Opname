@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import BrandBLP from "./BrandBLP";
 import { XIcon } from "./icons";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -93,9 +92,13 @@ export default function InstallPrompt() {
       <div className="w-full max-w-md mx-3 mb-3 bg-white rounded-2xl shadow-sheet border border-[#9BE0DF]/75 overflow-hidden animate-slideUp pb-safe">
         {/* Header */}
         <div className="px-4 pt-3.5 pb-3 flex items-center gap-3 bg-gradient-to-r from-[#DCF6F5] to-[#EEFBFB] border-b border-[#9BE0DF]/60">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#0E838C] to-[#14B8A6] text-white font-bold shadow-[0_6px_16px_-4px_rgba(14,131,140,0.28)]">
-            <BrandBLP compact className="text-white text-sm" />
-          </div>
+          <img
+            src="/icons/icon-192x192.png"
+            alt="Logo BLP SO"
+            width={44}
+            height={44}
+            className="w-11 h-11 rounded-xl shrink-0 shadow-subtle"
+          />
           <div className="flex-1 min-w-0">
             <h2 className="font-semibold text-[#0D3B40] text-sm">
               Pasang BLP Stock

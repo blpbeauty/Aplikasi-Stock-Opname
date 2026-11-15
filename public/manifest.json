@@ -1,14 +1,20 @@
 {
-  "name": "Stock Opname App",
-  "short_name": "Stock Opname",
+  "name": "BLP Stock Opname",
+  "short_name": "BLP SO",
   "description": "Aplikasi Stock Opname Gudang",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#faf5f6",
-  "theme_color": "#351f26",
+  "background_color": "#1D2123",
+  "theme_color": "#0e838c",
   "orientation": "portrait",
   "scope": "/",
   "icons": [
+    {
+      "src": "/icons/logo-blp-so.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "/icons/icon-72x72.png",
       "sizes": "72x72",
@@ -58,13 +64,13 @@
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "/icons/icon-maskable-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "/icons/icon-maskable-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

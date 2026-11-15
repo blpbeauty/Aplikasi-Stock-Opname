@@ -1,6 +1,7 @@
 importScripts('/offline-assets.js');
-const CACHE_NAME = 'stock-opname-v7-' + self.__OFFLINE_VERSION;
+const CACHE_NAME = 'stock-opname-v8-' + self.__OFFLINE_VERSION;
 const ROUTES = ['/', '/login', '/scan', '/input', '/history', '/profile'];
+const ICON_ASSETS = ['/favicon.png', '/apple-touch-icon.png', '/icons/logo-blp-so.svg', '/icons/icon-192x192.png'];
 const rscKey = path => new URL(path + '?offline-rsc=1', self.location.origin).href;
 
 self.addEventListener('install', event => {
@@ -8,7 +9,7 @@ self.addEventListener('install', event => {
     const cache = await caches.open(CACHE_NAME);
     await cache.addAll(['/manifest.json', ...ROUTES]);
     // Cache each route's scripts and CSS, including pages not opened yet.
-    const assets = new Set((self.__OFFLINE_ASSETS || []).map(path => new URL(path, self.location.origin).href));
+    const assets = new Set([...ICON_ASSETS, ...(self.__OFFLINE_ASSETS || [])].map(path => new URL(path, self.location.origin).href));
     for (const path of ROUTES) {
       const html = await (await cache.match(path)).text();
       for (const match of html.matchAll(/(?:src|href)=["']([^"']+)["']/g)) {

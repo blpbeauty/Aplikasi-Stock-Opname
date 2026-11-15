@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Stock Opname",
+    title: "BLP SO",
   },
   formatDetection: {
     telephone: false,
@@ -54,8 +54,9 @@ export default function RootLayout({
   return (
     <html lang="id" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
+        <link rel="icon" type="image/svg+xml" href="/icons/logo-blp-so.svg" />
         <link rel="icon" type="image/png" href="/favicon.png" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body
         className={`${inter.className} bg-[#EBF9F9] text-[#0D3B40] text-sm antialiased`}
